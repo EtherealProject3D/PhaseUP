@@ -402,10 +402,33 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
             let card_w=39.0;
+            // While dragging a valid card from the hand, preview the space it
+            // will occupy and shift the existing table cards around that gap.
+            let preview=g.drag.and_then(|(id,sx,sy)| {
+                let (mx,my)=game_mouse();
+                if !is_mouse_button_down(MouseButton::Left)
+                    || (mx-sx).abs()+(my-sy).abs()<=12.0
+                    || !inside(x,yy,width,102.0) || !g.players[0].laid
+                    || g.stage!=Stage::Play {return None;}
+                let card=g.players[0].hand.iter().find(|c|c.id==id).copied()?;
+                if !can_hit(group,card,p.phase,j){return None;}
+                let slot=if requirement(p.phase.min(9),j)=="run" {
+                    if let Kind::Number(n,_)=card.kind {
+                        group.iter().position(|existing|matches!(existing.kind,Kind::Number(m,_) if m>n)).unwrap_or(group.len())
+                    }else{group.len()}
+                }else{group.len()};
+                Some(slot)
+            });
+            let shown_len=group.len()+usize::from(preview.is_some());
             let available=(width-12.0-card_w).max(0.0);
-            let step=if group.len()>1 {(available/(group.len()-1) as f32).min(42.0)} else {0.0};
+            let step=if shown_len>1 {(available/(shown_len-1) as f32).min(42.0)} else {0.0};
+            if let Some(slot)=preview {
+                let cx=x+6.0+slot as f32*step;
+                draw_rectangle_lines(cx,yy+23.0,card_w,69.0,2.5,YELLOW);
+            }
             for (k,card) in group.iter().enumerate() {
-                let cx=x+6.0+k as f32*step;
+                let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
+                let cx=x+6.0+shown as f32*step;
                 let cy=yy+23.0;
                 let color=color_for(card.kind);
                 draw_rectangle(cx+1.0,cy+2.0,card_w,69.0,BG);
