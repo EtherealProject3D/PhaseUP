@@ -37,9 +37,9 @@ fn color_for(k: Kind) -> Color { match k { Kind::Number(_,0) => Color::new(0.96,
 fn card_text(k: Kind) -> String { match k { Kind::Number(n,_) => n.to_string(), Kind::Wild => "W".into(), Kind::Skip => "S".into() } }
 fn make_deck() -> Vec<Card> {
     let mut deck = Vec::new(); let mut id=0;
-    for color in 0.0.4 { for n in 1..=12 { for _ in 0.0.2 { deck.push(Card{id,kind:Kind::Number(n,color)}); id+=1; } } }
-    for _ in 0.0.8 { deck.push(Card{id,kind:Kind::Wild}); id+=1; }
-    for _ in 0.0.4 { deck.push(Card{id,kind:Kind::Skip}); id+=1; }
+    for color in 0..4 { for n in 1..=12 { for _ in 0..2 { deck.push(Card{id,kind:Kind::Number(n,color)}); id+=1; } } }
+    for _ in 0..8 { deck.push(Card{id,kind:Kind::Wild}); id+=1; }
+    for _ in 0..4 { deck.push(Card{id,kind:Kind::Skip}); id+=1; }
     shuffle(&mut deck); deck
 }
 fn shuffle<T>(v: &mut [T]) { for i in (1..v.len()).rev() { let j=gen_range(0,i+1); v.swap(i,j); } }
@@ -48,8 +48,8 @@ fn valid_group(cards: &[Card], kind: &str) -> bool {
     let normals: Vec<(u8,u8)> = cards.iter().filter_map(|c| if let Kind::Number(n,col)=c.kind {Some((n,col))} else {None}).collect();
     if normals.is_empty() { return false; } // require at least one natural card
     match kind {
-        "set" => normals.iter().all(|(n,_)| *n==normals[0]0.0),
-        "color" => normals.iter().all(|(_,c)| *c==normals[0]0.1),
+        "set" => normals.iter().all(|(n,_)| *n==normals[0].0),
+        "color" => normals.iter().all(|(_,c)| *c==normals[0].1),
         "run" => {
             let mut nums: Vec<u8> = normals.iter().map(|(n,_)|*n).collect(); nums.sort_unstable();
             if nums.windows(2).any(|w|w[0]==w[1]) { return false; }
@@ -87,13 +87,13 @@ fn can_hit(group: &[Card], card: Card, phase:usize, group_idx:usize) -> bool {
 }
 impl Game {
     fn new()->Self {
-        let players=(0.0.4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
+        let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0};g.deal();g
     }
     fn deal(&mut self) {
         self.deck=make_deck();self.discard.clear();self.selected.clear();self.turn=0;self.stage=Stage::Draw;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
-        for _ in 0.0.10 {for i in 0.0.4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
+        for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
         self.message=format!("Round {} — draw from deck or discard pile",self.round);
     }
@@ -137,11 +137,11 @@ impl Game {
         if card.is_empty(){return;}
         let c=card[0];self.discard.push(c);self.selected.clear();
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
-        if c.kind==Kind::Skip {let target=(1.0.4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.ai_cycle(Some(target));}
+        if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
     }
     fn ai_cycle(&mut self,skip:Option<usize>) {
-        for i in 1.0.4 {
+        for i in 1..4 {
             if skip==Some(i){continue;}
             self.turn=i;
             let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
@@ -165,7 +165,7 @@ impl Game {
                 let mut j=0;
                 while j<self.players[i].hand.len() {
                     let c=self.players[i].hand[j];let mut target_hit=None;
-                    'outer: for target in 0.0.4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase,g){target_hit=Some((target,g));break 'outer;}}}}
+                    'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase,g){target_hit=Some((target,g));break 'outer;}}}}
                     if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);}else{j+=1;}
                 }
             }
@@ -204,10 +204,10 @@ fn draw_game(g:&mut Game){
     label("PHASEUP",24.,42.,32.,ACCENT);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1.0.4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
-    for i in 0.0.4 {let p=&g.players[i];if !p.laid{continue;}let x=30.+(i as f32)*((sw-50.)/4.);let y=table_y+35.;label(&format!("{}",if i==0{"YOU".into()}else{format!("CPU {}",i)}),x,y,17.,ACCENT);
+    for i in 0..4 {let p=&g.players[i];if !p.laid{continue;}let x=30.+(i as f32)*((sw-50.)/4.);let y=table_y+35.;label(&format!("{}",if i==0{"YOU".into()}else{format!("CPU {}",i)}),x,y,17.,ACCENT);
         for (j,group) in p.table.iter().enumerate(){let yy=y+12.+j as f32*43.;draw_rectangle(x,yy,((sw-70.)/4.).min(275.),39.,PANEL);let desc=format!("{}: {} cards",requirement(p.phase,j),group.len());label(&desc,x+9.,yy+25.,17.,WHITEISH);let m=mouse_position();if m.0>=x&&m.0<=x+((sw-70.)/4.).min(275.)&&m.1>=yy&&m.1<=yy+39.&&is_mouse_button_pressed(MouseButton::Left){hit_click=Some((i,j));}}
     }
     let center=sh*0.49;
@@ -230,7 +230,7 @@ fn draw_game(g:&mut Game){
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-230.;let y=sh/2.-120.;draw_rectangle(x,y,460.,240.,PANEL);
         label(if g.stage==Stage::GameOver{"GAME COMPLETE"}else{"ROUND COMPLETE"},x+45.,y+53.,32.,ACCENT);
-        for i in 0.0.4 {let p=&g.players[i];label(&format!("{}: phase {}  |  {} pts",if i==0{"You".into()}else{format!("CPU {}",i)},p.phase.min(10),p.score),x+40.,y+83.+i as f32*27.,20.,WHITEISH);}
+        for i in 0..4 {let p=&g.players[i];label(&format!("{}: phase {}  |  {} pts",if i==0{"You".into()}else{format!("CPU {}",i)},p.phase.min(10),p.score),x+40.,y+83.+i as f32*27.,20.,WHITEISH);}
         if button(if g.stage==Stage::GameOver{"NEW GAME"}else{"NEXT ROUND"},x+135.,y+191.,190.,39.,true){if g.stage==Stage::GameOver{*g=Game::new();}else{g.deal();}}
     }
 }
