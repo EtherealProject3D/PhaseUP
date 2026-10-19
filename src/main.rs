@@ -400,7 +400,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         for (i,card) in cards.iter().enumerate() {
             let cx=x+10.0+i as f32*52.0;
             if cx+46.0<x+stage_w {
-                let _=card_ui(*card,cx,y+29.0,45.0,76.0,false);
+                let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
+                    let (mx,my)=game_mouse();
+                    id==card.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
+                });
+                if floating {
+                    draw_rectangle(cx,y+29.0,45.0,76.0,Color::new(0.24,0.32,0.40,0.45));
+                    draw_rectangle_lines(cx,y+29.0,45.0,76.0,1.0,MUTED);
+                } else {let _=card_ui(*card,cx,y+29.0,45.0,76.0,false);}
                 if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,y+29.0,45.0,76.0){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
             }
         }
@@ -427,6 +434,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
+    // Draw the lifted staging card above the other staged cards.
+    if let Some((id,sx,sy))=g.staged_drag {
+        let (mx,my)=game_mouse();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0 {
+            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied(){
+                let _=card_ui(card,mx-22.5,my-38.0,45.0,76.0,false);
+            }
+        }
+    }
     if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
