@@ -33,7 +33,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, staged_drag: Option<(u32,f32,f32)> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -185,13 +185,13 @@ impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),staged_drag:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
@@ -327,7 +327,7 @@ impl Game {
             let c=self.players[i].hand.remove(idx);self.discard.push(c);self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(c.kind)));
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
         }
-        self.turn=0;self.stage=Stage::Draw;self.drawn_card=None;self.message=String::new();
+        self.turn=0;self.stage=Stage::Draw;self.turn_count+=1;self.drawn_card=None;self.message=String::new();
     }
     fn end_round(&mut self,winner:usize) {
         for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
@@ -373,7 +373,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     label("PHASEUP",24.,42.,32.,ACCENT);
     label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
     label("v0.3.2-dev",184.,40.,19.,MUTED);
-    label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
+    label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Play if g.players[0].laid=>("YOUR TURN  -  HIT OR DISCARD",YELLOW),
@@ -472,7 +472,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
         if hovering&&dragging&&g.stage==Stage::Play {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
-        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
+        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw && g.turn_count==1 {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
@@ -540,7 +540,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }
     }
-    if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
