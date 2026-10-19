@@ -239,7 +239,7 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_game(g:&mut Game){
+fn draw_game(g:&mut Game,show_debug:bool){
     clear_background(BG);
     let sw=1600.0;let sh=1000.0;
     let (pw,ph)=(screen_width(),screen_height());
@@ -251,7 +251,7 @@ fn draw_game(g:&mut Game){
     };
     set_camera(&camera);
     label("PHASEUP",24.,42.,32.,ACCENT);
-    label("v0.3.0",184.,40.,19.,MUTED);
+    label("v0.3.1",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW A CARD",ACCENT),
@@ -418,7 +418,69 @@ fn draw_game(g:&mut Game){
         for i in 0..4 {let p=&g.players[i];label(&format!("{}: phase {}  |  {} pts",if i==0{"You".into()}else{format!("CPU {}",i)},p.phase.min(10),p.score),x+40.,y+83.+i as f32*27.,20.,WHITEISH);}
         if button(if g.stage==Stage::GameOver{"NEW GAME"}else{"NEXT ROUND"},x+135.,y+191.,190.,39.,true){if g.stage==Stage::GameOver{*g=Game::new();}else{g.deal();}}
     }
+    if show_debug {debug_overlay(g);}
 }
-fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:1600,window_height:1000,window_resizable:true,..Default::default()}}
+
+// Desktop window dimensions are stored outside the repository, in the user's
+// app-data directory. Invalid/old files safely fall back to the defaults.
+fn window_size_path() -> std::path::PathBuf {
+    let base=std::env::var_os("APPDATA").map(std::path::PathBuf::from)
+        .or_else(||std::env::var_os("HOME").map(|h|std::path::PathBuf::from(h).join(".config")))
+        .unwrap_or_else(||std::path::PathBuf::from("."));
+    base.join("PhaseUP").join("window_size.txt")
+}
+fn read_window_size() -> (i32,i32) {
+    if let Ok(s)=std::fs::read_to_string(window_size_path()) {
+        let mut parts=s.split_whitespace();
+        if let (Some(w),Some(h))=(parts.next().and_then(|v|v.parse::<i32>().ok()),parts.next().and_then(|v|v.parse::<i32>().ok())) {
+            if (640..=7680).contains(&w)&&(480..=4320).contains(&h) {return (w,h);}
+        }
+    }
+    (1600,1000)
+}
+fn save_window_size(w:i32,h:i32) {
+    let path=window_size_path();
+    if let Some(parent)=path.parent() {
+        if std::fs::create_dir_all(parent).is_err(){return;}
+    }
+    let _=std::fs::write(path,format!("{w} {h}\n"));
+}
+fn debug_overlay(g:&Game) {
+    let (pw,ph)=(screen_width(),screen_height());
+    let (mx,my)=game_mouse();
+    let lines=[
+        format!("FPS: {}",get_fps()),
+        format!("Window: {} x {}",pw.round() as i32,ph.round() as i32),
+        format!("Canvas: 1600 x 1000 ({:.2}x)",(pw/1600.0).min(ph/1000.0)),
+        format!("Mouse (canvas): {:.0}, {:.0}",mx,my),
+        format!("Round: {}  Turn: {}",g.round,if g.turn==0{"You".to_string()}else{format!("CPU {}",g.turn)}),
+        format!("Stage: {}",match g.stage {Stage::Draw=>"Draw",Stage::Play=>"Play",Stage::RoundOver=>"RoundOver",Stage::GameOver=>"GameOver"}),
+        format!("Selected: {}  Dragging: {}",g.selected.len(),g.drag.is_some()),
+        "F3: hide debug info".to_string(),
+    ];
+    let x=1170.0;let y=65.0;
+    draw_rectangle(x,y,410.0,lines.len() as f32*23.0+20.0,Color::new(0.02,0.04,0.08,0.93));
+    draw_rectangle_lines(x,y,410.0,lines.len() as f32*23.0+20.0,1.5,ACCENT);
+    for (i,line) in lines.iter().enumerate(){draw_text(line,x+12.0,y+29.0+i as f32*23.0,18.0,WHITEISH);}
+}
+fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
-async fn main(){let mut game=Game::new();loop{draw_game(&mut game);next_frame().await;}}
+async fn main(){
+    let mut game=Game::new();
+    let mut show_debug=false;
+    let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
+    let mut size_changed_at=get_time();
+    let mut saved_size=last_size;
+    loop {
+        if is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
+        let size=(screen_width().round() as i32,screen_height().round() as i32);
+        if size!=last_size {last_size=size;size_changed_at=get_time();}
+        // Wait until resizing stops before writing, to avoid disk writes every frame.
+        if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
+            save_window_size(size.0,size.1);
+            saved_size=size;
+        }
+        draw_game(&mut game,show_debug);
+        next_frame().await;
+    }
+}
