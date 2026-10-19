@@ -261,10 +261,13 @@ fn draw_game(g:&mut Game,show_debug:bool){
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
-    draw_rectangle(460.0,10.0,640.0,38.0,PANEL);
-    draw_rectangle_lines(460.0,10.0,640.0,38.0,2.0,turn_color);
+    // Turn guidance follows the player's hand instead of the top header.
+    // The hand panel starts at y=753 on the 1600x1000 logical canvas.
+    let guidance_y=699.0;
+    draw_rectangle(460.0,guidance_y,640.0,38.0,PANEL);
+    draw_rectangle_lines(460.0,guidance_y,640.0,38.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,23,1.0).width;
-    label(turn_text,780.0-tw/2.0,37.0,23.0,turn_color);
+    label(turn_text,780.0-tw/2.0,guidance_y+27.0,23.0,turn_color);
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
