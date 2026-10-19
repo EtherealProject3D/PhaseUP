@@ -232,13 +232,42 @@ fn draw_game(g:&mut Game){
     clear_background(BG);
     let sw=screen_width();let sh=screen_height();
     label("PHASEUP",24.,42.,32.,ACCENT);
+    label("v0.2.1",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
-    for i in 0..4 {let p=&g.players[i];if !p.laid{continue;}let x=30.+(i as f32)*((sw-50.)/4.);let y=table_y+35.;label(&format!("{}",if i==0{"YOU".into()}else{format!("CPU {}",i)}),x,y,17.,ACCENT);
-        for (j,group) in p.table.iter().enumerate(){let yy=y+12.+j as f32*43.;draw_rectangle(x,yy,((sw-70.)/4.).min(275.),39.,PANEL);let desc=format!("{}: {} cards",requirement(p.phase,j),group.len());label(&desc,x+9.,yy+25.,17.,WHITEISH);let m=mouse_position();if m.0>=x&&m.0<=x+((sw-70.)/4.).min(275.)&&m.1>=yy&&m.1<=yy+39.&&is_mouse_button_pressed(MouseButton::Left){hit_click=Some((i,j));}}
+    for i in 0..4 {
+        let p=&g.players[i];
+        if !p.laid {continue;}
+        let column_w=(sw-50.0)/4.0;
+        let x=24.0+i as f32*column_w;
+        let y=table_y+35.0;
+        label(if i==0 {"YOU"} else {match i {1=>"CPU 1",2=>"CPU 2",_=>"CPU 3"}},x,y,17.0,ACCENT);
+        for (j,group) in p.table.iter().enumerate() {
+            let yy=y+12.0+j as f32*108.0;
+            let width=(column_w-8.0).max(95.0);
+            draw_rectangle(x,yy,width,102.0,PANEL);
+            let desc=format!("{}  -  {} cards",requirement(p.phase,j).to_uppercase(),group.len());
+            label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
+            let card_w=39.0;
+            let available=(width-12.0-card_w).max(0.0);
+            let step=if group.len()>1 {(available/(group.len()-1) as f32).min(42.0)} else {0.0};
+            for (k,card) in group.iter().enumerate() {
+                let cx=x+6.0+k as f32*step;
+                let cy=yy+23.0;
+                let color=color_for(card.kind);
+                draw_rectangle(cx+1.0,cy+2.0,card_w,69.0,BG);
+                draw_rectangle(cx,cy,card_w,69.0,WHITEISH);
+                draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,63.0,color);
+                let value=card_text(card.kind);
+                label(&value,cx+6.0,cy+27.0,23.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+            }
+            if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,102.0) {
+                hit_click=Some((i,j));
+            }
+        }
     }
     let center=sh*0.49;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
