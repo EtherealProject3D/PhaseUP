@@ -476,7 +476,7 @@ fn menu_button(title:&str,y:f32)->bool {
     label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_menu(screen:MenuScreen,has_game:bool)->Option<MenuScreen> {
+fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool)->Option<MenuScreen> {
     clear_background(BG);
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/1600.0).min(ph/1000.0);
@@ -500,7 +500,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool)->Option<MenuScreen> {
                 request_new_screen_size(1600.0,1000.0);
                 save_window_size(1600,1000);
             }
-            if menu_button("TOGGLE FULLSCREEN",450.0){set_fullscreen(!is_fullscreen());}
+            if menu_button("TOGGLE FULLSCREEN",450.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
             if menu_button("BACK",575.0){return Some(MenuScreen::Home);}
         }
         MenuScreen::ConfirmNew=>{
@@ -526,6 +526,7 @@ async fn main(){
     let mut show_debug=false;
     let mut menu=MenuScreen::Home;
     let mut has_game=false;
+    let mut fullscreen=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
@@ -559,7 +560,7 @@ async fn main(){
             let (mx,my)=game_mouse();
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
         } else {
-            let action=draw_menu(menu,has_game);
+            let action=draw_menu(menu,has_game,&mut fullscreen);
             if let Some(next)=action {
                 if menu==MenuScreen::ConfirmNew&&next==MenuScreen::Playing {
                     game=Game::new();
