@@ -299,6 +299,13 @@ fn draw_game(g:&mut Game){
         }
         g.drag=None;
     }
+    if button("SELECT STAGED",24.0,sh-99.0,155.0,32.0,g.stage==Stage::Play&&g.staged.iter().any(|v|!v.is_empty())) {
+        g.selected=g.staged.iter().flatten().copied().collect();
+        g.message="Staged cards selected. Add other cards or lay your phase.".into();
+    }
+    if button("RETURN ALL",190.0,sh-99.0,138.0,32.0,g.staged.iter().any(|v|!v.is_empty())) {
+        g.staged=[vec![],vec![]];
+    }
     if button("LAY PHASE",24.0,sh-51.0,142.0,40.0,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
     if button("DISCARD",179.0,sh-51.0,122.0,40.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     if button("CLEAR",314.0,sh-51.0,104.0,40.0,!g.selected.is_empty()){g.selected.clear();}
