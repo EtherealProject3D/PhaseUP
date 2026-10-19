@@ -554,6 +554,30 @@ fn save_window_size(w:i32,h:i32) {
     }
     let _=std::fs::write(path,format!("{w} {h}\n"));
 }
+// Persist interface preferences alongside the existing window-size file.
+fn preferences_path()->std::path::PathBuf {
+    window_size_path().with_file_name("settings.txt")
+}
+fn read_preferences()->(bool,bool){
+    let mut show_moves=true;let mut fullscreen=false;
+    if let Ok(data)=std::fs::read_to_string(preferences_path()){
+        for line in data.lines(){
+            if let Some((key,value))=line.split_once('='){
+                match key.trim(){
+                    "recent_moves"=>match value.trim(){"true"=>show_moves=true,"false"=>show_moves=false,_=>{}},
+                    "fullscreen"=>match value.trim(){"true"=>fullscreen=true,"false"=>fullscreen=false,_=>{}},
+                    _=>{}
+                }
+            }
+        }
+    }
+    (show_moves,fullscreen)
+}
+fn save_preferences(show_moves:bool,fullscreen:bool){
+    let path=preferences_path();
+    if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
+    let _=std::fs::write(path,format!("recent_moves={}\nfullscreen={}\n",show_moves,fullscreen));
+}
 fn debug_overlay(g:&Game) {
     let (pw,ph)=(screen_width(),screen_height());
     let (mx,my)=game_mouse();
@@ -636,10 +660,11 @@ async fn main(){
     macroquad::rand::srand(seed);
     let mut game=Game::new();
     let mut show_debug=false;
-    let mut show_moves=true;
+    let (mut show_moves,mut fullscreen)=read_preferences();
+    if fullscreen {set_fullscreen(true);}
+    let mut saved_preferences=(show_moves,fullscreen);
     let mut menu=MenuScreen::Home;
     let mut has_game=false;
-    let mut fullscreen=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
@@ -657,6 +682,10 @@ async fn main(){
             request_new_screen_size(1600.0,1000.0);
             save_window_size(1600,1000);
             saved_size=(1600,1000);
+        }
+        if (show_moves,fullscreen)!=saved_preferences {
+            save_preferences(show_moves,fullscreen);
+            saved_preferences=(show_moves,fullscreen);
         }
         let size=(screen_width().round() as i32,screen_height().round() as i32);
         if size!=last_size {last_size=size;size_changed_at=get_time();}
