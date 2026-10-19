@@ -489,10 +489,10 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool)->Option<MenuS
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
-            if menu_button("NEW GAME",400.0){return Some(MenuScreen::ConfirmNew);}
+            if menu_button("NEW GAME",400.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
             if menu_button("SETTINGS",490.0){return Some(MenuScreen::Settings);}
             if menu_button("QUIT",580.0){std::process::exit(0);}
-            label("ESC: resume  |  F3: diagnostics",610.0,750.0,20.0,MUTED);
+            label(if has_game {"ESC: resume  |  F3: diagnostics"} else {"F3: diagnostics"},610.0,750.0,20.0,MUTED);
         }
         MenuScreen::Settings=>{
             label("WINDOW",590.0,300.0,26.0,WHITEISH);
@@ -562,7 +562,7 @@ async fn main(){
         } else {
             let action=draw_menu(menu,has_game,&mut fullscreen);
             if let Some(next)=action {
-                if menu==MenuScreen::ConfirmNew&&next==MenuScreen::Playing {
+                if next==MenuScreen::Playing && (menu==MenuScreen::ConfirmNew || !has_game) {
                     game=Game::new();
                     has_game=true;
                 }
