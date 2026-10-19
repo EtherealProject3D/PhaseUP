@@ -574,7 +574,7 @@ fn debug_overlay(g:&Game) {
 }
 
 #[derive(Clone,Copy,PartialEq,Eq)]
-enum MenuScreen { Home, Settings, ConfirmNew, Playing }
+enum MenuScreen { Home, Settings, ConfirmNew, Playing, Resume }
 fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
@@ -591,7 +591,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     set_camera(&Camera2D{target:vec2(800.0,500.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
     draw_rectangle(460.0,125.0,680.0,760.0,PANEL);
     draw_rectangle_lines(460.0,125.0,680.0,760.0,2.0,ACCENT);
-    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing=>""};
+    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume=>""};
     let w=measure_text(title,None,54,1.0).width;
     label(title,800.0-w/2.0,230.0,54.0,ACCENT);
     match screen {
@@ -612,13 +612,15 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             label("INTERFACE",590.0,555.0,26.0,WHITEISH);
             if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},595.0){*show_moves=!*show_moves;}
             if menu_button("BACK",705.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",790.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
             if menu_button("YES, NEW GAME",400.0){return Some(MenuScreen::Playing);}
             if menu_button("CANCEL",500.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",600.0){return Some(MenuScreen::Resume);}
         }
-        MenuScreen::Playing=>{}
+        MenuScreen::Playing|MenuScreen::Resume=>{}
     }
     None
 }
@@ -673,11 +675,14 @@ async fn main(){
         } else {
             let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves);
             if let Some(next)=action {
+                if next==MenuScreen::Resume {menu=MenuScreen::Playing;}
+                else {
                 if next==MenuScreen::Playing && (menu==MenuScreen::ConfirmNew || !has_game) {
                     game=Game::new();
                     has_game=true;
                 }
                 menu=next;
+                }
             }
         }
         next_frame().await;
