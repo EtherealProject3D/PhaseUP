@@ -153,13 +153,17 @@ impl Game {
         }else{self.message=format!("Selected cards do not match phase {} ({})",phase+1,phase_name(phase));}
     }
     fn hit(&mut self, target:usize,group:usize) {
-        if self.stage!=Stage::Play||!self.players[0].laid||self.selected.len()!=1{return;}
+        if self.stage!=Stage::Play {self.message="Draw a card before playing onto a phase.".into();return;}
+        if !self.players[0].laid {self.message="Complete your own phase before adding cards to the table.".into();return;}
+        if self.selected.len()!=1 {self.message="Select exactly one card, then click a table group to add it.".into();return;}
         let Some(card)=self.players[0].hand.iter().find(|c|c.id==self.selected[0]).copied() else{return;};
         if !self.players[target].laid||group>=self.players[target].table.len(){return;}
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
-            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);self.unstage_card(card.id);self.selected.clear();self.message="Card hit successfully".into();
-        }else{self.message="That card cannot be added to this group".into();}
+            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);self.unstage_card(card.id);self.selected.clear();
+            self.message=format!("Added {} to {}'s {}!",card_text(card.kind),if target==0 {"your".to_string()}else{format!("CPU {}",target)},requirement(phase,group));
+            if self.players[0].hand.is_empty(){self.end_round(0);}
+        }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
     }
     fn discard_selected(&mut self) {
         if self.stage!=Stage::Play||self.selected.len()!=1{return;}
@@ -248,7 +252,10 @@ fn draw_game(g:&mut Game){
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0+j as f32*108.0;
             let width=(column_w-8.0).max(95.0);
-            draw_rectangle(x,yy,width,102.0,PANEL);
+            let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
+            let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
+            draw_rectangle(x,yy,width,102.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
+            draw_rectangle_lines(x,yy,width,102.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             let desc=format!("{}  -  {} cards",requirement(p.phase,j).to_uppercase(),group.len());
             label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
             let card_w=39.0;
@@ -264,11 +271,13 @@ fn draw_game(g:&mut Game){
                 let value=card_text(card.kind);
                 label(&value,cx+6.0,cy+27.0,23.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
             }
+            if can_place {label("CLICK TO ADD",x+7.0,yy+97.0,13.0,ACCENT);}
             if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,102.0) {
                 hit_click=Some((i,j));
             }
         }
     }
+    // Reserve a separate central lane for draw/discard piles, away from laid groups.
     let center=sh*0.49;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
     let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x+6.,center-30.,70.,98.,2.,ACCENT);label(&format!("{}",g.deck.len()),deck_x+27.,center+22.,25.,WHITEISH);
