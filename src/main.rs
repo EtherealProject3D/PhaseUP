@@ -444,7 +444,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        label(&format!("{} {} / {}{}",requirement(g.players[0].phase,group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        label(&format!("{} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         for (i,card) in cards.iter().enumerate() {
             let cx=x+10.0+i as f32*52.0;
             if cx+46.0<x+stage_w {
