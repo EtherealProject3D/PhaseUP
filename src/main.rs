@@ -74,6 +74,24 @@ fn valid_group(cards: &[Card], kind: &str) -> bool {
         }, _=>false
     }
 }
+// Arrange a laid run numerically, placing wilds into missing-number slots.
+fn order_run(cards:&mut Vec<Card>) {
+    let len=cards.len();
+    if len==0 || len>12{return;}
+    let numbers:Vec<u8>=cards.iter().filter_map(|c|if let Kind::Number(n,_)=c.kind{Some(n)}else{None}).collect();
+    if numbers.is_empty(){return;}
+    let Some(start)=(1..=13-len as u8).find(|start|numbers.iter().all(|n|*n>=*start&&(*n as usize)<(*start as usize+len)))else{return;};
+    let mut ordered=Vec::with_capacity(len);
+    let mut wilds=cards.iter().copied().filter(|c|c.kind==Kind::Wild);
+    for value in start..start+len as u8 {
+        if let Some(card)=cards.iter().find(|c|matches!(c.kind,Kind::Number(n,_) if n==value)).copied(){ordered.push(card);}
+        else if let Some(wild)=wilds.next(){ordered.push(wild);}
+    }
+    if ordered.len()==len {*cards=ordered;}
+}
+fn order_table_groups(groups:&mut [Vec<Card>],phase:usize){
+    for (i,group) in groups.iter_mut().enumerate(){if requirement(phase,i)=="run"{order_run(group);}}
+}
 fn partition_phase(cards: &[Card], phase: usize) -> Option<Vec<Vec<Card>>> {
     let sizes=PHASES[phase]; if cards.len()!=sizes.iter().sum::<usize>() {return None;}
     fn recurse(cards: &[Card], phase: usize, g: usize) -> Option<Vec<Vec<Card>>> {
@@ -157,7 +175,8 @@ impl Game {
         if self.stage!=Stage::Play||self.players[0].laid{return;}
         let cards:Vec<Card>=self.players[0].hand.iter().copied().filter(|c|self.selected.contains(&c.id)).collect();
         let phase=self.players[0].phase;
-        if let Some(groups)=partition_phase(&cards,phase) {
+        if let Some(mut groups)=partition_phase(&cards,phase) {
+            order_table_groups(&mut groups,phase);
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
             self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
             self.message="Phase completed! Hit any laid phase or discard to finish.".into();
@@ -171,7 +190,7 @@ impl Game {
         if !self.players[target].laid||group>=self.players[target].table.len(){return;}
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
-            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);self.unstage_card(card.id);self.selected.clear();
+            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);if requirement(phase,group)=="run"{order_run(&mut self.players[target].table[group]);}self.unstage_card(card.id);self.selected.clear();
             self.message=format!("Added {} to {}'s {}!",card_text(card.kind),if target==0 {"your".to_string()}else{format!("CPU {}",target)},requirement(phase,group));
             if self.players[0].hand.is_empty(){self.end_round(0);}
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
@@ -203,7 +222,7 @@ impl Game {
                         for j in start..hand.len() {idx.push(j);if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}idx.pop();}None
                     }
                     found=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase);
-                    if let Some(groups)=found {let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));}
+                    if let Some(mut groups)=found {order_table_groups(&mut groups,self.players[i].phase);let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));}
                 }
             }
             if self.players[i].laid {
@@ -211,7 +230,7 @@ impl Game {
                 while j<self.players[i].hand.len() {
                     let c=self.players[i].hand[j];let mut target_hit=None;
                     'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase,g){target_hit=Some((target,g));break 'outer;}}}}
-                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
+                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);if requirement(self.players[target].phase,g)=="run"{order_run(&mut self.players[target].table[g]);}self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
                 }
             }
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
