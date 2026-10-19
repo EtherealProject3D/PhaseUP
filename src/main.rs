@@ -566,6 +566,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         g.pile_drag=None;
     }
+    // Completion banner sits between the staging slots and turn guidance.
+    let phase=g.players[0].phase;
+    let staged_complete=g.stage==Stage::Play&&!g.players[0].laid
+        && (0..groups.len()).all(|group|{
+            let cards:Vec<Card>=g.staged[group].iter()
+                .filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
+            cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
+        });
+    if staged_complete {
+        draw_rectangle(525.0,758.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
+        draw_rectangle_lines(525.0,758.0,550.0,31.0,1.5,GREEN);
+        label("PHASE COMPLETE",545.0,780.0,21.0,GREEN);
+        if button("LAY PHASE",852.0,760.0,206.0,27.0,true){
+            g.selected=g.staged.iter().flatten().copied().collect();
+            g.lay();
+        }
+    }
     if button("SELECT STAGED",24.0,sh-99.0,155.0,32.0,g.stage==Stage::Play&&g.staged.iter().any(|v|!v.is_empty())) {
         g.selected=g.staged.iter().flatten().copied().collect();
         g.message="Staged cards selected. Add other cards or lay your phase.".into();
