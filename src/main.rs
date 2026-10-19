@@ -14,7 +14,23 @@ struct Card { id: u32, kind: Kind }
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Stage { Draw, Play, RoundOver, GameOver }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32 }
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SortMode { Runs, Colors, Sets }
+fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
+    match card.kind {
+        Kind::Number(n,color) => match mode {
+            SortMode::Runs => (n,color,card.id),
+            SortMode::Colors => (color,n,card.id),
+            SortMode::Sets => (n,color,card.id),
+        },
+        Kind::Wild => (250,0,card.id),
+        Kind::Skip => (251,0,card.id),
+    }
+}
+fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
+    let (mx,my)=mouse_position();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
+}
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -88,14 +104,28 @@ fn can_hit(group: &[Card], card: Card, phase:usize, group_idx:usize) -> bool {
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None};g.deal();g
     }
     fn deal(&mut self) {
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.turn=0;self.stage=Stage::Draw;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
         self.message=format!("Round {} — draw from deck or discard pile",self.round);
+    }
+    fn stage_card(&mut self,id:u32,group:usize) {
+        if group>=PHASES[self.players[0].phase].len(){return;}
+        if !self.players[0].hand.iter().any(|c|c.id==id){return;}
+        for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
+        self.staged[group].push(id);
+        self.selected.retain(|v|*v!=id);
+    }
+    fn unstage_card(&mut self,id:u32) {
+        for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
+    }
+    fn stage_selected(&mut self,group:usize) {
+        let ids=self.selected.clone();
+        for id in ids {self.stage_card(id,group);}
     }
     fn draw(&mut self,discard:bool) {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
@@ -118,7 +148,7 @@ impl Game {
         let phase=self.players[0].phase;
         if let Some(groups)=partition_phase(&cards,phase) {
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
-            self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();
+            self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
             self.message="Phase completed! Hit any laid phase or discard to finish.".into();
         }else{self.message=format!("Selected cards do not match phase {} ({})",phase+1,phase_name(phase));}
     }
@@ -128,14 +158,14 @@ impl Game {
         if !self.players[target].laid||group>=self.players[target].table.len(){return;}
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
-            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);self.selected.clear();self.message="Card hit successfully".into();
+            Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);self.unstage_card(card.id);self.selected.clear();self.message="Card hit successfully".into();
         }else{self.message="That card cannot be added to this group".into();}
     }
     fn discard_selected(&mut self) {
         if self.stage!=Stage::Play||self.selected.len()!=1{return;}
         let id=self.selected[0];let card=Self::remove_ids(&mut self.players[0].hand,&[id]);
         if card.is_empty(){return;}
-        let c=card[0];self.discard.push(c);self.selected.clear();
+        let c=card[0];self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
         if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
@@ -216,16 +246,63 @@ fn draw_game(g:&mut Game){
     let m=mouse_position();if g.stage==Stage::Draw&&m.0>=deck_x&&m.0<=deck_x+82.&&m.1>=center-36.&&m.1<=center+74.&&is_mouse_button_pressed(MouseButton::Left){g.draw(false);}
     label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
     if let Some(c)=g.discard.last().copied(){let x=sw*0.56-40.;if card_ui(c,x,center-36.,82.,110.,false)&&g.stage==Stage::Draw{g.draw(true);}}
-    let py=sh-175.;draw_rectangle(12.,py-72.,sw-24.,247.,PANEL);
-    let p=&g.players[0];label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.,py-46.,21.,WHITEISH);
-    let n=p.hand.len();let cw=(sw-46.)/(n.max(1) as f32);let w=cw.min(75.);let spacing=if n>1{((sw-48.-w)/(n-1) as f32).min(81.)}else{0.};
-    let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.;let hand=p.hand.clone();let mut toggle=None;
-    for (i,c) in hand.iter().enumerate(){if card_ui(*c,start+i as f32*spacing,py,w,105.,g.selected.contains(&c.id)){toggle=Some(c.id);}}
-    if let Some(id)=toggle {if g.stage==Stage::Play {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}}
-    if button("LAY PHASE",24.,sh-51.,142.,40.,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
-    if button("DISCARD",179.,sh-51.,122.,40.,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
-    if button("CLEAR",314.,sh-51.,104.,40.,!g.selected.is_empty()){g.selected.clear();}
-    label(&g.message,435.,sh-23.,18.,ACCENT);
+    // Phase staging: cards remain in the player's actual hand until played.
+    let stage_y=sh-365.0;
+    let groups=PHASES[g.players[0].phase];
+    let stage_w=((sw-42.0)/groups.len() as f32).min(610.0);
+    label("PHASE STAGING  -  drag cards here, or select and press STAGE",24.0,stage_y-10.0,18.0,ACCENT);
+    let mut staged_click=None;
+    let mut stage_drop=None;
+    for group in 0..groups.len() {
+        let x=18.0+group as f32*(stage_w+6.0);
+        let y=stage_y;
+        draw_rectangle(x,y,stage_w,117.0,PANEL);
+        draw_rectangle_lines(x,y,stage_w,117.0,1.5,ACCENT);
+        let ids=g.staged[group].clone();
+        let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
+        let ready=cards.len()==groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
+        label(&format!("{} {} / {}{}",requirement(g.players[0].phase,group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        for (i,card) in cards.iter().enumerate() {
+            let cx=x+10.0+i as f32*52.0;
+            if cx+46.0<x+stage_w && card_ui(*card,cx,y+29.0,45.0,76.0,false) {staged_click=Some(card.id);}
+        }
+        if is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {stage_drop=Some(group);}
+        if button(&format!("STAGE {}",group+1),x+stage_w-99.0,y-27.0,96.0,24.0,!g.selected.is_empty()) {g.stage_selected(group);}
+    }
+    if let Some(id)=staged_click {g.unstage_card(id);}
+    let py=sh-175.0;
+    draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
+    let p=&g.players[0];
+    label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.0,py-46.0,21.0,WHITEISH);
+    let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
+    for (i,(mode,name)) in sorts.iter().enumerate() {
+        let x=sw-338.0+i as f32*109.0;
+        if button(name,x,py-65.0,103.0,28.0,true) {g.sort=*mode;}
+        if g.sort==*mode {draw_rectangle_lines(x,py-65.0,103.0,28.0,2.0,ACCENT);}
+    }
+    let mut hand:Vec<Card>=p.hand.iter().copied().filter(|c|!g.staged.iter().any(|v|v.contains(&c.id))).collect();
+    hand.sort_by_key(|c|sort_key(*c,g.sort));
+    let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
+    let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
+    let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
+    let mut toggle=None;
+    for (i,c) in hand.iter().enumerate() {
+        let x=start+i as f32*spacing;
+        if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,py-15.0,w,120.0){g.drag=Some((c.id,mouse_position().0,mouse_position().1));}
+    }
+    if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
+    if is_mouse_button_released(MouseButton::Left) {
+        if let (Some((id,ox,oy)),Some(group))=(g.drag,stage_drop) {
+            let (mx,my)=mouse_position();
+            if (mx-ox).abs()+(my-oy).abs()>12.0 {g.stage_card(id,group);}
+        }
+        g.drag=None;
+    }
+    if button("LAY PHASE",24.0,sh-51.0,142.0,40.0,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
+    if button("DISCARD",179.0,sh-51.0,122.0,40.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
+    if button("CLEAR",314.0,sh-51.0,104.0,40.0,!g.selected.is_empty()){g.selected.clear();}
+    label(&g.message,435.0,sh-23.0,18.0,ACCENT);
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-230.;let y=sh/2.-120.;draw_rectangle(x,y,460.,240.,PANEL);
