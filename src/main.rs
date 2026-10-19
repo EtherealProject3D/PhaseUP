@@ -452,7 +452,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
         let title_w=measure_text(&title,None,32,1.0).width;
         label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
         let winner_name=if g.turn==0 {"YOU".to_string()}else{format!("CPU {}",g.turn)};
-        let announcement=if game_over {format!("{} FINISHED THE GAME!",winner_name)}else{format!("{} WINS THE ROUND!",winner_name)};
+        let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
         let announce_w=measure_text(&announcement,None,27,1.0).width;
         label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
         label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
