@@ -208,7 +208,7 @@ impl Game {
             let c=self.players[i].hand.remove(idx);self.discard.push(c);
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
         }
-        self.turn=0;self.stage=Stage::Draw;self.message="Your turn — draw a card".into();
+        self.turn=0;self.stage=Stage::Draw;self.message=String::new();
     }
     fn end_round(&mut self,winner:usize) {
         for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
@@ -350,12 +350,12 @@ fn draw_game(g:&mut Game,show_debug:bool){
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
-    // y=790..819 fits between the hand header and cards beginning at y=825.
-    let guidance_y=790.0;
-    draw_rectangle(460.0,guidance_y,640.0,29.0,BG);
-    draw_rectangle_lines(460.0,guidance_y,640.0,29.0,2.0,turn_color);
-    let tw=measure_text(turn_text,None,19,1.0).width;
-    label(turn_text,780.0-tw/2.0,guidance_y+21.0,19.0,turn_color);
+    // Taller, high-contrast banner; hand cards start lower to clear it.
+    let guidance_y=791.0;
+    draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
+    draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
+    let tw=measure_text(turn_text,None,25,1.0).width;
+    label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     let p=&g.players[0];
     label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
@@ -369,6 +369,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
     let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
     let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
     let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
+    let card_y=py+13.0;
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
@@ -377,10 +378,10 @@ fn draw_game(g:&mut Game,show_debug:bool){
             id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
         if is_dragging {
-            draw_rectangle(x,py,w,105.0,Color::new(0.24,0.32,0.40,0.45));
-            draw_rectangle_lines(x,py,w,105.0,1.0,MUTED);
-        } else if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){py-15.0}else{py},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
+            draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
+            draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);
+        } else if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){card_y-15.0}else{card_y},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
     // Draw the dragged card last so it floats above every other UI element.
