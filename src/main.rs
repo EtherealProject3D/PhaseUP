@@ -111,7 +111,7 @@ impl Game {
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
-        self.message=format!("Round {} — draw from deck or discard pile",self.round);
+        self.message=String::new(); // Turn guidance is displayed in the banner above the hand.
     }
     fn stage_card(&mut self,id:u32,group:usize) {
         if group>=PHASES[self.players[0].phase].len(){return;}
@@ -255,7 +255,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
     label("v0.3.2-dev",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
-        Stage::Draw=>("YOUR TURN  -  DRAW A CARD",ACCENT),
+        Stage::Draw=>("YOUR TURN  -  DRAW FROM DECK OR DISCARD",ACCENT),
         Stage::Play if g.players[0].laid=>("YOUR TURN  -  HIT OR DISCARD",YELLOW),
         Stage::Play=>("YOUR TURN  -  LAY PHASE OR DISCARD",YELLOW),
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
