@@ -1,3 +1,6 @@
+// Launch as a GUI application on Windows, without a separate console window.
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
 use macroquad::prelude::*;
 use macroquad::rand::gen_range;
 
