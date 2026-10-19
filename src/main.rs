@@ -255,7 +255,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
     label("v0.3.2-dev",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
-        Stage::Draw=>("YOUR TURN  -  DRAW FROM DECK OR DISCARD",ACCENT),
+        Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Play if g.players[0].laid=>("YOUR TURN  -  HIT OR DISCARD",YELLOW),
         Stage::Play=>("YOUR TURN  -  LAY PHASE OR DISCARD",YELLOW),
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
