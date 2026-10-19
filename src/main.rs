@@ -477,8 +477,25 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
         label(&format!("{} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
-        for (i,card) in cards.iter().enumerate() {
-            let cx=x+10.0+i as f32*52.0;
+        let drag_preview=g.staged_drag.and_then(|(id,sx,sy)|{
+            let (mx,my)=game_mouse();
+            if is_mouse_button_down(MouseButton::Left)
+                && (mx-sx).abs()+(my-sy).abs()>10.0
+                && inside(x,y,stage_w,117.0) {
+                let slot=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                Some((id,slot))
+            } else {None}
+        });
+        let visible_cards:Vec<Card>=cards.iter().copied()
+            .filter(|card|drag_preview.is_none_or(|(id,_)|card.id!=id)).collect();
+        let insert_at=drag_preview.map(|(_,slot)|slot.min(visible_cards.len()));
+        if let Some(slot)=insert_at {
+            let gap_x=x+10.0+slot as f32*52.0;
+            draw_rectangle_lines(gap_x,y+29.0,45.0,76.0,2.0,YELLOW);
+        }
+        for (i,card) in visible_cards.iter().enumerate() {
+            let shifted=i+usize::from(insert_at.is_some_and(|slot|i>=slot));
+            let cx=x+10.0+shifted as f32*52.0;
             if cx+46.0<x+stage_w {
                 let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
                     let (mx,my)=game_mouse();
