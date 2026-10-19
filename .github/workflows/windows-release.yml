@@ -1,0 +1,62 @@
+name: Build Windows release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag (for example v0.3.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Determine release tag
+        id: version
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:EVENT_NAME -eq "release") { $tag = $env:RELEASE_TAG } else { $tag = $env:INPUT_TAG }
+          if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "Expected a version tag like v0.3.1" }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Check out exact historical release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile release executable
+        run: cargo build --release --locked
+
+      - name: Rename versioned executable
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $file = "PhaseUP-$tag-windows-x64.exe"
+          Copy-Item "target/release/phaseup.exe" $file
+          "ASSET_FILE=$file" >> $env:GITHUB_ENV
+
+      - name: Upload executable to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release view $env:RELEASE_TAG --repo $env:GH_REPO
+          gh release upload $env:RELEASE_TAG $env:ASSET_FILE --repo $env:GH_REPO --clobber
