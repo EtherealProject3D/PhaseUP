@@ -114,6 +114,40 @@ fn partition_phase(cards: &[Card], phase: usize) -> Option<Vec<Vec<Card>>> {
     }
     recurse(cards,phase,0)
 }
+// Human players may lay larger valid groups than the phase minimum.
+fn partition_phase_flexible(cards:&[Card],phase:usize)->Option<Vec<Vec<Card>>>{
+    let minimum:usize=PHASES[phase].iter().sum();
+    if cards.len()<minimum{return None;}
+    fn recurse(cards:&[Card],phase:usize,group:usize)->Option<Vec<Vec<Card>>>{
+        if group==PHASES[phase].len(){return if cards.is_empty(){Some(Vec::new())}else{None};}
+        let remaining_min:usize=PHASES[phase][group+1..].iter().sum();
+        if cards.len()<PHASES[phase][group]+remaining_min{return None;}
+        fn choose(cards:&[Card],phase:usize,group:usize,start:usize,need:usize,indices:&mut Vec<usize>)->Option<Vec<Vec<Card>>>{
+            if need==0{
+                let mut chosen=Vec::new();let mut rest=Vec::new();
+                for (i,c) in cards.iter().enumerate(){if indices.contains(&i){chosen.push(*c)}else{rest.push(*c)}}
+                if valid_group(&chosen,requirement(phase,group)){
+                    if let Some(mut tail)=recurse(&rest,phase,group+1){
+                        let mut result=vec![chosen];result.append(&mut tail);return Some(result);
+                    }
+                }
+                return None;
+            }
+            if start+need>cards.len(){return None;}
+            for i in start..=cards.len()-need{
+                indices.push(i);
+                if let Some(result)=choose(cards,phase,group,i+1,need-1,indices){return Some(result);}
+                indices.pop();
+            }
+            None
+        }
+        for count in PHASES[phase][group]..=cards.len()-remaining_min {
+            if let Some(groups)=choose(cards,phase,group,0,count,&mut Vec::new()){return Some(groups);}
+        }
+        None
+    }
+    recurse(cards,phase,0)
+}
 fn can_hit(group: &[Card], card: Card, phase:usize, group_idx:usize) -> bool {
     if card.kind==Kind::Skip {return false;}
     let mut c=group.to_vec();c.push(card);
@@ -186,7 +220,16 @@ impl Game {
         if self.stage!=Stage::Play||self.players[0].laid{return;}
         let cards:Vec<Card>=self.players[0].hand.iter().copied().filter(|c|self.selected.contains(&c.id)).collect();
         let phase=self.players[0].phase;
-        if let Some(mut groups)=partition_phase(&cards,phase) {
+        // Preserve the player's explicit staging groups when they form a valid phase.
+        let staged_groups=if self.staged.iter().flatten().count()==cards.len()
+            && self.staged.iter().flatten().all(|id|self.selected.contains(id))
+            && (0..PHASES[phase].len()).all(|i|{
+                self.staged[i].len()>=PHASES[phase][i] &&
+                valid_group(&self.staged[i].iter().filter_map(|id|cards.iter().find(|c|c.id==*id).copied()).collect::<Vec<_>>(),requirement(phase,i))
+            }){
+            Some((0..PHASES[phase].len()).map(|i|self.staged[i].iter().filter_map(|id|cards.iter().find(|c|c.id==*id).copied()).collect::<Vec<_>>()).collect::<Vec<_>>())
+        }else{None};
+        if let Some(mut groups)=staged_groups.or_else(||partition_phase_flexible(&cards,phase)) {
             order_table_groups(&mut groups,phase);
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
             self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
@@ -395,7 +438,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
-        let ready=cards.len()==groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
+        let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
         label(&format!("{} {} / {}{}",requirement(g.players[0].phase,group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         for (i,card) in cards.iter().enumerate() {
             let cx=x+10.0+i as f32*52.0;
