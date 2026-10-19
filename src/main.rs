@@ -270,7 +270,7 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_game(g:&mut Game,show_debug:bool){
+fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     clear_background(BG);
     let sw=1600.0;let sh=1000.0;
     let (pw,ph)=(screen_width(),screen_height());
@@ -354,12 +354,14 @@ fn draw_game(g:&mut Game,show_debug:bool){
     if let Some(c)=g.discard.last().copied(){let _=card_ui(c,discard_x,center-36.,82.,110.,false);if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
     else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
     // Recent CPU actions stay visible after their turns resolve instantly.
+    if show_moves {
     let log_x=1198.0;let log_y=404.0;
     draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
     draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
     label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
     for (j,event) in g.move_log.iter().rev().take(7).enumerate(){
         label(event,log_x+12.0,log_y+50.0+j as f32*23.0,16.0,WHITEISH);
+    }
     }
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-365.0;
@@ -582,7 +584,7 @@ fn menu_button(title:&str,y:f32)->bool {
     label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool)->Option<MenuScreen> {
+fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool)->Option<MenuScreen> {
     clear_background(BG);
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/1600.0).min(ph/1000.0);
@@ -607,7 +609,9 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool)->Option<MenuS
                 save_window_size(1600,1000);
             }
             if menu_button("TOGGLE FULLSCREEN",450.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            if menu_button("BACK",575.0){return Some(MenuScreen::Home);}
+            label("INTERFACE",590.0,555.0,26.0,WHITEISH);
+            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},595.0){*show_moves=!*show_moves;}
+            if menu_button("BACK",705.0){return Some(MenuScreen::Home);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
@@ -630,6 +634,7 @@ async fn main(){
     macroquad::rand::srand(seed);
     let mut game=Game::new();
     let mut show_debug=false;
+    let mut show_moves=true;
     let mut menu=MenuScreen::Home;
     let mut has_game=false;
     let mut fullscreen=false;
@@ -660,13 +665,13 @@ async fn main(){
         }
         if menu==MenuScreen::Playing {
             has_game=true;
-            draw_game(&mut game,show_debug);
+            draw_game(&mut game,show_debug,show_moves);
             draw_rectangle(1390.0,8.0,100.0,40.0,PANEL);
             label("MENU",1404.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
         } else {
-            let action=draw_menu(menu,has_game,&mut fullscreen);
+            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves);
             if let Some(next)=action {
                 if next==MenuScreen::Playing && (menu==MenuScreen::ConfirmNew || !has_game) {
                     game=Game::new();
