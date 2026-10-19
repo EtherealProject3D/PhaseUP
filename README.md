@@ -24,3 +24,7 @@ PhaseUP is an independent prototype; it is not affiliated with Mattel.
 ## Roadmap and feature requests
 
 See the [PhaseUP roadmap](ROADMAP.md) for planned releases and future ideas, and [GitHub Issues](https://github.com/EtherealProject3D/PhaseUP/issues) to track or discuss individual features and bugs.
+
+## Version history
+
+Explore [historical PhaseUP versions and source snapshots](CHANGELOG.md), including early playable builds and release notes.
