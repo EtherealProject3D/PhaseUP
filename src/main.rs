@@ -492,7 +492,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool)->Option<MenuS
             if menu_button("NEW GAME",400.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
             if menu_button("SETTINGS",490.0){return Some(MenuScreen::Settings);}
             if menu_button("QUIT",580.0){std::process::exit(0);}
-            label(if has_game {"ESC: resume  |  F3: diagnostics"} else {"F3: diagnostics"},610.0,750.0,20.0,MUTED);
+            if has_game { label("ESC: resume game",690.0,750.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
             label("WINDOW",590.0,300.0,26.0,WHITEISH);
@@ -531,7 +531,7 @@ async fn main(){
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
     loop {
-        if is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
+        if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
