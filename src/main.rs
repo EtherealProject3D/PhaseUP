@@ -246,7 +246,7 @@ fn draw_game(g:&mut Game){
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
         target:vec2(sw/2.0,sh/2.0),
-        zoom:vec2(2.0*scale/pw,-2.0*scale/ph),
+        zoom:vec2(2.0*scale/pw,2.0*scale/ph),
         ..Default::default()
     };
     set_camera(&camera);
