@@ -141,6 +141,17 @@ impl Game {
         if !self.players[0].hand.iter().any(|c|c.id==id){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         self.staged[group].push(id);
+        // Auto-sort newly staged run cards, but leave explicit drag reordering alone.
+        if requirement(self.players[0].phase,group)=="run" {
+            let hand=&self.players[0].hand;
+            self.staged[group].sort_by_key(|card_id| {
+                hand.iter().find(|c|c.id==*card_id).map(|c|match c.kind {
+                    Kind::Number(n,_) => (0u8,n),
+                    Kind::Wild => (1u8,0),
+                    Kind::Skip => (2u8,0),
+                }).unwrap_or((3u8,0))
+            });
+        }
         self.selected.retain(|v|*v!=id);
     }
     fn move_staged_card(&mut self,id:u32,group:usize,index:usize) {
