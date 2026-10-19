@@ -251,7 +251,8 @@ fn draw_game(g:&mut Game,show_debug:bool){
     };
     set_camera(&camera);
     label("PHASEUP",24.,42.,32.,ACCENT);
-    label("v0.3.1",184.,40.,19.,MUTED);
+    label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
+    label("v0.3.2-dev",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW A CARD",ACCENT),
@@ -473,6 +474,18 @@ async fn main(){
     let mut saved_size=last_size;
     loop {
         if is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
+        // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
+        // the default window dimensions. The existing persistence loop saves it.
+        let (mx,my)=game_mouse();
+        let header_reset=is_mouse_button_pressed(MouseButton::Right)
+            && mx>=12.0 && mx<=310.0 && my>=0.0 && my<=54.0;
+        let shortcut_reset=is_key_pressed(KeyCode::Key0)
+            && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
+        if header_reset||shortcut_reset {
+            request_new_screen_size(1600.0,1000.0);
+            save_window_size(1600,1000);
+            saved_size=(1600,1000);
+        }
         let size=(screen_width().round() as i32,screen_height().round() as i32);
         if size!=last_size {last_size=size;size_changed_at=get_time();}
         // Wait until resizing stops before writing, to avoid disk writes every frame.
