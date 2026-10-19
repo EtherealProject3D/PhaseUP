@@ -443,7 +443,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
-        let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
+        let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
         label(&format!("{} {} / {}{}",requirement(g.players[0].phase,group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         for (i,card) in cards.iter().enumerate() {
             let cx=x+10.0+i as f32*52.0;
@@ -572,7 +572,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         g.pile_drag=None;
     }
     // Completion banner sits between the staging slots and turn guidance.
-    let phase=g.players[0].phase;
+    let phase=g.players[0].phase.min(PHASES.len()-1);
     let staged_complete=g.stage==Stage::Play&&!g.players[0].laid
         && (0..groups.len()).all(|group|{
             let cards:Vec<Card>=g.staged[group].iter()
@@ -796,7 +796,7 @@ async fn main(){
             label("MENU",1404.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
-            if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=1075.0 && mx<=1265.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
+            if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
             let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves);
             if let Some(next)=action {
