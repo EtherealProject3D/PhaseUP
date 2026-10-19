@@ -30,7 +30,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, staged_drag: Option<(u32,f32,f32)> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -105,13 +105,13 @@ impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new()};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),staged_drag:None};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
@@ -124,6 +124,12 @@ impl Game {
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         self.staged[group].push(id);
         self.selected.retain(|v|*v!=id);
+    }
+    fn move_staged_card(&mut self,id:u32,group:usize,index:usize) {
+        if self.stage!=Stage::Play||group>=self.staged.len(){return;}
+        if !self.staged.iter().any(|bucket|bucket.contains(&id)){return;}
+        for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
+        let at=index.min(self.staged[group].len());self.staged[group].insert(at,id);
     }
     fn unstage_card(&mut self,id:u32) {
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
@@ -343,6 +349,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
     label(if g.stage==Stage::Draw {"PHASE STAGING  -  DRAW FIRST TO UNLOCK"}else{"PHASE STAGING  -  drag cards here, or select and press STAGE"},24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
+    let mut staged_reorder=None;
     for group in 0..groups.len() {
         let x=18.0+group as f32*(stage_w+6.0);
         let y=stage_y;
@@ -360,11 +367,33 @@ fn draw_game(g:&mut Game,show_debug:bool){
         label(&format!("{} {} / {}{}",requirement(g.players[0].phase,group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         for (i,card) in cards.iter().enumerate() {
             let cx=x+10.0+i as f32*52.0;
-            if cx+46.0<x+stage_w && card_ui(*card,cx,y+29.0,45.0,76.0,false) {staged_click=Some(card.id);}
+            if cx+46.0<x+stage_w {
+                let _=card_ui(*card,cx,y+29.0,45.0,76.0,false);
+                if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,y+29.0,45.0,76.0){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
+            }
         }
-        if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {stage_drop=Some(group);}
+        if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {
+            stage_drop=Some(group);
+            if let Some((id,sx,sy))=g.staged_drag {
+                let (mx,my)=game_mouse();
+                if (mx-sx).abs()+(my-sy).abs()>10.0 {
+                    let slot=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                    let source=g.staged.iter().position(|bucket|bucket.contains(&id));
+                    let target_index=if source==Some(group){let old=g.staged[group].iter().position(|v|*v==id).unwrap_or(0);if slot>old{slot.saturating_sub(1)}else{slot}}else{slot};
+                    staged_reorder=Some((id,group,target_index));
+                }
+            }
+        }
         if button(&format!("STAGE {}",group+1),x+stage_w-99.0,y-27.0,96.0,24.0,g.stage==Stage::Play&&!g.selected.is_empty()) {g.stage_selected(group);}
     }
+    if is_mouse_button_released(MouseButton::Left){
+        if let Some((id,sx,sy))=g.staged_drag {
+            let (mx,my)=game_mouse();
+            if (mx-sx).abs()+(my-sy).abs()<=10.0 {staged_click=Some(id);}
+        }
+        g.staged_drag=None;
+    }
+    if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
     if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
