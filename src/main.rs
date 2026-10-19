@@ -464,6 +464,54 @@ fn debug_overlay(g:&Game) {
     draw_rectangle_lines(x,y,410.0,lines.len() as f32*23.0+20.0,1.5,ACCENT);
     for (i,line) in lines.iter().enumerate(){draw_text(line,x+12.0,y+29.0+i as f32*23.0,18.0,WHITEISH);}
 }
+
+#[derive(Clone,Copy,PartialEq,Eq)]
+enum MenuScreen { Home, Settings, ConfirmNew, Playing }
+fn menu_button(title:&str,y:f32)->bool {
+    let (mx,my)=game_mouse();
+    let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
+    draw_rectangle(570.0,y,460.0,64.0,if hovered {ACCENT} else {PANEL});
+    draw_rectangle_lines(570.0,y,460.0,64.0,2.0,ACCENT);
+    let w=measure_text(title,None,28,1.0).width;
+    label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
+    hovered&&is_mouse_button_pressed(MouseButton::Left)
+}
+fn draw_menu(screen:MenuScreen,has_game:bool)->Option<MenuScreen> {
+    clear_background(BG);
+    let (pw,ph)=(screen_width(),screen_height());
+    let scale=(pw/1600.0).min(ph/1000.0);
+    set_camera(&Camera2D{target:vec2(800.0,500.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    draw_rectangle(460.0,125.0,680.0,760.0,PANEL);
+    draw_rectangle_lines(460.0,125.0,680.0,760.0,2.0,ACCENT);
+    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing=>""};
+    let w=measure_text(title,None,54,1.0).width;
+    label(title,800.0-w/2.0,230.0,54.0,ACCENT);
+    match screen {
+        MenuScreen::Home=>{
+            if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
+            if menu_button("NEW GAME",400.0){return Some(MenuScreen::ConfirmNew);}
+            if menu_button("SETTINGS",490.0){return Some(MenuScreen::Settings);}
+            if menu_button("QUIT",580.0){std::process::exit(0);}
+            label("ESC: resume  |  F3: diagnostics",610.0,750.0,20.0,MUTED);
+        }
+        MenuScreen::Settings=>{
+            label("WINDOW",590.0,300.0,26.0,WHITEISH);
+            if menu_button("RESET SIZE (1600 x 1000)",355.0){
+                request_new_screen_size(1600.0,1000.0);
+                save_window_size(1600,1000);
+            }
+            if menu_button("TOGGLE FULLSCREEN",450.0){set_fullscreen(!is_fullscreen());}
+            if menu_button("BACK",575.0){return Some(MenuScreen::Home);}
+        }
+        MenuScreen::ConfirmNew=>{
+            label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
+            if menu_button("YES, NEW GAME",400.0){return Some(MenuScreen::Playing);}
+            if menu_button("CANCEL",500.0){return Some(MenuScreen::Home);}
+        }
+        MenuScreen::Playing=>{}
+    }
+    None
+}
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){
@@ -476,11 +524,14 @@ async fn main(){
     macroquad::rand::srand(seed);
     let mut game=Game::new();
     let mut show_debug=false;
+    let mut menu=MenuScreen::Home;
+    let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
     loop {
         if is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
+        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
         let (mx,my)=game_mouse();
@@ -500,7 +551,23 @@ async fn main(){
             save_window_size(size.0,size.1);
             saved_size=size;
         }
-        draw_game(&mut game,show_debug);
+        if menu==MenuScreen::Playing {
+            has_game=true;
+            draw_game(&mut game,show_debug);
+            draw_rectangle(1390.0,8.0,100.0,40.0,PANEL);
+            label("MENU",1404.0,35.0,22.0,ACCENT);
+            let (mx,my)=game_mouse();
+            if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
+        } else {
+            let action=draw_menu(menu,has_game);
+            if let Some(next)=action {
+                if menu==MenuScreen::ConfirmNew&&next==MenuScreen::Playing {
+                    game=Game::new();
+                    has_game=true;
+                }
+                menu=next;
+            }
+        }
         next_frame().await;
     }
 }
