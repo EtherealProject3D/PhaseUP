@@ -30,7 +30,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -104,9 +104,13 @@ fn can_hit(group: &[Card], card: Card, phase:usize, group_idx:usize) -> bool {
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None};g.deal();g
+        let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new()};g.deal();g
     }
+    fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
+    fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
+        self.move_log.clear();
         self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
@@ -177,11 +181,11 @@ impl Game {
     }
     fn ai_cycle(&mut self,skip:Option<usize>) {
         for i in 1..4 {
-            if skip==Some(i){continue;}
+            if skip==Some(i){self.log_move(format!("{} was skipped",self.cpu_name(i)));continue;}
             self.turn=i;
             let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
             let card=if use_discard{self.discard.pop()}else{self.draw_deck()};
-            if let Some(c)=card{self.players[i].hand.push(c);}
+            if let Some(c)=card{self.players[i].hand.push(c);self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"discard"}else{"deck"}));}
             if !self.players[i].laid {
                 let n=self.players[i].hand.len();let needed:usize=PHASES[self.players[i].phase].iter().sum();
                 // Find any exact subset satisfying this phase.
@@ -193,7 +197,7 @@ impl Game {
                         for j in start..hand.len() {idx.push(j);if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}idx.pop();}None
                     }
                     found=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase);
-                    if let Some(groups)=found {let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;}
+                    if let Some(groups)=found {let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));}
                 }
             }
             if self.players[i].laid {
@@ -201,12 +205,12 @@ impl Game {
                 while j<self.players[i].hand.len() {
                     let c=self.players[i].hand[j];let mut target_hit=None;
                     'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase,g){target_hit=Some((target,g));break 'outer;}}}}
-                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);}else{j+=1;}
+                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
                 }
             }
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
             let idx=self.players[i].hand.iter().enumerate().max_by_key(|(_,c)|card_points(**c)).map(|(j,_)|j).unwrap();
-            let c=self.players[i].hand.remove(idx);self.discard.push(c);
+            let c=self.players[i].hand.remove(idx);self.discard.push(c);self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(c.kind)));
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
         }
         self.turn=0;self.stage=Stage::Draw;self.drawn_card=None;self.message=String::new();
@@ -214,8 +218,9 @@ impl Game {
     fn end_round(&mut self,winner:usize) {
         for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
         self.turn=winner;
-        if self.players.iter().any(|p|p.phase>=10){self.stage=Stage::GameOver;self.message=format!("Game complete! Player {} finished all 10 phases",winner+1);}
-        else{self.stage=Stage::RoundOver;self.message=format!("Player {} went out! Scores updated. Continue for next round.",winner+1);}
+        self.log_move(format!("{} went out!",self.cpu_name(winner)));
+        if self.players.iter().any(|p|p.phase>=10){self.stage=Stage::GameOver;self.message=format!("Game complete! {} finished all 10 phases",self.cpu_name(winner));}
+        else{self.stage=Stage::RoundOver;self.message=format!("{} went out! Scores updated. Continue for next round.",self.cpu_name(winner));}
     }
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
@@ -263,7 +268,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
@@ -272,7 +277,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
         let column_w=(sw-50.0)/4.0;
         let x=24.0+i as f32*column_w;
         let y=table_y+35.0;
-        label(if i==0 {"YOU"} else {match i {1=>"CPU 1",2=>"CPU 2",_=>"CPU 3"}},x,y,17.0,ACCENT);
+        label(&g.cpu_name(i).to_uppercase(),x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0+j as f32*108.0;
             let width=(column_w-8.0).max(95.0);
@@ -323,6 +328,14 @@ fn draw_game(g:&mut Game,show_debug:bool){
     draw_rectangle_lines(discard_x,center-36.,82.,110.,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
     if let Some(c)=g.discard.last().copied(){let _=card_ui(c,discard_x,center-36.,82.,110.,false);if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
     else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
+    // Recent CPU actions stay visible after their turns resolve instantly.
+    let log_x=1198.0;let log_y=404.0;
+    draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
+    draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
+    label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
+    for (j,event) in g.move_log.iter().rev().take(7).enumerate(){
+        label(event,log_x+12.0,log_y+50.0+j as f32*23.0,16.0,WHITEISH);
+    }
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-365.0;
     let groups=PHASES[g.players[0].phase];
@@ -451,14 +464,14 @@ fn draw_game(g:&mut Game,show_debug:bool){
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
         let title_w=measure_text(&title,None,32,1.0).width;
         label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
-        let winner_name=if g.turn==0 {"YOU".to_string()}else{format!("CPU {}",g.turn)};
+        let winner_name=g.cpu_name(g.turn).to_uppercase();
         let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
         let announce_w=measure_text(&announcement,None,27,1.0).width;
         label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
         label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
         for i in 0..4 {
             let p=&g.players[i];
-            let name=if i==0 {"You".to_string()}else{format!("CPU {}",i)};
+            let name=g.cpu_name(i);
             let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
             label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
