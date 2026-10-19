@@ -286,7 +286,13 @@ fn draw_game(g:&mut Game){
         let x=18.0+group as f32*(stage_w+6.0);
         let y=stage_y;
         draw_rectangle(x,y,stage_w,117.0,PANEL);
-        draw_rectangle_lines(x,y,stage_w,117.0,1.5,ACCENT);
+        let hovering=inside(x,y,stage_w,117.0);
+        let dragging=g.drag.is_some_and(|(_,sx,sy)| {
+            let (mx,my)=mouse_position();
+            is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
+        });
+        if hovering&&dragging {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
+        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging {3.0}else{1.5},if hovering&&dragging {YELLOW}else{ACCENT});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()==groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
@@ -317,10 +323,31 @@ fn draw_game(g:&mut Game){
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
-        if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
+        let is_dragging=g.drag.is_some_and(|(id,sx,sy)| {
+            let (mx,my)=mouse_position();
+            id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
+        });
+        if is_dragging {
+            draw_rectangle(x,py,w,105.0,Color::new(0.24,0.32,0.40,0.45));
+            draw_rectangle_lines(x,py,w,105.0,1.0,MUTED);
+        } else if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
         if is_mouse_button_pressed(MouseButton::Left)&&inside(x,py-15.0,w,120.0){g.drag=Some((c.id,mouse_position().0,mouse_position().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
+    // Draw the dragged card last so it floats above every other UI element.
+    if let Some((id,ox,oy))=g.drag {
+        let (mx,my)=mouse_position();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-ox).abs()+(my-oy).abs()>10.0 {
+            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
+                let drag_w=77.0;
+                let drag_h=110.0;
+                let dx=mx-drag_w/2.0;
+                let dy=my-drag_h/2.0;
+                draw_rectangle(dx+6.0,dy+8.0,drag_w,drag_h,Color::new(0.0,0.0,0.0,0.42));
+                let _=card_ui(card,dx,dy,drag_w,drag_h,false);
+            }
+        }
+    }
     if is_mouse_button_released(MouseButton::Left) {
         if let (Some((id,ox,oy)),Some(group))=(g.drag,stage_drop) {
             let (mx,my)=mouse_position();
