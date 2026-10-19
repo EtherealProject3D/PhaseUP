@@ -548,7 +548,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if is_mouse_button_released(MouseButton::Left){
         if let Some((id,sx,sy))=g.staged_drag {
             let (mx,my)=game_mouse();
-            if (mx-sx).abs()+(my-sy).abs()<=10.0 {staged_click=Some(id);}
+            let moved=(mx-sx).abs()+(my-sy).abs()>10.0;
+            if !moved {
+                staged_click=Some(id);
+            } else if inside(12.0,sh-175.0-72.0,sw-24.0,247.0) {
+                // Dragging a staged card back into the hand unstages it,
+                // without discarding it or changing the player's selection.
+                g.unstage_card(id);
+            }
         }
         g.staged_drag=None;
     }
