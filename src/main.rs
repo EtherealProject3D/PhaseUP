@@ -217,9 +217,16 @@ impl Game {
         else{self.stage=Stage::RoundOver;self.message=format!("Player {} went out! Scores updated. Continue for next round.",winner+1);}
     }
 }
+// Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
+fn game_mouse()->(f32,f32) {
+    let (pw,ph)=(screen_width(),screen_height());
+    let scale=(pw/1600.0).min(ph/1000.0);
+    let (mx,my)=mouse_position();
+    ((mx-(pw-1600.0*scale)/2.0)/scale,(my-(ph-1000.0*scale)/2.0)/scale)
+}
 fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,color);}
 fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
-    let mouse=mouse_position();let hover=mouse.0>=x&&mouse.0<=x+w&&mouse.1>=y&&mouse.1<=y+h;
+    let mouse=game_mouse();let hover=mouse.0>=x&&mouse.0<=x+w&&mouse.1>=y&&mouse.1<=y+h;
     draw_rectangle(x,y,w,h,if !enabled{Color::new(0.18,0.22,0.28,1.)}else if hover{Color::new(0.22,0.66,0.61,1.)}else{Color::new(0.15,0.48,0.46,1.)});
     let t=measure_text(text,None,19,1.);label(text,x+(w-t.width)/2.,y+h/2.+7.,19.,if enabled{WHITEISH}else{MUTED});
     enabled&&hover&&is_mouse_button_pressed(MouseButton::Left)
@@ -230,14 +237,33 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     draw_rectangle(x+5.,yy+5.,w-10.,h-10.,c);
     let t=card_text(card.kind);let size: f32=if w<45.0{23.0}else{32.0};let dims=measure_text(&t,None,size as u16,1.0);
     label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
-    let m=mouse_position();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
+    let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_game(g:&mut Game){
     clear_background(BG);
-    let sw=screen_width();let sh=screen_height();
+    let sw=1600.0;let sh=1000.0;
+    let (pw,ph)=(screen_width(),screen_height());
+    let scale=(pw/sw).min(ph/sh);
+    let camera=Camera2D {
+        target:vec2(sw/2.0,sh/2.0),
+        zoom:vec2(2.0*scale/pw,-2.0*scale/ph),
+        ..Default::default()
+    };
+    set_camera(&camera);
     label("PHASEUP",24.,42.,32.,ACCENT);
-    label("v0.2.1",184.,40.,19.,MUTED);
+    label("v0.3.0",184.,40.,19.,MUTED);
     label(&format!("ROUND {}",g.round),sw-150.,38.,22.,MUTED);
+    let (turn_text,turn_color)=match g.stage {
+        Stage::Draw=>("YOUR TURN  -  DRAW A CARD",ACCENT),
+        Stage::Play if g.players[0].laid=>("YOUR TURN  -  HIT OR DISCARD",YELLOW),
+        Stage::Play=>("YOUR TURN  -  LAY PHASE OR DISCARD",YELLOW),
+        Stage::RoundOver=>("ROUND COMPLETE",MUTED),
+        Stage::GameOver=>("GAME COMPLETE",MUTED),
+    };
+    draw_rectangle(460.0,10.0,640.0,38.0,PANEL);
+    draw_rectangle_lines(460.0,10.0,640.0,38.0,2.0,turn_color);
+    let tw=measure_text(turn_text,None,23,1.0).width;
+    label(turn_text,780.0-tw/2.0,37.0,23.0,turn_color);
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
@@ -278,7 +304,7 @@ fn draw_game(g:&mut Game){
             // Dropping a dragged hand card on a laid group plays it directly.
             if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,102.0) {
                 if let Some((id,sx,sy))=g.drag {
-                    let (mx,my)=mouse_position();
+                    let (mx,my)=game_mouse();
                     if (mx-sx).abs()+(my-sy).abs()>12.0 {
                         g.selected=vec![id];
                         hit_click=Some((i,j));
@@ -290,10 +316,10 @@ fn draw_game(g:&mut Game){
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
     let center=sh*0.49;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
-    let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x+6.,center-30.,70.,98.,2.,ACCENT);label(&format!("{}",g.deck.len()),deck_x+27.,center+22.,25.,WHITEISH);
-    let m=mouse_position();if g.stage==Stage::Draw&&m.0>=deck_x&&m.0<=deck_x+82.&&m.1>=center-36.&&m.1<=center+74.&&is_mouse_button_pressed(MouseButton::Left){g.draw(false);}
+    let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x+6.,center-30.,70.,98.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label(&format!("{}",g.deck.len()),deck_x+27.,center+22.,25.,WHITEISH);
+    let m=game_mouse();if g.stage==Stage::Draw&&m.0>=deck_x&&m.0<=deck_x+82.&&m.1>=center-36.&&m.1<=center+74.&&is_mouse_button_pressed(MouseButton::Left){g.draw(false);}
     label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
-    if let Some(c)=g.discard.last().copied(){let x=sw*0.56-40.;if card_ui(c,x,center-36.,82.,110.,false)&&g.stage==Stage::Draw{g.draw(true);}}
+    if let Some(c)=g.discard.last().copied(){let x=sw*0.56-40.;if g.stage==Stage::Draw {draw_rectangle_lines(x-4.0,center-40.0,90.0,118.0,3.0,YELLOW);}if card_ui(c,x,center-36.,82.,110.,false)&&g.stage==Stage::Draw{g.draw(true);}}
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-365.0;
     let groups=PHASES[g.players[0].phase];
@@ -307,7 +333,7 @@ fn draw_game(g:&mut Game){
         draw_rectangle(x,y,stage_w,117.0,PANEL);
         let hovering=inside(x,y,stage_w,117.0);
         let dragging=g.drag.is_some_and(|(_,sx,sy)| {
-            let (mx,my)=mouse_position();
+            let (mx,my)=game_mouse();
             is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
         if hovering&&dragging {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
@@ -343,19 +369,19 @@ fn draw_game(g:&mut Game){
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
         let is_dragging=g.drag.is_some_and(|(id,sx,sy)| {
-            let (mx,my)=mouse_position();
+            let (mx,my)=game_mouse();
             id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
         if is_dragging {
             draw_rectangle(x,py,w,105.0,Color::new(0.24,0.32,0.40,0.45));
             draw_rectangle_lines(x,py,w,105.0,1.0,MUTED);
         } else if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,py-15.0,w,120.0){g.drag=Some((c.id,mouse_position().0,mouse_position().1));}
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,py-15.0,w,120.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
     // Draw the dragged card last so it floats above every other UI element.
     if let Some((id,ox,oy))=g.drag {
-        let (mx,my)=mouse_position();
+        let (mx,my)=game_mouse();
         if is_mouse_button_down(MouseButton::Left)&&(mx-ox).abs()+(my-oy).abs()>10.0 {
             if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
                 let drag_w=77.0;
@@ -369,7 +395,7 @@ fn draw_game(g:&mut Game){
     }
     if is_mouse_button_released(MouseButton::Left) {
         if let (Some((id,ox,oy)),Some(group))=(g.drag,stage_drop) {
-            let (mx,my)=mouse_position();
+            let (mx,my)=game_mouse();
             if (mx-ox).abs()+(my-oy).abs()>12.0 {g.stage_card(id,group);}
         }
         g.drag=None;
@@ -393,6 +419,6 @@ fn draw_game(g:&mut Game){
         if button(if g.stage==Stage::GameOver{"NEW GAME"}else{"NEXT ROUND"},x+135.,y+191.,190.,39.,true){if g.stage==Stage::GameOver{*g=Game::new();}else{g.deal();}}
     }
 }
-fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:1280,window_height:800,window_resizable:true,..Default::default()}}
+fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:1600,window_height:1000,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){let mut game=Game::new();loop{draw_game(&mut game);next_frame().await;}}
