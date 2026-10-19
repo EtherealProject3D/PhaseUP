@@ -28,7 +28,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
     }
 }
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
-    let (mx,my)=mouse_position();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
+    let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
 struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)> }
 
@@ -380,7 +380,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
             draw_rectangle(x,py,w,105.0,Color::new(0.24,0.32,0.40,0.45));
             draw_rectangle_lines(x,py,w,105.0,1.0,MUTED);
         } else if card_ui(*c,x,py,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,py-15.0,w,120.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){py-15.0}else{py},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
     // Draw the dragged card last so it floats above every other UI element.
