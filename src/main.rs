@@ -261,13 +261,6 @@ fn draw_game(g:&mut Game,show_debug:bool){
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
-    // Turn guidance follows the player's hand instead of the top header.
-    // The hand panel starts at y=753 on the 1600x1000 logical canvas.
-    let guidance_y=699.0;
-    draw_rectangle(460.0,guidance_y,640.0,38.0,PANEL);
-    draw_rectangle_lines(460.0,guidance_y,640.0,38.0,2.0,turn_color);
-    let tw=measure_text(turn_text,None,23,1.0).width;
-    label(turn_text,780.0-tw/2.0,guidance_y+27.0,23.0,turn_color);
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("CPU {}  |  Phase {}  |  {} cards",i,p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
@@ -356,6 +349,13 @@ fn draw_game(g:&mut Game,show_debug:bool){
     if let Some(id)=staged_click {g.unstage_card(id);}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
+    // Draw inside the hand panel, after its background and before the cards.
+    // y=790..819 fits between the hand header and cards beginning at y=825.
+    let guidance_y=790.0;
+    draw_rectangle(460.0,guidance_y,640.0,29.0,BG);
+    draw_rectangle_lines(460.0,guidance_y,640.0,29.0,2.0,turn_color);
+    let tw=measure_text(turn_text,None,19,1.0).width;
+    label(turn_text,780.0-tw/2.0,guidance_y+21.0,19.0,turn_color);
     let p=&g.players[0];
     label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
