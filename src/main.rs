@@ -387,7 +387,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
         if is_dragging {
             draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
             draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);
-        } else {if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}if g.drawn_card==Some(c.id){let y=if g.selected.contains(&c.id){card_y-15.0}else{card_y};draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);draw_rectangle(x+w-37.0,y+5.0,34.0,17.0,BG);label("NEW",x+w-35.0,y+18.0,14.0,YELLOW);}}
+        } else {if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}if g.drawn_card==Some(c.id){let y=if g.selected.contains(&c.id){card_y-15.0}else{card_y};draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);}}
         if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){card_y-15.0}else{card_y},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
