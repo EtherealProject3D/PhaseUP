@@ -275,6 +275,16 @@ fn draw_game(g:&mut Game){
             if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,102.0) {
                 hit_click=Some((i,j));
             }
+            // Dropping a dragged hand card on a laid group plays it directly.
+            if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,102.0) {
+                if let Some((id,sx,sy))=g.drag {
+                    let (mx,my)=mouse_position();
+                    if (mx-sx).abs()+(my-sy).abs()>12.0 {
+                        g.selected=vec![id];
+                        hit_click=Some((i,j));
+                    }
+                }
+            }
         }
     }
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
