@@ -20,3 +20,7 @@ The game currently uses Macroquad. This repository is an early prototype and the
 - Shared Rust gameplay for Windows and Android
 
 PhaseUP is an independent prototype; it is not affiliated with Mattel.
+
+## Roadmap and feature requests
+
+See the [PhaseUP roadmap](ROADMAP.md) for planned releases and future ideas, and [GitHub Issues](https://github.com/EtherealProject3D/PhaseUP/issues) to track or discuss individual features and bugs.
