@@ -446,10 +446,23 @@ fn draw_game(g:&mut Game,show_debug:bool){
     label(&g.message,435.0,sh-23.0,18.0,ACCENT);
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
-        draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-230.;let y=sh/2.-120.;draw_rectangle(x,y,460.,240.,PANEL);
-        label(if g.stage==Stage::GameOver{"GAME COMPLETE"}else{"ROUND COMPLETE"},x+45.,y+53.,32.,ACCENT);
-        for i in 0..4 {let p=&g.players[i];label(&format!("{}: phase {}  |  {} pts",if i==0{"You".into()}else{format!("CPU {}",i)},p.phase.min(10),p.score),x+40.,y+83.+i as f32*27.,20.,WHITEISH);}
-        if button(if g.stage==Stage::GameOver{"NEW GAME"}else{"NEXT ROUND"},x+135.,y+191.,190.,39.,true){if g.stage==Stage::GameOver{*g=Game::new();}else{g.deal();}}
+        draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
+        let game_over=g.stage==Stage::GameOver;
+        let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
+        let title_w=measure_text(&title,None,32,1.0).width;
+        label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
+        let winner_name=if g.turn==0 {"YOU".to_string()}else{format!("CPU {}",g.turn)};
+        let announcement=if game_over {format!("{} FINISHED THE GAME!",winner_name)}else{format!("{} WINS THE ROUND!",winner_name)};
+        let announce_w=measure_text(&announcement,None,27,1.0).width;
+        label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
+        label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
+        for i in 0..4 {
+            let p=&g.players[i];
+            let name=if i==0 {"You".to_string()}else{format!("CPU {}",i)};
+            let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
+            label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
+        }
+        if button(if game_over {"NEW GAME"}else{"NEXT ROUND"},x+170.,y+277.,190.,40.,true){if game_over{*g=Game::new();}else{g.deal();}}
     }
     if show_debug {debug_overlay(g);}
 }
