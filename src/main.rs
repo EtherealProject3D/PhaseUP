@@ -30,7 +30,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -104,16 +104,17 @@ fn can_hit(group: &[Card], card: Card, phase:usize, group_idx:usize) -> bool {
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None};g.deal();g
     }
     fn deal(&mut self) {
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
         self.message=String::new(); // Turn guidance is displayed in the banner above the hand.
     }
     fn stage_card(&mut self,id:u32,group:usize) {
+        if self.stage!=Stage::Play||self.turn!=0{return;}
         if group>=PHASES[self.players[0].phase].len(){return;}
         if !self.players[0].hand.iter().any(|c|c.id==id){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
@@ -131,7 +132,7 @@ impl Game {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.players[0].hand.push(c);self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn draw_deck(&mut self)->Option<Card> {
         if self.deck.is_empty() && self.discard.len()>1 {let top=self.discard.pop().unwrap();self.deck.append(&mut self.discard);shuffle(&mut self.deck);self.discard.push(top);}
@@ -208,7 +209,7 @@ impl Game {
             let c=self.players[i].hand.remove(idx);self.discard.push(c);
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
         }
-        self.turn=0;self.stage=Stage::Draw;self.message=String::new();
+        self.turn=0;self.stage=Stage::Draw;self.drawn_card=None;self.message=String::new();
     }
     fn end_round(&mut self,winner:usize) {
         for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
@@ -326,7 +327,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
     let stage_y=sh-365.0;
     let groups=PHASES[g.players[0].phase];
     let stage_w=((sw-42.0)/groups.len() as f32).min(610.0);
-    label("PHASE STAGING  -  drag cards here, or select and press STAGE",24.0,stage_y-10.0,18.0,ACCENT);
+    label(if g.stage==Stage::Draw {"PHASE STAGING  -  DRAW FIRST TO UNLOCK"}else{"PHASE STAGING  -  drag cards here, or select and press STAGE"},24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
     for group in 0..groups.len() {
@@ -338,8 +339,8 @@ fn draw_game(g:&mut Game,show_debug:bool){
             let (mx,my)=game_mouse();
             is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
-        if hovering&&dragging {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
-        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging {3.0}else{1.5},if hovering&&dragging {YELLOW}else{ACCENT});
+        if hovering&&dragging&&g.stage==Stage::Play {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
+        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()==groups[group] && valid_group(&cards,requirement(g.players[0].phase,group));
@@ -348,10 +349,11 @@ fn draw_game(g:&mut Game,show_debug:bool){
             let cx=x+10.0+i as f32*52.0;
             if cx+46.0<x+stage_w && card_ui(*card,cx,y+29.0,45.0,76.0,false) {staged_click=Some(card.id);}
         }
-        if is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {stage_drop=Some(group);}
-        if button(&format!("STAGE {}",group+1),x+stage_w-99.0,y-27.0,96.0,24.0,!g.selected.is_empty()) {g.stage_selected(group);}
+        if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {stage_drop=Some(group);}
+        if button(&format!("STAGE {}",group+1),x+stage_w-99.0,y-27.0,96.0,24.0,g.stage==Stage::Play&&!g.selected.is_empty()) {g.stage_selected(group);}
     }
     if let Some(id)=staged_click {g.unstage_card(id);}
+    if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
@@ -385,7 +387,7 @@ fn draw_game(g:&mut Game,show_debug:bool){
         if is_dragging {
             draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
             draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);
-        } else if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}
+        } else {if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}if g.drawn_card==Some(c.id){let y=if g.selected.contains(&c.id){card_y-15.0}else{card_y};draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);label("NEW",x+5.0,y-8.0,17.0,YELLOW);}}
         if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){card_y-15.0}else{card_y},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
