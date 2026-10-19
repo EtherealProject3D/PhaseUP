@@ -204,7 +204,7 @@ impl Game {
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         self.staged[group].push(id);
         // Auto-sort newly staged run cards, but leave explicit drag reordering alone.
-        if requirement(self.players[0].phase,group)=="run" {
+        if requirement(self.players[0].phase,group)=="run" && !self.staged[group].iter().any(|card_id|self.players[0].hand.iter().any(|c|c.id==*card_id && c.kind==Kind::Wild)) {
             let hand=&self.players[0].hand;
             self.staged[group].sort_by_key(|card_id| {
                 hand.iter().find(|c|c.id==*card_id).map(|c|match c.kind {
@@ -500,7 +500,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
         label(&format!("{} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
-        let drag_preview=g.staged_drag.and_then(|(id,sx,sy)|{
+        let drag_preview=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
             let (mx,my)=game_mouse();
             if is_mouse_button_down(MouseButton::Left)
                 && (mx-sx).abs()+(my-sy).abs()>10.0
