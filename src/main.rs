@@ -216,6 +216,13 @@ impl Game {
         }
         self.selected.retain(|v|*v!=id);
     }
+    fn stage_card_at(&mut self,id:u32,group:usize,index:usize) {
+        self.stage_card(id,group);
+        // Explicit drops choose a position; only automatic staging sorts Wilds last.
+        if self.staged.iter().any(|bucket|bucket.contains(&id)) {
+            self.move_staged_card(id,group,index);
+        }
+    }
     fn move_staged_card(&mut self,id:u32,group:usize,index:usize) {
         if self.stage!=Stage::Play||group>=self.staged.len(){return;}
         if !self.staged.iter().any(|bucket|bucket.contains(&id)){return;}
@@ -516,7 +523,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }
     }
-    if g.stage==Stage::Draw && g.round==1 {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
@@ -585,7 +592,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if g.stage==Stage::Play&&inside(sw*0.56-44.0,center-40.0,90.0,118.0) {
                     g.selected=vec![id];
                     g.discard_selected();
-                } else if let Some(group)=stage_drop {g.stage_card(id,group);}
+                } else if let Some(group)=stage_drop {
+                    let x=18.0+group as f32*(stage_w+6.0);
+                    let index=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                    g.stage_card_at(id,group,index);
+                }
             }
         }
         g.drag=None;
