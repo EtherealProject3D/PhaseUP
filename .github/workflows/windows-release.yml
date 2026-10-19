@@ -41,7 +41,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Compile release executable
-        run: cargo build --release --locked
+        run: cargo build --release
 
       - name: Rename versioned executable
         shell: pwsh
