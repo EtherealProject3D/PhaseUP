@@ -268,7 +268,7 @@ impl Game {
             let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
             let card=if use_discard{self.discard.pop()}else{self.draw_deck()};
             if let Some(c)=card{self.players[i].hand.push(c);self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"discard"}else{"deck"}));}
-            if !self.players[i].laid {
+            if !self.players[i].laid && self.players[i].phase<PHASES.len() {
                 let n=self.players[i].hand.len();let needed:usize=PHASES[self.players[i].phase].iter().sum();
                 // Find any exact subset satisfying this phase.
                 if needed<=n {
@@ -286,8 +286,8 @@ impl Game {
                 let mut j=0;
                 while j<self.players[i].hand.len() {
                     let c=self.players[i].hand[j];let mut target_hit=None;
-                    'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase,g){target_hit=Some((target,g));break 'outer;}}}}
-                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);if requirement(self.players[target].phase,g)=="run"{order_run(&mut self.players[target].table[g]);}self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
+                    'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase.min(PHASES.len()-1),g){target_hit=Some((target,g));break 'outer;}}}}
+                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);if requirement(self.players[target].phase.min(PHASES.len()-1),g)=="run"{order_run(&mut self.players[target].table[g]);}self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
                 }
             }
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
@@ -367,7 +367,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             draw_rectangle(x,yy,width,102.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
             draw_rectangle_lines(x,yy,width,102.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
-            let desc=format!("{}  -  {} cards",requirement(p.phase,j).to_uppercase(),group.len());
+            let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
             let card_w=39.0;
             let available=(width-12.0-card_w).max(0.0);
@@ -422,7 +422,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-365.0;
-    let groups=PHASES[g.players[0].phase];
+    // The completed player advances to phase index 10, beyond the ten phase definitions.
+    // Keep rendering the final phase while the GameOver overlay is displayed.
+    let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
     let stage_w=((sw-42.0)/groups.len() as f32).min(610.0);
     label(if g.stage==Stage::Draw {"PHASE STAGING  -  DRAW FIRST TO UNLOCK"}else{"PHASE STAGING  -  drag cards here, or select and press STAGE"},24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
@@ -615,7 +617,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
             label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
-        if button(if game_over {"NEW GAME"}else{"NEXT ROUND"},x+170.,y+277.,190.,40.,true){if game_over{*g=Game::new();}else{g.deal();}}
+        if game_over {
+            if button("NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
+            let _=button("MAIN MENU",x+280.,y+277.,190.,40.,true);
+        } else if button("NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
     }
     if show_debug {debug_overlay(g);}
 }
@@ -791,6 +796,7 @@ async fn main(){
             label("MENU",1404.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
+            if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=1075.0 && mx<=1265.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
             let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves);
             if let Some(next)=action {
