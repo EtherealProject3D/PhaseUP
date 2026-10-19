@@ -561,15 +561,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    // Draw the lifted staging card above the other staged cards.
-    if let Some((id,sx,sy))=g.staged_drag {
-        let (mx,my)=game_mouse();
-        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0 {
-            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied(){
-                let _=card_ui(card,mx-22.5,my-38.0,45.0,76.0,false);
-            }
-        }
-    }
     if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
@@ -653,6 +644,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if g.stage==Stage::Draw&&((!moved&&source)||(moved&&inside(12.0,py-72.0,sw-24.0,247.0))) {g.draw(from_discard);}
         }
         g.pile_drag=None;
+    }
+    // Render staged-card drags at the end of the game scene, above the hand,
+    // overlays and table, just like cards dragged out of the hand.
+    if let Some((id,sx,sy))=g.staged_drag {
+        let (mx,my)=game_mouse();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0 {
+            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
+                let _=card_ui(card,mx-38.5,my-55.0,77.0,110.0,false);
+            }
+        }
     }
     // Completion banner sits between the staging slots and turn guidance.
     let phase=g.players[0].phase.min(PHASES.len()-1);
