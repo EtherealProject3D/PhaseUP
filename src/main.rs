@@ -51,6 +51,31 @@ fn phase_name(p: usize) -> &'static str {
     const N: [&str;10] = ["2 sets of 3","set of 3 + run of 4","set of 4 + run of 4","run of 7","run of 8","run of 9","2 sets of 4","7 of one color","set of 5 + set of 2","set of 5 + set of 3"];
     N[p.min(9)]
 }
+// CPU discard priority: retain Wilds for completing phases; prefer shedding
+// isolated numbers and Skips instead of donating Wilds to the human player.
+fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 {
+    let card=hand[index];
+    match card.kind {
+        Kind::Wild => -1000,
+        Kind::Skip => 150,
+        Kind::Number(n,color) => {
+            let mut partners=0;
+            for (j,other) in hand.iter().enumerate() {
+                if j==index {continue;}
+                match other.kind {
+                    Kind::Number(m,c) => {
+                        if n==m {partners+=3;}
+                        if (n as i32-m as i32).abs()<=2 {partners+=2;}
+                        if color==c {partners+=if phase==7 {4}else{1};}
+                    }
+                    Kind::Wild => {partners+=3;}
+                    Kind::Skip => {}
+                }
+            }
+            card_points(card) as i32*2-partners*8
+        }
+    }
+}
 fn card_points(c: Card) -> u32 { match c.kind { Kind::Number(n,_) if n<=9 => 5, Kind::Number(_,_) => 10, Kind::Skip => 15, Kind::Wild => 25 } }
 fn color_for(k: Kind) -> Color { match k { Kind::Number(_,0) => Color::new(0.96,0.34,0.39,1.), Kind::Number(_,1) => Color::new(0.25,0.65,0.98,1.), Kind::Number(_,2) => Color::new(0.99,0.78,0.31,1.), Kind::Number(_,_) => Color::new(0.37,0.83,0.54,1.), Kind::Wild => Color::new(0.66,0.44,0.97,1.), Kind::Skip => Color::new(0.62,0.67,0.75,1.) } }
 fn card_text(k: Kind) -> String { match k { Kind::Number(n,_) => n.to_string(), Kind::Wild => "W".into(), Kind::Skip => "S".into() } }
@@ -291,7 +316,7 @@ impl Game {
                 }
             }
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
-            let idx=self.players[i].hand.iter().enumerate().max_by_key(|(_,c)|card_points(**c)).map(|(j,_)|j).unwrap();
+            let idx=(0..self.players[i].hand.len()).max_by_key(|&j|cpu_discard_priority(&self.players[i].hand,j,self.players[i].phase)).unwrap();
             let c=self.players[i].hand.remove(idx);self.discard.push(c);self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(c.kind)));
             if self.players[i].hand.is_empty(){self.end_round(i);return;}
         }
@@ -350,7 +375,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,19.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,17.,MUTED);}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);}
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
@@ -491,7 +516,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }
     }
-    if g.stage==Stage::Draw {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    if g.stage==Stage::Draw && g.round==1 {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-175.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
