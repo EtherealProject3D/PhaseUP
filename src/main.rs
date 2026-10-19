@@ -467,6 +467,13 @@ fn debug_overlay(g:&Game) {
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){
+    // Macroquad's PRNG starts with a deterministic seed unless explicitly
+    // initialized. Seed once per launch before Game::new() deals the first hand.
+    let seed=std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0x50484153455550);
+    macroquad::rand::srand(seed);
     let mut game=Game::new();
     let mut show_debug=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
