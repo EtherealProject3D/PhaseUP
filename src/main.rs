@@ -313,10 +313,15 @@ fn draw_game(g:&mut Game,show_debug:bool){
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
     let center=sh*0.49;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
-    let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x+6.,center-30.,70.,98.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label(&format!("{}",g.deck.len()),deck_x+27.,center+22.,25.,WHITEISH);
+    let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
     let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
     label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
-    if let Some(c)=g.discard.last().copied(){let x=sw*0.56-40.;if g.stage==Stage::Draw {draw_rectangle_lines(x-4.0,center-40.0,90.0,118.0,3.0,YELLOW);}let _=card_ui(c,x,center-36.,82.,110.,false);if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
+    let discard_x=sw*0.56-40.;
+    let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,center-36.,82.,110.);
+    draw_rectangle(discard_x,center-36.,82.,110.,Color::new(0.10,0.18,0.23,1.));
+    draw_rectangle_lines(discard_x,center-36.,82.,110.,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
+    if let Some(c)=g.discard.last().copied(){let _=card_ui(c,discard_x,center-36.,82.,110.,false);if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
+    else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-365.0;
     let groups=PHASES[g.players[0].phase];
