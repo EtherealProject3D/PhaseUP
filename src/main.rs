@@ -233,7 +233,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    let table_y=207.;label("CPU PHASES",24.,table_y+18.,19.,MUTED);
+    let table_y=207.;menu_label("CPU PHASES",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
@@ -309,10 +309,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
     let center=535.0;
-    label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
+    menu_label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
     let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
     let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
-    label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
+    menu_label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
     let discard_x=sw*0.56-40.;
     let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,center-36.,82.,110.);
     draw_rectangle(discard_x,center-36.,82.,110.,Color::new(0.10,0.18,0.23,1.));
@@ -560,8 +560,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     } else {
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
-        let tw=measure_text(turn_text,None,25,1.0).width;
-        label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
+        let tw=menu_text_width(turn_text,25);
+        menu_label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     }
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
