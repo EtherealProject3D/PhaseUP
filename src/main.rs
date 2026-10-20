@@ -35,7 +35,9 @@ fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
 }
 struct CpuDrawFlight { player:usize, from_discard:bool, card_id:u32, started:f64, duration:f64 }
 
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight> }
+struct HumanDrawFlight { card_id:u32, from_discard:bool, started:f64 }
+
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -187,13 +189,13 @@ impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,human_draw_flight:None};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
@@ -242,7 +244,7 @@ impl Game {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()});self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn draw_deck(&mut self)->Option<Card> {
         if self.deck.is_empty() && self.discard.len()>1 {let top=self.discard.pop().unwrap();self.deck.append(&mut self.discard);shuffle(&mut self.deck);self.discard.push(top);}
@@ -497,6 +499,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         ..Default::default()
     };
     set_camera(&camera);
+    if g.human_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_draw_flight=None;}
     label("PHASEUP",24.,42.,32.,ACCENT);
     label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
     label("v0.3.2-dev",184.,40.,19.,MUTED);
@@ -748,6 +751,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
+        if g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) {continue;}
         let is_dragging=g.drag.is_some_and(|(id,sx,sy)| {
             let (mx,my)=game_mouse();
             id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
@@ -868,6 +872,28 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if button("NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
             let _=button("MAIN MENU",x+280.,y+277.,190.,40.,true);
         } else if button("NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
+    }
+    // Human draw: show the face-up card flying to its sorted hand slot.
+    if let Some(flight)=&g.human_draw_flight {
+        if let Some(card)=g.players[0].hand.iter().find(|c|c.id==flight.card_id).copied() {
+            let mut sorted:Vec<Card>=g.players[0].hand.iter().copied()
+                .filter(|c|!g.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
+            sorted.sort_by_key(|c|sort_key(*c,g.sort));
+            let n=sorted.len();
+            let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
+            let spacing=if n>1 {((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
+            let left=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
+            let index=sorted.iter().position(|c|c.id==flight.card_id).unwrap_or(n.saturating_sub(1));
+            let end_x=left+index as f32*spacing;
+            let end_y=sh-166.0;
+            let start_x=if flight.from_discard {sw*0.56-40.0}else{sw*0.39-55.0};
+            let start_y=535.0-36.0;
+            let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
+            let eased=t*t*(3.0-2.0*t);
+            let x=start_x+(end_x-start_x)*eased;
+            let y=start_y+(end_y-start_y)*eased-50.0*(4.0*t*(1.0-t));
+            let _=card_ui(card,x,y,w,105.0,false);
+        }
     }
     // Animate the arriving card above the board, without duplicating its hand back.
     if let Some(flight)=&g.cpu_draw_flight {
