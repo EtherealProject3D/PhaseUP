@@ -199,3 +199,68 @@ fn dealing_new_round_resets_transient_state_but_preserves_progress() {
     assert_eq!(g.discard.len(),1);
     assert_eq!(g.deck.len(),67);
 }
+
+
+#[test]
+fn player_cannot_draw_twice_in_one_turn() {
+    let mut g=Game::new();
+    g.draw(false,false);
+    assert_eq!(g.stage,Stage::Play);
+    let hand=g.players[0].hand.len();
+    let deck=g.deck.len();
+    g.draw(false,false);
+    assert_eq!(g.players[0].hand.len(),hand);
+    assert_eq!(g.deck.len(),deck);
+}
+
+#[test]
+fn player_cannot_discard_before_drawing() {
+    let mut g=Game::new();
+    g.selected=vec![g.players[0].hand[0].id];
+    let hand=g.players[0].hand.len();
+    let discard=g.discard.len();
+    g.discard_selected();
+    assert_eq!(g.stage,Stage::Draw);
+    assert_eq!(g.players[0].hand.len(),hand);
+    assert_eq!(g.discard.len(),discard);
+}
+
+#[test]
+fn player_actions_do_nothing_during_cpu_turn() {
+    let mut g=Game::new();
+    g.stage=Stage::Cpu;
+    g.turn=1;
+    let id=g.players[0].hand[0].id;
+    g.selected=vec![id];
+    let hand=g.players[0].hand.len();
+    let deck=g.deck.len();
+    let discard=g.discard.len();
+    g.draw(false,false);
+    g.lay();
+    g.hit(0,0);
+    g.discard_selected();
+    assert_eq!(g.turn,1);
+    assert_eq!(g.stage,Stage::Cpu);
+    assert_eq!(g.players[0].hand.len(),hand);
+    assert_eq!(g.deck.len(),deck);
+    assert_eq!(g.discard.len(),discard);
+    assert!(!g.players[0].laid);
+}
+
+#[test]
+fn player_cannot_lay_same_phase_twice() {
+    let mut g=Game::new();
+    g.stage=Stage::Play;
+    g.turn=0;
+    g.players[0].phase=0;
+    g.players[0].hand=[set(8000,3,3),set(8010,6,3)].concat();
+    g.selected=g.players[0].hand.iter().map(|c|c.id).collect();
+    g.lay();
+    assert!(g.players[0].laid);
+    let table=g.players[0].table.clone();
+    let hand=g.players[0].hand.len();
+    g.lay();
+    assert_eq!(g.players[0].hand.len(),hand);
+    assert_eq!(g.players[0].table.len(),table.len());
+    assert!(g.players[0].laid);
+}
