@@ -472,12 +472,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
+    // Keep the CPU action status beside Recent Moves, away from laid cards.
     if g.stage==Stage::Cpu {
         let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
         let notice=format!("{}  -  {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
-        let width=measure_text(&notice,None,23,1.0).width;
-        draw_rectangle(590.0,281.0,420.0,39.0,PANEL);
-        label(&notice,800.0-width/2.0,308.0,23.0,YELLOW);
+        draw_rectangle(1198.0,315.0,374.0,38.0,PANEL);
+        draw_rectangle_lines(1198.0,315.0,374.0,38.0,1.5,YELLOW);
+        let width=measure_text(&notice,None,19,1.0).width;
+        label(&notice,1385.0-width/2.0,341.0,19.0,YELLOW);
     }
     let table_y=207.;label("CPU PHASES",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
