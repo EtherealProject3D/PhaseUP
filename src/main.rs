@@ -269,7 +269,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {if sh<1150.0 {sh-496.0}else{sh-532.0}}else{table_y+47.0};
+            let y=if i==0 {if sh<1150.0 {sh-496.0}else{sh-532.0}}else{table_y+if sh<1150.0 {29.0}else{47.0}};
             if i==0 {menu_label("YOUR LAID PHASE",x,if sh<1150.0 {sh-508.0}else{sh-544.0},17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
@@ -285,7 +285,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {if sh<1150.0 {sh-508.0}else{sh-544.0}}else{table_y+35.0};
+        let y=if i==0 {if sh<1150.0 {sh-508.0}else{sh-544.0}}else{table_y+if sh<1150.0 {17.0}else{35.0}};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
