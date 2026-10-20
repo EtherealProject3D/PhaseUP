@@ -37,6 +37,8 @@ mod animations;
 use animations::*;
 mod ui;
 use ui::*;
+mod help;
+use help::*;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -656,7 +658,7 @@ fn debug_overlay(g:&Game) {
 }
 
 #[derive(Clone,Copy,PartialEq,Eq)]
-enum MenuScreen { Home, Settings, ConfirmNew, Playing, Resume }
+enum MenuScreen { Home, Settings, HowToPlay, Rules, ConfirmNew, Playing, Resume }
 fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
@@ -666,23 +668,30 @@ fn menu_button(title:&str,y:f32)->bool {
     label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool)->Option<MenuScreen> {
+fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32)->Option<MenuScreen> {
     set_default_camera();
     clear_background(BG);
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/1600.0).min(ph/1200.0);
     set_camera(&Camera2D{target:vec2(800.0,600.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
+        help_page(screen==MenuScreen::Rules,help_scroll);
+        if button("BACK TO MENU",570.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
+        return None;
+    }
     draw_rectangle(460.0,225.0,680.0,760.0,PANEL);
     draw_rectangle_lines(460.0,225.0,680.0,760.0,2.0,ACCENT);
-    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume=>""};
+    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     let w=measure_text(title,None,54,1.0).width;
     label(title,800.0-w/2.0,310.0,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
             if menu_button("NEW GAME",400.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
-            if menu_button("SETTINGS",490.0){return Some(MenuScreen::Settings);}
-            if menu_button("QUIT",580.0){std::process::exit(0);}
+            if menu_button("HOW TO PLAY",490.0){return Some(MenuScreen::HowToPlay);}
+            if menu_button("GAME RULES",580.0){return Some(MenuScreen::Rules);}
+            if menu_button("SETTINGS",670.0){return Some(MenuScreen::Settings);}
+            if menu_button("QUIT",760.0){std::process::exit(0);}
             if has_game { label("ESC: resume game",690.0,750.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
@@ -703,7 +712,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("CANCEL",500.0){return Some(MenuScreen::Home);}
             if has_game && menu_button("RESUME GAME",600.0){return Some(MenuScreen::Resume);}
         }
-        MenuScreen::Playing|MenuScreen::Resume=>{}
+        MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }
     None
 }
@@ -724,6 +733,7 @@ async fn main(){
     if fullscreen {set_fullscreen(true);}
     let mut saved_preferences=(show_moves,fullscreen);
     let mut menu=MenuScreen::Home;
+    let mut help_scroll=0.0f32;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -761,7 +771,7 @@ async fn main(){
             previous_fullscreen=fullscreen;
         }
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
-        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
+        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
         let (mx,my)=game_mouse();
@@ -821,8 +831,9 @@ async fn main(){
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
-            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves);
+            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll);
             if let Some(next)=action {
+                if matches!(next,MenuScreen::HowToPlay|MenuScreen::Rules) {help_scroll=0.0;}
                 if next==MenuScreen::Resume {menu=MenuScreen::Playing;}
                 else {
                 if next==MenuScreen::Playing && (menu==MenuScreen::ConfirmNew || !has_game) {
