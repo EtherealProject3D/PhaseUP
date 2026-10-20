@@ -359,6 +359,17 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
+fn column_hand_width(count:usize,card_w:f32)->f32 {
+    if count<=1 {0.0}else{(count-1) as f32*17.0.min((360.0-card_w)/(count-1) as f32)}
+}
+fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
+    draw_rectangle(x+2.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.28));
+    draw_rectangle(x,y,w,h,WHITEISH);
+    draw_rectangle(x+3.0,y+3.0,w-6.0,h-6.0,Color::new(0.12,0.39,0.48,1.0));
+    draw_rectangle_lines(x+6.0,y+6.0,w-12.0,h-12.0,1.5,ACCENT);
+    draw_line(x+8.0,y+8.0,x+w-8.0,y+h-8.0,1.0,ACCENT);
+    draw_line(x+w-8.0,y+8.0,x+8.0,y+h-8.0,1.0,ACCENT);
+}
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     clear_background(BG);
     let sw=1600.0;let sh=1000.0;
@@ -382,7 +393,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
+        // Face-down fanned hand: the visible backs represent the actual hand count.
+        let count=p.hand.len();
+        let card_w=29.0;let card_h=43.0;
+        let step=if count>1 {(column_hand_width(count,card_w)/(count-1) as f32).min(17.0)}else{0.0};
+        for k in 0..count {
+            cpu_card_back(x+k as f32*step,125.0,card_w,card_h);
+        }
+    }
     let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
