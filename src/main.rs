@@ -369,7 +369,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        label(&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        menu_label(&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         let drag_preview=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
             let (mx,my)=game_mouse();
             if is_mouse_button_down(MouseButton::Left)
@@ -554,7 +554,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if staged_complete {
         draw_rectangle(525.0,772.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
         draw_rectangle_lines(525.0,772.0,550.0,31.0,1.5,GREEN);
-        label("PHASE COMPLETE",545.0,794.0,21.0,GREEN);
+        let ready_text="PHASE COMPLETE";
+        let ready_w=menu_text_width(ready_text,21);
+        menu_label(ready_text,800.0-ready_w/2.0,794.0,21.0,GREEN);
     }
     if staged_complete {
         if button("LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
@@ -562,6 +564,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.lay();
         }
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,3.0,GREEN);
+        let lay_text="LAY PHASE";
+        let lay_w=menu_text_width(lay_text,25);
+        menu_label(lay_text,800.0-lay_w/2.0,guidance_y+30.0,25.0,WHITEISH);
     } else {
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
