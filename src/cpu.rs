@@ -81,7 +81,15 @@ impl Game {
                     }
                 }
                 if let Some((j,target,group,card))=hit {
+                    let origin_count=self.players[i].hand.len();
                     self.players[i].hand.remove(j);
+                    if self.cpu_speed!=0 {
+                        let duration=match self.cpu_speed {1=>0.30,3=>1.05,_=>0.60};
+                        self.cpu_hit_flight=Some(CpuHitFlight{
+                            card,player:i,target,group,origin_index:j,origin_count,
+                            started:get_time(),duration
+                        });
+                    }
                     self.players[target].table[group].push(card);
                     if requirement(self.players[target].phase.min(9),group)=="run" {
                         order_run(&mut self.players[target].table[group]);
@@ -147,6 +155,7 @@ impl Game {
         if self.cpu_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_draw_flight=None;}
         if self.cpu_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_discard_flight=None;}
         if self.cpu_phase_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration()) {self.cpu_phase_flight=None;}
+        if self.cpu_hit_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_hit_flight=None;}
         if self.stage!=Stage::Cpu{return;}
         if self.cpu_speed==0 {
             if get_time()>=self.cpu_next_at {
@@ -164,7 +173,10 @@ impl Game {
             let phase_delay=self.cpu_phase_flight.as_ref()
                 .map(|flight|(flight.started+flight.duration()-get_time()+0.10).max(0.0))
                 .unwrap_or(0.0);
-            self.cpu_next_at=get_time()+handoff_delay.max(phase_delay);
+            let hit_delay=self.cpu_hit_flight.as_ref()
+                .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
+                .unwrap_or(0.0);
+            self.cpu_next_at=get_time()+handoff_delay.max(phase_delay).max(hit_delay);
         }
     }
 }
