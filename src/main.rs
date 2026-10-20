@@ -623,7 +623,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
-        let sort_y=sh-43.0;
+        let sort_y=sh-51.0;
         if button(name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
         if g.sort==*mode {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
@@ -748,7 +748,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     let discard_ready=g.stage==Stage::Play&&g.selected.len()==1;
     let discard_x=1050.0;
-    let discard_y=sh-43.0;
+    let discard_y=sh-51.0;
     if button("DISCARD",discard_x,discard_y,103.0,28.0,discard_ready){
         g.discard_selected();
     }
