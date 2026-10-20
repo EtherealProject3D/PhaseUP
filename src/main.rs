@@ -617,7 +617,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let tw=measure_text(turn_text,None,25,1.0).width;
     label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     let p=&g.players[0];
-    label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.0,py-46.0,21.0,WHITEISH);
+    let hand_info=format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score);
+    let hand_info_width=measure_text(&hand_info,None,21,1.0).width;
+    label(&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
@@ -744,7 +746,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.staged[1].clear();
         }
     }
-    if button("DISCARD",1050.0,sh-40.0,154.0,30.0,g.stage==Stage::Play&&g.selected.len()==1){
+    if button("DISCARD",1050.0,sh-43.0,154.0,28.0,g.stage==Stage::Play&&g.selected.len()==1){
         g.discard_selected();
     }
     // Show contextual instructions above staging, not beneath the hand cards
