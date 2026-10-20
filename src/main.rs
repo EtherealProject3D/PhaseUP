@@ -48,14 +48,6 @@ impl Game {
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
-    fn deal(&mut self) {
-        self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.cpu_discard_flight=None;self.human_discard_flight=None;self.cpu_draw_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
-        for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
-        for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
-        self.discard.push(self.deck.pop().unwrap());
-        self.message=String::new(); // Turn guidance is displayed in the banner above the hand.
-    }
     fn stage_card(&mut self,id:u32,group:usize) {
         if self.stage!=Stage::Play||self.turn!=0{return;}
         if group>=PHASES[self.players[0].phase].len(){return;}
