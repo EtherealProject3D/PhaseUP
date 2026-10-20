@@ -153,7 +153,7 @@ impl Game {
             // Give each CPU's final discard time to land before the next
             // player begins. Keep the normal pacing between actions intact.
             let handoff_delay=if self.turn!=previous_turn && self.stage==Stage::Cpu {
-                match self.cpu_speed {1=>0.60,3=>1.60,_=>0.90}
+                match self.cpu_speed {1=>0.48,3=>1.40,_=>0.78}
             }else{delay};
             self.cpu_next_at=get_time()+handoff_delay;
         }
