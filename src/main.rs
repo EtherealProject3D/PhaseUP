@@ -21,7 +21,7 @@ enum SortMode { Runs, Colors, Sets }
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight> }
 
 mod phases;
 use phases::*;
@@ -29,6 +29,8 @@ mod cards;
 use cards::*;
 mod ai;
 use ai::*;
+mod roster;
+use roster::*;
 mod cpu;
 mod animations;
 use animations::*;
@@ -37,8 +39,9 @@ use ui::*;
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
-        let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,human_draw_flight:None,cpu_discard_flight:None,human_discard_flight:None};g.deal();g
+        let cpu_roster=select_opponents(Difficulty::Normal);
+        let cpu_names=cpu_roster.map(|cpu|cpu.name.to_string());
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,human_draw_flight:None,cpu_discard_flight:None,human_discard_flight:None};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
@@ -212,7 +215,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,172.0,3.0,YELLOW);}label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,172.0,3.0,YELLOW);}label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,104.,17.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=65.0;let card_h=87.0;
