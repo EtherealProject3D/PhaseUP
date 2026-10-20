@@ -93,7 +93,7 @@ impl Game {
                     if requirement(self.players[target].phase.min(9),group)=="run" {
                         order_run(&mut self.players[target].table[group]);
                     }
-                    self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(card.kind)));
+                    self.log_move(if target==i {format!("{} hit with a {}",self.cpu_name(i),card_text(card.kind))}else{format!("{} hit {} with a {}",self.cpu_name(i),self.cpu_name(target),card_text(card.kind))});
                 } else {self.cpu_step=3;}
             }
             _ => {
