@@ -294,7 +294,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             draw_rectangle_lines(x,yy,width,102.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
-            let card_w=39.0;
+            let card_w=48.0;
+            let card_h=76.0;
             // While dragging a valid card from the hand, preview the space it
             // will occupy and shift the existing table cards around that gap.
             let preview=g.drag.and_then(|(id,sx,sy)| {
@@ -314,10 +315,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             });
             let shown_len=group.len()+usize::from(preview.is_some());
             let available=(width-12.0-card_w).max(0.0);
-            let step=if shown_len>1 {(available/(shown_len-1) as f32).min(42.0)} else {0.0};
+            let step=if shown_len>1 {(available/(shown_len-1) as f32).min(50.0)} else {0.0};
             if let Some(slot)=preview {
                 let cx=x+6.0+slot as f32*step;
-                draw_rectangle_lines(cx,yy+23.0,card_w,69.0,2.5,YELLOW);
+                draw_rectangle_lines(cx,yy+23.0,card_w,card_h,2.5,YELLOW);
             }
             for (k,card) in group.iter().enumerate() {
                 if i==0 && g.human_phase_flight.as_ref().is_some_and(|flight|!flight.visible(card.id,get_time())) {continue;}
@@ -327,13 +328,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let cx=x+6.0+shown as f32*step;
                 let cy=yy+23.0;
                 let color=color_for(card.kind);
-                draw_rectangle(cx+1.0,cy+2.0,card_w,69.0,BG);
-                draw_rectangle(cx,cy,card_w,69.0,WHITEISH);
-                draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,63.0,color);
+                draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
+                draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
+                draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
                 let value=card_text(card.kind);
-                label(&value,cx+6.0,cy+27.0,23.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                label(&value,cx+7.0,cy+32.0,26.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
             }
-            if can_place {label("CLICK TO ADD",x+7.0,yy+97.0,13.0,ACCENT);}
+            if can_place {label("CLICK TO ADD",x+7.0,yy+100.0,12.0,ACCENT);}
             if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,102.0) {
                 hit_click=Some((i,j));
             }
