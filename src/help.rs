@@ -42,6 +42,8 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
         rows.push((false,"Be the first to get rid of all your cards, or keep working on your phase until another player goes out. Completed phases advance next round.".into()));
         rows.push((true,"TIP: SORT YOUR HAND".into()));
         rows.push((false,"Use RUNS, COLORS, or SETS below your hand to change how cards are arranged. Sorting does not change which cards you own.".into()));
+        rows.push((true,"WINDOW SHORTCUTS".into()));
+        rows.push((false,"Right-click the PHASEUP logo during a game, or press Ctrl+0, to reset the game window to its default size. You can also reset the window size from Settings.".into()));
         rows.push((true,"NEED THE DETAILS?".into()));
         rows.push((false,"Open GAME RULES from the main menu for the ten phase requirements, special cards, scoring, and win conditions.".into()));
     }
