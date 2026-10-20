@@ -703,7 +703,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if button("LAY PHASE",24.0,sh-51.0,142.0,40.0,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
     if button("DISCARD",179.0,sh-51.0,122.0,40.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     if button("CLEAR",24.0,sh-145.0,104.0,34.0,!g.selected.is_empty()){g.selected.clear();}
-    label(&g.message,435.0,sh-23.0,18.0,ACCENT);
+    // Show contextual instructions above staging, not beneath the hand cards
+    // where they collided with the sorting controls.
+    if !g.message.is_empty() {
+        draw_rectangle(390.0,607.0,650.0,32.0,BG);
+        let msg_width=measure_text(&g.message,None,18,1.0).width;
+        label(&g.message,715.0-msg_width/2.0,629.0,18.0,ACCENT);
+    }
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
