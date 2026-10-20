@@ -131,7 +131,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             let index=sorted.iter().position(|c|c.id==flight.card_id).unwrap_or(n.saturating_sub(1));
             let end_x=left+index as f32*spacing;
             let end_y=sh-166.0;
-            let start_x=if flight.from_discard {sw*0.56-54.0}else{sw*0.39-69.0};
+            let start_x=if flight.from_discard {sw/2.0+88.0}else{sw/2.0-200.0};
             let start_y=535.0-50.0;
             let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
             let eased=t*t*(3.0-2.0*t);
@@ -144,7 +144,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
     if let Some(flight)=&g.cpu_draw_flight {
         let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
         let eased=t*t*(3.0-2.0*t);
-        let start_x=if flight.from_discard {1920.0*0.56-54.0}else{1920.0*0.39-69.0};
+        let start_x=if flight.from_discard {1920.0/2.0+88.0}else{1920.0/2.0-200.0};
         let start_y=535.0-50.0;
         let cpu_x=28.0+(flight.player-1) as f32*(1920.0-50.0)/3.0;
         let count=g.players[flight.player].hand.len();
@@ -166,7 +166,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
     if let Some(flight)=&g.human_discard_flight {
         let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
         let eased=t*t*(3.0-2.0*t);
-        let x=flight.from_x+(sw*0.56-54.0-flight.from_x)*eased;
+        let x=flight.from_x+(sw/2.0+88.0-flight.from_x)*eased;
         let y=flight.from_y+(535.0-50.0-flight.from_y)*eased-50.0*(4.0*t*(1.0-t));
         let _=card_ui(flight.card,x,y,75.0+(112.0-75.0)*eased,105.0+(150.0-105.0)*eased,false);
     }
@@ -180,7 +180,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         }else{0.0};
         let from_x=cpu_x+flight.origin_index as f32*step;
         let from_y=119.0;
-        let to_x=sw*0.56-54.0;
+        let to_x=sw/2.0+88.0;
         let to_y=535.0-50.0;
         let x=from_x+(to_x-from_x)*eased;
         let y=from_y+(to_y-from_y)*eased-50.0*(4.0*t*(1.0-t));
