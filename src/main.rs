@@ -822,6 +822,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if g.stage==Stage::Play&&inside(sw*0.56-44.0,center-40.0,90.0,118.0) {
                     g.selected=vec![id];
                     g.discard_selected();
+                    // Drag-and-drop is already a direct physical movement.
+                    // Only button-triggered discards should fly.
+                    g.human_discard_flight=None;
                 } else if let Some(group)=stage_drop {
                     let x=stage_left+group as f32*(stage_w+6.0);
                     let index=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
