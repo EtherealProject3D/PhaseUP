@@ -84,7 +84,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let p=&g.players[flight.target];
         if let Some(cards)=p.table.get(flight.group) {
             let x=if flight.target==0 {sw/2.0-400.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
-            let y=if flight.target==0 {(game_canvas_height()-544.0)}else{207.0+35.0};
+            let y=if flight.target==0 {game_canvas_height()-544.0}else{207.0+35.0};
             let width=if flight.target==0 {if p.table.len()==1 {800.0}else{397.0}}
                 else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0};
             let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
@@ -132,7 +132,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             let end_x=left+index as f32*spacing;
             let end_y=sh-166.0;
             let start_x=if flight.from_discard {sw/2.0+88.0}else{sw/2.0-200.0};
-            let start_y=(if game_canvas_height()<1150.0 {408.0}else{485.0});
+            let start_y=if game_canvas_height()<1150.0 {408.0}else{485.0};
             let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
             let eased=t*t*(3.0-2.0*t);
             let x=start_x+(end_x-start_x)*eased;
@@ -145,7 +145,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
         let eased=t*t*(3.0-2.0*t);
         let start_x=if flight.from_discard {1920.0/2.0+88.0}else{1920.0/2.0-200.0};
-        let start_y=(if game_canvas_height()<1150.0 {408.0}else{485.0});
+        let start_y=if game_canvas_height()<1150.0 {408.0}else{485.0};
         let cpu_x=28.0+(flight.player-1) as f32*(1920.0-50.0)/3.0;
         let count=g.players[flight.player].hand.len();
         let step=if count>1 {column_hand_width(count,65.0)/(count-1) as f32}else{0.0};
@@ -181,7 +181,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let from_x=cpu_x+flight.origin_index as f32*step;
         let from_y=119.0;
         let to_x=sw/2.0+88.0;
-        let to_y=(if game_canvas_height()<1150.0 {408.0}else{485.0});
+        let to_y=if game_canvas_height()<1150.0 {408.0}else{485.0};
         let x=from_x+(to_x-from_x)*eased;
         let y=from_y+(to_y-from_y)*eased-50.0*(4.0*t*(1.0-t));
         let _=card_ui(flight.card,x,y,65.0+(112.0-65.0)*eased,87.0+(150.0-87.0)*eased,false);
