@@ -8,11 +8,30 @@ pub(super) fn read_window_size() -> (i32,i32) {
     if let Ok(s)=std::fs::read_to_string(window_size_path()) {
         let mut parts=s.split_whitespace();
         if let (Some(w),Some(h))=(parts.next().and_then(|v|v.parse::<i32>().ok()),parts.next().and_then(|v|v.parse::<i32>().ok())) {
-            if (640..=7680).contains(&w)&&(480..=4320).contains(&h) {return (w,h);}
+            if (640..=7680).contains(&w)&&(480..=4320).contains(&h) {return fit_window_to_desktop(w,h);}
         }
     }
-    (1600,1000)
+    fit_window_to_desktop(1600,1000)
 }
+#[cfg(target_os="windows")]
+pub(super) fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){
+    use std::ffi::c_void;
+    #[repr(C)]
+    struct Rect {left:i32,top:i32,right:i32,bottom:i32}
+    #[link(name="user32")]
+    extern "system" {
+        fn SystemParametersInfoW(action:u32,param:u32,out:*mut c_void,flags:u32)->i32;
+    }
+    let mut area=Rect{left:0,top:0,right:0,bottom:0};
+    if unsafe{SystemParametersInfoW(0x0030,0,&mut area as *mut _ as *mut c_void,0)}==0{return (w,h);}
+    // Reserve a little room for the title bar, borders and desktop margins.
+    let max_w=(area.right-area.left-32).max(640);
+    let max_h=(area.bottom-area.top-80).max(480);
+    let scale=(max_w as f32/w as f32).min(max_h as f32/h as f32).min(1.0);
+    ((w as f32*scale).round() as i32,(h as f32*scale).round() as i32)
+}
+#[cfg(not(target_os="windows"))]
+fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){(w,h)}
 pub(super) fn save_window_size(w:i32,h:i32) {
     let path=window_size_path();
     if let Some(parent)=path.parent() {
