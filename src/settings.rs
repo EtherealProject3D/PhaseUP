@@ -14,7 +14,7 @@ pub(super) fn read_window_size() -> (i32,i32) {
     fit_window_to_desktop(1600,1200)
 }
 #[cfg(target_os="windows")]
-fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){
+pub(super) fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){
     use std::ffi::c_void;
     #[repr(C)]
     struct Rect {left:i32,top:i32,right:i32,bottom:i32}
