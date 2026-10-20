@@ -707,7 +707,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},595.0){*show_moves=!*show_moves;}
             label("APPEARANCE",590.0,700.0,26.0,WHITEISH);
             if menu_button(&format!("THEME: {}",active_theme().name()),740.0){let next=active_theme().next();set_theme(next);save_theme(next);}
-            if menu_button("BACK",840.0){return Some(MenuScreen::Home;}
+            if menu_button("BACK",840.0){return Some(MenuScreen::Home);}
             if has_game && menu_button("RESUME GAME",930.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::ConfirmNew=>{
