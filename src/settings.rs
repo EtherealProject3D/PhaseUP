@@ -96,6 +96,7 @@ pub(super) mod window_placement {
         fn GetWindowRect(hwnd:Hwnd,rect:*mut Rect)->i32;
         fn SetWindowPos(hwnd:Hwnd,after:Hwnd,x:i32,y:i32,cx:i32,cy:i32,flags:u32)->i32;
         fn GetSystemMetrics(index:i32)->i32;
+        fn SystemParametersInfoW(action:u32,param:u32,out:*mut c_void,flags:u32)->i32;
     }
     fn hwnd()->Hwnd {
         let title:Vec<u16>="PhaseUP - Offline Card Game".encode_utf16().chain(std::iter::once(0)).collect();
@@ -119,6 +120,23 @@ pub(super) mod window_placement {
         if width<=0||height<=0||x<left-100||y<top-100||x>left+width-100||y>top+height-100{return;}
         let h=hwnd();if h.is_null(){return;}
         unsafe {SetWindowPos(h,std::ptr::null_mut(),x,y,0,0,0x0001|0x0004|0x0010);}
+    }
+    // Center the complete decorated window inside the desktop work area,
+    // leaving the title bar visible even after a resolution change.
+    pub fn center() -> Option<(i32,i32)> {
+        let h=hwnd();
+        if h.is_null(){return None;}
+        let mut rect=Rect{left:0,top:0,right:0,bottom:0};
+        let mut area=Rect{left:0,top:0,right:0,bottom:0};
+        if unsafe{GetWindowRect(h,&mut rect)}==0{return None;}
+        let ok=unsafe{SystemParametersInfoW(0x0030,0,&mut area as *mut _ as *mut c_void,0)};
+        if ok==0{return None;}
+        let width=rect.right-rect.left;
+        let height=rect.bottom-rect.top;
+        let x=area.left+((area.right-area.left-width)/2).max(0);
+        let y=area.top+((area.bottom-area.top-height)/2).max(0);
+        unsafe{SetWindowPos(h,std::ptr::null_mut(),x,y,0,0,0x0001|0x0004|0x0010);}
+        Some((x,y))
     }
     pub fn save(x:i32,y:i32) {
         let p=path();
