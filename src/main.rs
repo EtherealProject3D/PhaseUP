@@ -729,7 +729,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Two-group phases have a 254px gutter; one-group phases have a 450px gutter.
     let control_w=154.0;
     let control_h=30.0;
-    let control_x=stage_left-control_w-16.0;
+    // Anchor the controls to the two-group layout so single-group phases
+    // keep the same horizontal position even though their staging box is narrower.
+    let two_group_left=(sw-(2.0*540.0+6.0))/2.0;
+    let control_x=(two_group_left-control_w)/2.0;
     let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
