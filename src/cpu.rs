@@ -53,6 +53,11 @@ impl Game {
                             order_table_groups(&mut groups,self.players[i].phase);
                             let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();
                             Self::remove_ids(&mut self.players[i].hand,&ids);
+                            if self.cpu_speed!=0 {
+                                let per_card=match self.cpu_speed {1=>0.12,3=>0.34,_=>0.20};
+                                let cards=groups.iter().enumerate().flat_map(|(g,group)|group.iter().copied().enumerate().map(move |(k,card)|(card,g,k))).collect();
+                                self.cpu_phase_flight=Some(CpuPhaseFlight{player:i,cards,started:get_time(),per_card});
+                            }
                             self.players[i].table=groups;self.players[i].laid=true;
                             self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));
                         }
@@ -141,6 +146,7 @@ impl Game {
     pub(super) fn update_cpu(&mut self) {
         if self.cpu_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_draw_flight=None;}
         if self.cpu_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_discard_flight=None;}
+        if self.cpu_phase_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration()) {self.cpu_phase_flight=None;}
         if self.stage!=Stage::Cpu{return;}
         if self.cpu_speed==0 {
             if get_time()>=self.cpu_next_at {
@@ -155,7 +161,10 @@ impl Game {
             let handoff_delay=if self.turn!=previous_turn && self.stage==Stage::Cpu {
                 match self.cpu_speed {1=>0.48,3=>1.40,_=>0.78}
             }else{delay};
-            self.cpu_next_at=get_time()+handoff_delay;
+            let phase_delay=self.cpu_phase_flight.as_ref()
+                .map(|flight|(flight.started+flight.duration()-get_time()+0.10).max(0.0))
+                .unwrap_or(0.0);
+            self.cpu_next_at=get_time()+handoff_delay.max(phase_delay);
         }
     }
 }
