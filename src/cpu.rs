@@ -129,7 +129,7 @@ impl Game {
                 if self.players[i].hand.is_empty(){self.end_round(i);return;}
                 if card.kind==Kind::Skip {
                     let target=(i+1)%4;
-                    self.log_move(format!("{} was skipped",self.cpu_name(target)));
+                    self.log_move(if target==0 {"You were skipped".to_string()}else{format!("{} was skipped",self.cpu_name(target))});
                     if target==0 {
                         // The last CPU skipped the human. Start the next CPU
                         // cycle without exposing a playable human turn.
