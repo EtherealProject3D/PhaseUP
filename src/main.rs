@@ -310,11 +310,13 @@ impl Game {
         if self.stage!=Stage::Cpu {return;}
         if self.turn>3 {
             self.turn=0;self.stage=Stage::Draw;self.turn_count+=1;
+            self.cpu_skip=None;
             self.drawn_card=None;self.message.clear();return;
         }
         let i=self.turn;
         if self.cpu_skip==Some(i) {
             self.log_move(format!("{} was skipped",self.cpu_name(i)));
+            self.cpu_skip=None;
             self.turn+=1;self.cpu_step=0;return;
         }
         match self.cpu_step {
@@ -409,7 +411,25 @@ impl Game {
                 self.discard.push(card);
                 self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(card.kind)));
                 if self.players[i].hand.is_empty(){self.end_round(i);return;}
-                self.turn+=1;self.cpu_step=0;
+                if card.kind==Kind::Skip {
+                    let target=(i+1)%4;
+                    self.log_move(format!("{} skipped {}",self.cpu_name(i),self.cpu_name(target)));
+                    if target==0 {
+                        // The last CPU skipped the human. Start the next CPU
+                        // cycle without exposing a playable human turn.
+                        self.turn_count+=1;
+                        self.turn=1;
+                        self.cpu_skip=None;
+                        self.cpu_draw_flight=None;
+                        self.cpu_next_at=get_time()+0.75;
+                    } else {
+                        self.cpu_skip=Some(target);
+                        self.turn=target;
+                    }
+                }else{
+                    self.turn+=1;
+                }
+                self.cpu_step=0;
             }
         }
     }
