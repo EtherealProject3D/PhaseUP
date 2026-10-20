@@ -517,9 +517,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
     let stage_w=if groups.len()==1 {700.0}else{540.0};
     let stage_left=(sw-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
-    let staging_title="PHASE STAGING";
-    let staging_title_width=measure_text(staging_title,None,18,1.0).width;
-    label(staging_title,(sw-staging_title_width)/2.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
     let mut staged_reorder=None;
@@ -537,7 +534,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        label(&format!("{} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        label(&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         let drag_preview=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
             let (mx,my)=game_mouse();
             if is_mouse_button_down(MouseButton::Left)
