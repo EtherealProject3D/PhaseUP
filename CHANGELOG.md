@@ -1,6 +1,17 @@
 # PhaseUP — Version History
 
-PhaseUP is in early development. This history preserves milestones and links to the exact source commits. **These are historical source snapshots, not yet published GitHub Releases or prebuilt Windows/Android binaries.** Some early builds have known bugs.
+PhaseUP is in early development. This history preserves milestones and links to source snapshots. Earlier entries are historical snapshots; publication of GitHub Releases and prebuilt binaries is tracked separately.
+
+## v0.3.2 — Gameplay and help polish
+**Status:** Release source prepared; Windows binary and GitHub Release to be published after final build.
+
+- Added animated CPU phase laying and hitting, plus animated human phase laying.
+- Improved CPU turn handoff timing and card movement.
+- Simplified hand-card clicking to single-card selection while retaining multi-card staging and drag-and-drop hits.
+- Added **How to Play** and **Game Rules** pages to the main menu, including scrolling and navigation.
+- Expanded automated gameplay and rules regression coverage to 19 tests.
+- Improved the separation of game rules, animations, and CPU turn logic.
+- Windows gameplay was tested by the project developer; final release-build verification remains part of publishing.
 
 ## v0.3.1 — Window memory and debug tools
 **Source snapshot:** [bc66cb4](https://github.com/EtherealProject3D/PhaseUP/tree/bc66cb4eb692714e9ed1e577b913fa30e4e0f177)
