@@ -668,7 +668,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=510.0;
+    let guidance_y=606.0;
     draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
     draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,25,1.0).width;
@@ -787,11 +787,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if button("CLEAR",24.0,sh-145.0,104.0,34.0,!g.selected.is_empty()){g.selected.clear();}
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
-    if !g.message.is_empty() {
-        draw_rectangle(390.0,602.0,650.0,30.0,BG);
-        let msg_width=measure_text(&g.message,None,18,1.0).width;
-        label(&g.message,715.0-msg_width/2.0,623.0,18.0,ACCENT);
-    }
+    // Contextual text is available through the game log; do not paint it
+    // over the narrow gap reserved for the turn-status banner.
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
