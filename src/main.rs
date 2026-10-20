@@ -865,7 +865,7 @@ fn resolution_picker(x:f32,y:f32)->bool {
             let tw=menu_text_width(&text,19);
             menu_label(&text,bx+(228.0-tw)/2.0,by+31.0,19.0,WHITEISH);
             if hover&&is_mouse_button_pressed(MouseButton::Left) {
-                let fitted=fit_window_to_desktop(*w,*h);
+                let fitted=(*w,*h);
                 request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
                 save_window_size(fitted.0,fitted.1);
                 save_selected_resolution(*w,*h);
@@ -938,7 +938,7 @@ async fn main(){
         let shortcut_reset=is_key_pressed(KeyCode::Key0)
             && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
         if header_reset||shortcut_reset {
-            let fitted=fit_window_to_desktop(1920,1200);
+            let fitted=(1920,1200);
             request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
             save_window_size(fitted.0,fitted.1);
             save_selected_resolution(1920,1200);
