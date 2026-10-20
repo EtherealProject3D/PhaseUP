@@ -472,6 +472,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
+    if g.stage==Stage::Cpu {
+        let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
+        let notice=format!("{}  -  {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
+        let width=measure_text(&notice,None,23,1.0).width;
+        draw_rectangle(590.0,281.0,420.0,39.0,PANEL);
+        label(&notice,800.0-width/2.0,308.0,23.0,YELLOW);
+    }
     let table_y=207.;label("CPU PHASES",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
@@ -864,7 +871,7 @@ fn debug_overlay(g:&Game) {
         format!("Canvas: 1600 x 1000 ({:.2}x)",(pw/1600.0).min(ph/1000.0)),
         format!("Mouse (canvas): {:.0}, {:.0}",mx,my),
         format!("Round: {}  Turn: {}",g.round,if g.turn==0{"You".to_string()}else{format!("CPU {}",g.turn)}),
-        format!("Stage: {}",match g.stage {Stage::Draw=>"Draw",Stage::Play=>"Play",Stage::RoundOver=>"RoundOver",Stage::GameOver=>"GameOver"}),
+        format!("Stage: {}",match g.stage {Stage::Draw=>"Draw",Stage::Play=>"Play",Stage::Cpu=>"CPU",Stage::RoundOver=>"RoundOver",Stage::GameOver=>"GameOver"}),
         format!("Selected: {}  Dragging: {}",g.selected.len(),g.drag.is_some()),
         "F3: hide debug info".to_string(),
     ];
