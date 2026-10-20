@@ -738,6 +738,8 @@ async fn main(){
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
+    let mut windowed_size=read_window_size();
+    let mut previous_fullscreen=fullscreen;
     #[cfg(target_os="windows")]
     {
         window_placement::restore();
@@ -758,6 +760,16 @@ async fn main(){
         }
     }
     loop {
+        if previous_fullscreen!=fullscreen {
+            if !fullscreen {
+                let (w,h)=windowed_size;
+                request_new_screen_size(w as f32,h as f32);
+                last_size=(w,h);
+                saved_size=(w,h);
+                size_changed_at=get_time();
+            }
+            previous_fullscreen=fullscreen;
+        }
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
@@ -795,12 +807,16 @@ async fn main(){
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
             if !fullscreen {
-                let target_h=((size.0 as f32)*12.0/16.0).round() as i32;
-                if (size.1-target_h).abs()>2 {
-                    request_new_screen_size(size.0 as f32,target_h as f32);
-                    saved_size=(size.0,target_h);
+                let fitted=fit_window_to_desktop(size.0,size.1);
+                let scale=(fitted.0 as f32/size.0 as f32).min(fitted.1 as f32/size.1 as f32);
+                let fit_w=((size.0 as f32*scale).round() as i32).max(640);
+                let fit_h=((fit_w as f32)*0.75).round() as i32;
+                if (size.0-fit_w).abs()>2 || (size.1-fit_h).abs()>2 {
+                    request_new_screen_size(fit_w as f32,fit_h as f32);
+                    saved_size=(fit_w,fit_h);
                 } else {
                     save_window_size(size.0,size.1);
+                    windowed_size=size;
                     saved_size=size;
                 }
             }
