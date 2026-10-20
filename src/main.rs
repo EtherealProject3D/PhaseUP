@@ -355,8 +355,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let pile_y=center-50.0;
     let pile_w=112.0;
     let pile_h=150.0;
-    let deck_x=sw*0.39-69.0;
-    let discard_x=sw*0.56-54.0;
+    let deck_x=sw/2.0-200.0;
+    let discard_x=sw/2.0+88.0;
     menu_label("DRAW",deck_x,pile_y-17.0,19.0,MUTED);
     menu_label("DISCARD",discard_x,pile_y-17.0,19.0,MUTED);
     // Offset layers expose the thickness of the remaining draw deck.
@@ -541,7 +541,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let guidance_y=806.0;
     // When a phase is ready, the entire guidance banner becomes the
     // LAY PHASE button. Draw it later, after staging validation.
-    let guidance_x=415.0;
+    let guidance_x=(sw-770.0)/2.0;
     let guidance_w=770.0;
     let guidance_h=43.0;
     let p=&g.players[0];
@@ -660,7 +660,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
         let tw=menu_text_width(turn_text,25);
-        menu_label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
+        menu_label(turn_text,sw/2.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     }
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
@@ -762,10 +762,10 @@ fn debug_overlay(g:&Game) {
 enum MenuScreen { Home, Settings, HowToPlay, Rules, ConfirmNew, Playing, Resume }
 fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
-    let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
-    themed_button(570.0,y,460.0,64.0,hovered);
+    let hovered=mx>=730.0&&mx<=1190.0&&my>=y&&my<=y+64.0;
+    themed_button(730.0,y,460.0,64.0,hovered);
     let w=menu_text_width(title,28);
-    menu_label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
+    menu_label(title,960.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool)->Option<MenuScreen> {
@@ -777,14 +777,14 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
-        if button("BACK TO MENU",570.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
+        if button("BACK TO MENU",730.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    panel_decoration(460.0,190.0,680.0,880.0);
+    panel_decoration(620.0,190.0,680.0,880.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>260.0,_=>310.0};
     let w=menu_text_width(title,54);
-    menu_label(title,800.0-w/2.0,title_y,54.0,ACCENT);
+    menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",345.0){return Some(MenuScreen::Playing);}
@@ -793,18 +793,18 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("GAME RULES",615.0){return Some(MenuScreen::Rules);}
             if menu_button("SETTINGS",705.0){return Some(MenuScreen::Settings);}
             if menu_button("QUIT",795.0){std::process::exit(0);}
-            if has_game { menu_label("ESC: resume game",690.0,925.0,20.0,MUTED); }
+            if has_game { menu_label("ESC: resume game",850.0,925.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",590.0,333.0,22.0,MUTED);
+            menu_label("WINDOW",750.0,333.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             if menu_button(&format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"}),365.0){
                 *resolution_open=!*resolution_open;
             }
             if menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",590.0,540.0,22.0,MUTED);
+            menu_label("INTERFACE",750.0,540.0,22.0,MUTED);
             if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},560.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",590.0,650.0,22.0,MUTED);
+            menu_label("APPEARANCE",750.0,650.0,22.0,MUTED);
             if menu_button(&format!("THEME: {}",active_theme().name()),670.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
@@ -813,8 +813,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 let choices=[(1280,800),(1440,900),(1600,1000),(1920,1200)];
-                draw_rectangle(564.0,428.0,472.0,252.0,active_theme().background());
-                draw_rectangle_lines(564.0,428.0,472.0,252.0,2.0,ACCENT);
+                draw_rectangle(724.0,428.0,472.0,252.0,active_theme().background());
+                draw_rectangle_lines(724.0,428.0,472.0,252.0,2.0,ACCENT);
                 for (index,(w,h)) in choices.iter().enumerate() {
                     let y=432.0+index as f32*61.0;
                     if menu_button(&format!("{} x {}  (16:10)",w,h),y){
@@ -826,12 +826,12 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                 }
                 if is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    if !(mx>=564.0&&mx<=1036.0&&my>=365.0&&my<=680.0){*resolution_open=false;}
+                    if !(mx>=724.0&&mx<=1196.0&&my>=365.0&&my<=680.0){*resolution_open=false;}
                 }
             }
         }
         MenuScreen::ConfirmNew=>{
-            label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
+            label("Start over? Current game progress will be lost.",675.0,310.0,22.0,WHITEISH);
             if menu_button("YES, NEW GAME",400.0){return Some(MenuScreen::Playing);}
             if menu_button("CANCEL",500.0){return Some(MenuScreen::Home);}
             if has_game && menu_button("RESUME GAME",600.0){return Some(MenuScreen::Resume);}
