@@ -768,7 +768,7 @@ fn menu_button(title:&str,y:f32)->bool {
     menu_label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32)->Option<MenuScreen> {
+fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool)->Option<MenuScreen> {
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
@@ -797,22 +797,38 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         }
         MenuScreen::Settings=>{
             menu_label("WINDOW",590.0,333.0,22.0,MUTED);
-            for (index,(w,h)) in [(1280,800),(1440,900),(1600,1000),(1920,1200)].iter().enumerate(){
-                if menu_button(&format!("WINDOW: {} x {} (16:10)",w,h),365.0+index as f32*65.0){
-                    let fitted=fit_window_to_desktop(*w,*h);
-                    request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
-                    save_window_size(fitted.0,fitted.1);
-                }
+            let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
+            if menu_button(&format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"}),365.0){
+                *resolution_open=!*resolution_open;
             }
-            if menu_button("TOGGLE FULLSCREEN",641.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",590.0,710.0,22.0,MUTED);
-            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},724.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",590.0,805.0,22.0,MUTED);
-            if menu_button(&format!("THEME: {}",active_theme().name()),817.0){
+            if menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",590.0,540.0,22.0,MUTED);
+            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},560.0){*show_moves=!*show_moves;}
+            menu_label("APPEARANCE",590.0,650.0,22.0,MUTED);
+            if menu_button(&format!("THEME: {}",active_theme().name()),670.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if menu_button("BACK",912.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",989.0){return Some(MenuScreen::Resume);}
+            if menu_button("BACK",785.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
+            // Draw the expanded list last, above the other settings controls.
+            if *resolution_open {
+                let choices=[(1280,800),(1440,900),(1600,1000),(1920,1200)];
+                draw_rectangle(564.0,428.0,472.0,252.0,active_theme().background());
+                draw_rectangle_lines(564.0,428.0,472.0,252.0,2.0,ACCENT);
+                for (index,(w,h)) in choices.iter().enumerate() {
+                    let y=432.0+index as f32*61.0;
+                    if menu_button(&format!("{} x {}  (16:10)",w,h),y){
+                        let fitted=fit_window_to_desktop(*w,*h);
+                        request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                        save_window_size(fitted.0,fitted.1);
+                        *resolution_open=false;
+                    }
+                }
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    let (mx,my)=game_mouse();
+                    if !(mx>=564.0&&mx<=1036.0&&my>=365.0&&my<=680.0){*resolution_open=false;}
+                }
+            }
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
@@ -844,6 +860,7 @@ async fn main(){
     let mut saved_preferences=(show_moves,fullscreen);
     let mut menu=MenuScreen::Home;
     let mut help_scroll=0.0f32;
+    let mut resolution_open=false;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -942,7 +959,7 @@ async fn main(){
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1710.0&&mx<=1810.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
-            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll);
+            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open);
             if let Some(next)=action {
                 if matches!(next,MenuScreen::HowToPlay|MenuScreen::Rules) {help_scroll=0.0;}
                 if next==MenuScreen::Resume {menu=MenuScreen::Playing;}
