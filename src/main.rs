@@ -152,7 +152,7 @@ impl Game {
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
             Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);if requirement(phase,group)=="run"{order_run(&mut self.players[target].table[group]);}self.unstage_card(card.id);self.selected.clear();
-            self.log_move(if target==0 {format!("You hit with a {}",card_text(card.kind))}else{format!("You hit {} with a {}",self.cpu_name(target),card_text(card.kind))});
+            self.log_move(if target==0 {format!("You hit with {} {}",card_article(card.kind),card_text(card.kind))}else{format!("You hit {} with {} {}",self.cpu_name(target),card_article(card.kind),card_text(card.kind))});
             self.message=format!("Added {} to {}'s {}!",card_text(card.kind),if target==0 {"your".to_string()}else{format!("CPU {}",target)},requirement(phase,group));
             if self.players[0].hand.is_empty(){self.end_round(0);}
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
@@ -177,7 +177,7 @@ impl Game {
         self.human_draw_flight=None;
         self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time()});
         self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
-        if c.kind!=Kind::Skip {self.log_move(format!("You discarded a {}",card_text(c.kind)));}
+        if c.kind!=Kind::Skip {self.log_move(format!("You discarded {} {}",card_article(c.kind),card_text(c.kind)));}
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
         if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.log_move(if target==0 {"You were skipped".to_string()}else{format!("{} was skipped",self.cpu_name(target))});self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
@@ -198,6 +198,10 @@ impl Game {
             while self.stage==Stage::Cpu {self.cpu_action();}
         }
     }
+}
+// Use "an" for the spoken card names eight and eleven.
+fn card_article(kind:Kind)->&'static str {
+    match kind {Kind::Number(8,_)|Kind::Number(11,_)=>"an",_=>"a"}
 }
 // Stable player identity colors used in the scoreboard and move history.
 fn player_color(i:usize)->Color {
