@@ -94,7 +94,7 @@ impl Game {
         if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn lay(&mut self) {
-        if self.stage!=Stage::Play||self.players[0].laid{return;}
+        if self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
         let cards:Vec<Card>=self.players[0].hand.iter().copied().filter(|c|self.selected.contains(&c.id)).collect();
         let phase=self.players[0].phase;
         // Preserve the player's explicit staging groups when they form a valid phase.
@@ -114,7 +114,7 @@ impl Game {
         }else{self.message=format!("Selected cards do not match phase {} ({})",phase+1,phase_name(phase));}
     }
     fn hit(&mut self, target:usize,group:usize) {
-        if self.stage!=Stage::Play {self.message="Draw a card before playing onto a phase.".into();return;}
+        if self.stage!=Stage::Play||self.turn!=0 {self.message="Draw a card before playing onto a phase.".into();return;}
         if !self.players[0].laid {self.message="Complete your own phase before adding cards to the table.".into();return;}
         if self.selected.len()!=1 {self.message="Select exactly one card, then click a table group to add it.".into();return;}
         let Some(card)=self.players[0].hand.iter().find(|c|c.id==self.selected[0]).copied() else{return;};
@@ -127,7 +127,7 @@ impl Game {
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
     }
     fn discard_selected(&mut self) {
-        if self.stage!=Stage::Play||self.selected.len()!=1{return;}
+        if self.stage!=Stage::Play||self.turn!=0||self.selected.len()!=1{return;}
         let id=self.selected[0];
         // Capture the card's actual sorted hand slot before removing it.
         let mut sorted:Vec<Card>=self.players[0].hand.iter().copied()
