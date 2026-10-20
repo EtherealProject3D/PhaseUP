@@ -4,10 +4,51 @@ pub(super) struct CpuDrawFlight { pub(super) player:usize, pub(super) from_disca
 
 pub(super) struct CpuDiscardFlight { pub(super) card:Card, pub(super) player:usize, pub(super) origin_index:usize, pub(super) origin_count:usize, pub(super) started:f64, pub(super) duration:f64 }
 
+pub(super) struct CpuPhaseFlight {
+    pub(super) player:usize,
+    pub(super) cards:Vec<(Card,usize,usize)>,
+    pub(super) started:f64,
+    pub(super) per_card:f64,
+}
+impl CpuPhaseFlight {
+    pub(super) fn duration(&self)->f64 {self.cards.len() as f64*self.per_card}
+    pub(super) fn visible(&self,group:usize,index:usize,now:f64)->bool {
+        self.cards.iter().position(|(_,g,k)|*g==group&&*k==index)
+            .is_none_or(|n|now-self.started>=(n+1) as f64*self.per_card)
+    }
+}
+
 pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
 pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
 
 pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
+    // Reveal CPU phase cards in sequence, flying from their former hand area.
+    if let Some(flight)=&g.cpu_phase_flight {
+        let elapsed=get_time()-flight.started;
+        if elapsed>=0.0 && elapsed<flight.duration() {
+            let index=(elapsed/flight.per_card) as usize;
+            if let Some((card,group,slot))=flight.cards.get(index).copied() {
+                let p=&g.players[flight.player];
+                let count=p.table.iter().map(|g|g.len()).sum::<usize>()+p.hand.len();
+                let origin_x=28.0+(flight.player-1) as f32*(sw-50.0)/3.0;
+                let step=if count>1 {column_hand_width(count,65.0)/(count-1) as f32}else{0.0};
+                let start_x=origin_x+(count.saturating_sub(1) as f32*step)/2.0;
+                let start_y=119.0;
+                let base_x=24.0+(flight.player-1) as f32*((sw-50.0)/3.0);
+                let width=if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
+                let dest_x=base_x+group as f32*252.0;
+                let len=p.table[group].len();
+                let spacing=if len>1 {((width-12.0-39.0).max(0.0)/(len-1) as f32).min(42.0)}else{0.0};
+                let end_x=dest_x+6.0+slot as f32*spacing;
+                let end_y=207.0+35.0+12.0+23.0;
+                let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
+                let eased=t*t*(3.0-2.0*t);
+                let x=start_x+(end_x-start_x)*eased;
+                let y=start_y+(end_y-start_y)*eased-30.0*(4.0*t*(1.0-t));
+                let _=card_ui(card,x,y,39.0+26.0*(1.0-t),69.0+18.0*(1.0-t),false);
+            }
+        }
+    }
     // Human draw: show the face-up card flying to its sorted hand slot.
     if let Some(flight)=&g.human_draw_flight {
         if let Some(card)=g.players[0].hand.iter().find(|c|c.id==flight.card_id).copied() {
