@@ -517,7 +517,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
     let stage_w=if groups.len()==1 {700.0}else{540.0};
     let stage_left=(sw-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
-    label("PHASE STAGING",24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
+    let staging_title="PHASE STAGING";
+    let staging_title_width=measure_text(staging_title,None,18,1.0).width;
+    label(staging_title,(sw-staging_title_width)/2.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
     let mut staged_reorder=None;
