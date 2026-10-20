@@ -264,8 +264,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {680.0}else{table_y+35.0};
-        let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
-        menu_label(&phase_label,x,y,17.0,player_color(i));
+        if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
             let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
