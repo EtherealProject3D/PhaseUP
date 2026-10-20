@@ -210,7 +210,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     set_camera(&camera);
     expire_human_flights(g);
-    label("PHASEUP",24.,42.,32.,ACCENT);
+    menu_label("PHASEUP",24.,42.,32.,ACCENT);
     label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
     label("v0.3.2-dev",184.,40.,19.,MUTED);
     label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
@@ -222,8 +222,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
-    draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,172.0,3.0,YELLOW);}label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,104.,17.,MUTED);
+    draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,172.0,3.0,YELLOW);}menu_label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,20.,WHITEISH);menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,104.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=65.0;let card_h=87.0;
@@ -322,9 +322,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
     let log_x=1198.0;let log_y=480.0;
-    draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
+    draw_rectangle(log_x,log_y,374.0,207.0,active_theme().panel());
     draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
-    label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
+    menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
     // Put the live action *inside* the panel so laid phases cannot cover it.
     let events_y=if g.stage==Stage::Cpu {
         let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
@@ -437,7 +437,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if let Some(id)=staged_click {g.unstage_card(id);}
     if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-157.0;
-    draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
+    draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
     let guidance_y=806.0;
@@ -448,8 +448,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let guidance_h=43.0;
     let p=&g.players[0];
     let hand_info=format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score);
-    let hand_info_width=measure_text(&hand_info,None,21,1.0).width;
-    label(&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
+    let hand_info_width=menu_text_width(&hand_info,21);
+    menu_label(&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
