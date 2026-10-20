@@ -152,7 +152,7 @@ impl Game {
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
             Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);if requirement(phase,group)=="run"{order_run(&mut self.players[target].table[group]);}self.unstage_card(card.id);self.selected.clear();
-            self.log_move(format!("You hit {} with {}",self.cpu_name(target),card_text(card.kind)));
+            self.log_move(if target==0 {format!("You hit with a {}",card_text(card.kind))}else{format!("You hit {} with a {}",self.cpu_name(target),card_text(card.kind))});
             self.message=format!("Added {} to {}'s {}!",card_text(card.kind),if target==0 {"your".to_string()}else{format!("CPU {}",target)},requirement(phase,group));
             if self.players[0].hand.is_empty(){self.end_round(0);}
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
