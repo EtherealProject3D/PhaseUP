@@ -799,15 +799,15 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button(&format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"}),365.0){
                 *resolution_open=!*resolution_open;
             }
-            if menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
             menu_label("INTERFACE",750.0,540.0,22.0,MUTED);
-            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},560.0){*show_moves=!*show_moves;}
+            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},560.0){*show_moves=!*show_moves;}
             menu_label("APPEARANCE",750.0,650.0,22.0,MUTED);
-            if menu_button(&format!("THEME: {}",active_theme().name()),670.0){
+            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),670.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if menu_button("BACK",785.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("BACK",785.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 // Two compact columns keep all nine presets visible.
