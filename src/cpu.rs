@@ -2,7 +2,7 @@ use macroquad::prelude::get_time;
 use crate::*;
 
 impl Game {
-    fn cpu_action(&mut self) {
+    pub(super) fn cpu_action(&mut self) {
         if self.stage!=Stage::Cpu {return;}
         if self.turn>3 {
             self.turn=0;self.stage=Stage::Draw;self.turn_count+=1;
@@ -138,7 +138,7 @@ impl Game {
         }
     }
 
-    fn update_cpu(&mut self) {
+    pub(super) fn update_cpu(&mut self) {
         if self.cpu_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_draw_flight=None;}
         if self.cpu_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_discard_flight=None;}
         if self.stage!=Stage::Cpu{return;}
