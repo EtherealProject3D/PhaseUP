@@ -16,7 +16,7 @@ enum Kind { Number(u8, u8), Wild, Skip }
 struct Card { id: u32, kind: Kind }
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Stage { Draw, Play, RoundOver, GameOver }
+enum Stage { Draw, Play, Cpu, RoundOver, GameOver }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SortMode { Runs, Colors, Sets }
 fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
@@ -33,7 +33,7 @@ fn sort_key(card: Card, mode: SortMode) -> (u8,u8,u32) {
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8 }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -185,13 +185,13 @@ impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.turn_count=1;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
@@ -294,39 +294,108 @@ impl Game {
         else {self.ai_cycle(None);}
     }
     fn ai_cycle(&mut self,skip:Option<usize>) {
-        for i in 1..4 {
-            if skip==Some(i){self.log_move(format!("{} was skipped",self.cpu_name(i)));continue;}
-            self.turn=i;
-            let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
-            let card=if use_discard{self.discard.pop()}else{self.draw_deck()};
-            if let Some(c)=card{self.players[i].hand.push(c);self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"discard"}else{"deck"}));}
-            if !self.players[i].laid && self.players[i].phase<PHASES.len() {
-                let n=self.players[i].hand.len();let needed:usize=PHASES[self.players[i].phase].iter().sum();
-                // Find any exact subset satisfying this phase.
-                if needed<=n {
-                    let hand=self.players[i].hand.clone();
-                    fn search(hand:&[Card],needed:usize,start:usize,idx:&mut Vec<usize>,phase:usize)->Option<Vec<Vec<Card>>>{
-                        if idx.len()==needed {let subset:Vec<Card>=idx.iter().map(|i|hand[*i]).collect();return partition_phase(&subset,phase);}
-                        for j in start..hand.len() {idx.push(j);if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}idx.pop();}None
-                    }
-                    let found=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase);
-                    if let Some(mut groups)=found {order_table_groups(&mut groups,self.players[i].phase);let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));}
-                }
-            }
-            if self.players[i].laid {
-                let mut j=0;
-                while j<self.players[i].hand.len() {
-                    let c=self.players[i].hand[j];let mut target_hit=None;
-                    'outer: for target in 0..4 {if self.players[target].laid {for g in 0..self.players[target].table.len(){if can_hit(&self.players[target].table[g],c,self.players[target].phase.min(PHASES.len()-1),g){target_hit=Some((target,g));break 'outer;}}}}
-                    if let Some((target,g))=target_hit {self.players[i].hand.remove(j);self.players[target].table[g].push(c);if requirement(self.players[target].phase.min(PHASES.len()-1),g)=="run"{order_run(&mut self.players[target].table[g]);}self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(c.kind)));}else{j+=1;}
-                }
-            }
-            if self.players[i].hand.is_empty(){self.end_round(i);return;}
-            let idx=(0..self.players[i].hand.len()).max_by_key(|&j|cpu_discard_priority(&self.players[i].hand,j,self.players[i].phase)).unwrap();
-            let c=self.players[i].hand.remove(idx);self.discard.push(c);self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(c.kind)));
-            if self.players[i].hand.is_empty(){self.end_round(i);return;}
+        self.cpu_skip=skip;
+        self.turn=1;
+        self.cpu_step=0;
+        self.stage=Stage::Cpu;
+        self.cpu_next_at=get_time()+0.15;
+        if self.cpu_speed==0 {
+            while self.stage==Stage::Cpu {self.cpu_action();}
         }
-        self.turn=0;self.stage=Stage::Draw;self.turn_count+=1;self.drawn_card=None;self.message=String::new();
+    }
+    fn cpu_action(&mut self) {
+        if self.stage!=Stage::Cpu {return;}
+        if self.turn>3 {
+            self.turn=0;self.stage=Stage::Draw;self.turn_count+=1;
+            self.drawn_card=None;self.message.clear();return;
+        }
+        let i=self.turn;
+        if self.cpu_skip==Some(i) {
+            self.log_move(format!("{} was skipped",self.cpu_name(i)));
+            self.turn+=1;self.cpu_step=0;return;
+        }
+        match self.cpu_step {
+            0 => {
+                let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
+                let card=if use_discard {self.discard.pop()}else{self.draw_deck()};
+                if let Some(c)=card {
+                    self.players[i].hand.push(c);
+                    self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"discard"}else{"deck"}));
+                }
+                self.cpu_step=1;
+            }
+            1 => {
+                if !self.players[i].laid && self.players[i].phase<PHASES.len() {
+                    let needed:usize=PHASES[self.players[i].phase].iter().sum();
+                    if needed<=self.players[i].hand.len() {
+                        let hand=self.players[i].hand.clone();
+                        fn search(hand:&[Card],needed:usize,start:usize,idx:&mut Vec<usize>,phase:usize)->Option<Vec<Vec<Card>>>{
+                            if idx.len()==needed {
+                                let subset:Vec<Card>=idx.iter().map(|j|hand[*j]).collect();
+                                return partition_phase(&subset,phase);
+                            }
+                            for j in start..hand.len() {
+                                idx.push(j);
+                                if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}
+                                idx.pop();
+                            }
+                            None
+                        }
+                        if let Some(mut groups)=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase) {
+                            order_table_groups(&mut groups,self.players[i].phase);
+                            let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();
+                            Self::remove_ids(&mut self.players[i].hand,&ids);
+                            self.players[i].table=groups;self.players[i].laid=true;
+                            self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));
+                        }
+                    }
+                }
+                self.cpu_step=2;
+            }
+            2 => {
+                let mut hit=None;
+                if self.players[i].laid {
+                    'cards: for (j,&card) in self.players[i].hand.iter().enumerate() {
+                        for target in 0..4 {
+                            if self.players[target].laid {
+                                for group in 0..self.players[target].table.len() {
+                                    if can_hit(&self.players[target].table[group],card,self.players[target].phase.min(9),group) {
+                                        hit=Some((j,target,group,card));break 'cards;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some((j,target,group,card))=hit {
+                    self.players[i].hand.remove(j);
+                    self.players[target].table[group].push(card);
+                    if requirement(self.players[target].phase.min(9),group)=="run" {
+                        order_run(&mut self.players[target].table[group]);
+                    }
+                    self.log_move(format!("{} hit {} with {}",self.cpu_name(i),self.cpu_name(target),card_text(card.kind)));
+                } else {self.cpu_step=3;}
+            }
+            _ => {
+                if self.players[i].hand.is_empty(){self.end_round(i);return;}
+                let idx=(0..self.players[i].hand.len()).max_by_key(|&j|cpu_discard_priority(&self.players[i].hand,j,self.players[i].phase)).unwrap();
+                let card=self.players[i].hand.remove(idx);
+                self.discard.push(card);
+                self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(card.kind)));
+                if self.players[i].hand.is_empty(){self.end_round(i);return;}
+                self.turn+=1;self.cpu_step=0;
+            }
+        }
+    }
+    fn update_cpu(&mut self) {
+        if self.stage!=Stage::Cpu{return;}
+        if self.cpu_speed==0 {
+            while self.stage==Stage::Cpu {self.cpu_action();}
+        }else if get_time()>=self.cpu_next_at {
+            self.cpu_action();
+            let delay=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
+            self.cpu_next_at=get_time()+delay;
+        }
     }
     fn end_round(&mut self,winner:usize) {
         for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
@@ -387,13 +456,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
+        Stage::Cpu=>("CPU TURN  -  WATCH THE ACTIONS",YELLOW),
         Stage::Play if g.players[0].laid=>("YOUR TURN  -  HIT OR DISCARD",YELLOW),
         Stage::Play=>("YOUR TURN  -  LAY PHASE OR DISCARD",YELLOW),
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,PANEL);
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,172.0,3.0,YELLOW);}label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=65.0;let card_h=87.0;
@@ -921,6 +991,7 @@ async fn main(){
         }
         if menu==MenuScreen::Playing {
             has_game=true;
+            game.update_cpu();
             draw_game(&mut game,show_debug,show_moves);
             draw_rectangle(1390.0,8.0,100.0,40.0,PANEL);
             label("MENU",1404.0,35.0,22.0,ACCENT);
