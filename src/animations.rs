@@ -18,6 +18,17 @@ impl CpuPhaseFlight {
     }
 }
 
+pub(super) struct CpuHitFlight {
+    pub(super) card:Card,
+    pub(super) player:usize,
+    pub(super) target:usize,
+    pub(super) group:usize,
+    pub(super) origin_index:usize,
+    pub(super) origin_count:usize,
+    pub(super) started:f64,
+    pub(super) duration:f64,
+}
+
 pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
 pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
 
@@ -47,6 +58,30 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                 let y=start_y+(end_y-start_y)*eased-30.0*(4.0*t*(1.0-t));
                 let _=card_ui(card,x,y,39.0+26.0*(1.0-t),69.0+18.0*(1.0-t),false);
             }
+        }
+    }
+    // CPU hit: move the played card from its former hand slot to the table.
+    if let Some(flight)=&g.cpu_hit_flight {
+        let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
+        let eased=t*t*(3.0-2.0*t);
+        let cpu_x=28.0+(flight.player-1) as f32*(sw-50.0)/3.0;
+        let step=if flight.origin_count>1 {column_hand_width(flight.origin_count,65.0)/(flight.origin_count-1) as f32}else{0.0};
+        let from_x=cpu_x+flight.origin_index as f32*step;
+        let from_y=119.0;
+        let p=&g.players[flight.target];
+        if let Some(cards)=p.table.get(flight.group) {
+            let x=if flight.target==0 {sw/2.0-350.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
+            let y=if flight.target==0 {680.0}else{207.0+35.0};
+            let width=if flight.target==0 {if p.table.len()==1 {700.0}else{347.0}}
+                else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
+            let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
+            let slot=cards.iter().position(|c|c.id==flight.card.id).unwrap_or(cards.len().saturating_sub(1));
+            let spacing=if cards.len()>1 {((width-12.0-39.0).max(0.0)/(cards.len()-1) as f32).min(42.0)}else{0.0};
+            let to_x=x+6.0+slot as f32*spacing;
+            let to_y=y+12.0+23.0;
+            let px=from_x+(to_x-from_x)*eased;
+            let py=from_y+(to_y-from_y)*eased-45.0*(4.0*t*(1.0-t));
+            let _=card_ui(flight.card,px,py,65.0-26.0*eased,87.0-18.0*eased,false);
         }
     }
     // Human draw: show the face-up card flying to its sorted hand slot.
