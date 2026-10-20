@@ -164,7 +164,7 @@ impl Game {
         }else if get_time()>=self.cpu_next_at {
             let previous_turn=self.turn;
             self.cpu_action();
-            let delay=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
+            let delay: f64=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
             // A turn handoff is measured from the outgoing discard landing,
             // rather than from the instant the discard action was processed.
             // This prevents the next CPU drawing over the previous animation.
@@ -182,7 +182,7 @@ impl Game {
                 }
             }else{delay};
             let phase_delay=self.cpu_phase_flight.as_ref()
-                .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
+                .map(|flight|(flight.started+flight.duration()-get_time()+0.10).max(0.0))
                 .unwrap_or(0.0);
             let hit_delay=self.cpu_hit_flight.as_ref()
                 .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
