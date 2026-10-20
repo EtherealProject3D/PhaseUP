@@ -807,15 +807,10 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         MenuScreen::Settings=>{
             menu_label("WINDOW",750.0,333.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
-            let window_text=if let Some((w,h))=read_selected_resolution() {
-                if (w,h)!=(current_w,current_h) {
-                    format!("PRESET: {} x {}  {}",w,h,if *resolution_open {"▲"}else{"▼"})
-                }else{
-                    format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"})
-                }
-            }else{
-                format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"})
-            };
+            // Always identify a chosen resolution by its preset, even when
+            // Windows fits its actual client size to the available desktop.
+            let selected=read_selected_resolution().unwrap_or((current_w,current_h));
+            let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
             if menu_button(&window_text,365.0){
                 *resolution_open=!*resolution_open;
             }
