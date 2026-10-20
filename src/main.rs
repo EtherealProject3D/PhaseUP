@@ -440,7 +440,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=menu_text_width(t,24);menu_label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-157.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
     // Draw inside the hand panel, after its background and before the cards.
@@ -621,18 +621,18 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
         let game_over=g.stage==Stage::GameOver;
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
-        let title_w=measure_text(&title,None,32,1.0).width;
-        label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
+        let title_w=menu_text_width(&title,32);
+        menu_label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
         let winner_name=g.cpu_name(g.turn).to_uppercase();
         let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
-        let announce_w=measure_text(&announcement,None,27,1.0).width;
-        label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
-        label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
+        let announce_w=menu_text_width(&announcement,27);
+        menu_label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
+        menu_label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
         for i in 0..4 {
             let p=&g.players[i];
             let name=g.cpu_name(i);
             let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
-            label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
+            menu_label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
         if game_over {
             if button("NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
