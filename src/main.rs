@@ -276,7 +276,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                 draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
-                label(&desc,gx+6.0,y+17.0,15.0,Color::new(0.38,0.45,0.51,1.0));
+                menu_label(&desc,gx+8.0,y+22.0,19.0,Color::new(0.62,0.71,0.78,1.0));
                 menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
@@ -293,7 +293,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
             draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
-            label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
+            menu_label(&desc,x+8.0,yy+22.0,19.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -665,13 +665,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
     // Position the clear controls immediately left of the phase staging slots.
-    // Two-group phases have a 254px gutter; one-group phases have a 450px gutter.
+    // Keep clear buttons entirely in the gutter left of the staging panels.
+    // Derive their position from the actual current staging width.
     let control_w=154.0;
     let control_h=30.0;
-    // Anchor the controls to the two-group layout so single-group phases
-    // keep the same horizontal position even though their staging box is narrower.
-    let two_group_left=(sw-(2.0*540.0+6.0))/2.0;
-    let control_x=(two_group_left-control_w)/2.0;
+    let control_x=(stage_left-control_w-12.0).max(12.0);
     let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
