@@ -25,9 +25,9 @@ use crate::*;
 
 pub(super) fn game_mouse()->(f32,f32) {
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1600.0).min(ph/1200.0);
+    let scale=(pw/1920.0).min(ph/1200.0);
     let (mx,my)=mouse_position();
-    ((mx-(pw-1600.0*scale)/2.0)/scale,(my-(ph-1200.0*scale)/2.0)/scale)
+    ((mx-(pw-1920.0*scale)/2.0)/scale,(my-(ph-1200.0*scale)/2.0)/scale)
 }
 pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,crate::theme::themed_color(color));}
 pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
