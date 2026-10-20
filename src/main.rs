@@ -407,12 +407,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let p=&g.players[i];
         if !p.laid {continue;}
         let column_w=(sw-50.0)/4.0;
-        let x=24.0+i as f32*column_w;
-        let y=table_y+35.0;
-        label(&g.cpu_name(i).to_uppercase(),x,y,17.0,ACCENT);
+        let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+        let y=if i==0 {478.0}else{table_y+35.0};
+        label(if i==0 {"YOUR LAID PHASE"}else{&g.cpu_name(i).to_uppercase()},x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
-            let yy=y+12.0+j as f32*108.0;
-            let width=(column_w-8.0).max(95.0);
+            let yy=if i==0 {y+12.0}else{y+12.0+j as f32*108.0};
+            let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{((sw-50.0)/3.0-8.0).max(95.0)};
+            let x=if i==0 {x+j as f32*353.0}else{x};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             draw_rectangle(x,yy,width,102.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
@@ -498,13 +499,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // The completed player advances to phase index 10, beyond the ten phase definitions.
     // Keep rendering the final phase while the GameOver overlay is displayed.
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
-    let stage_w=((sw-42.0)/groups.len() as f32).min(610.0);
+    let stage_w=if groups.len()==1 {700.0}else{540.0};
+    let stage_left=(sw-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
     label(if g.stage==Stage::Draw {"PHASE STAGING  -  DRAW FIRST TO UNLOCK"}else{"PHASE STAGING  -  drag cards here, or select and press STAGE"},24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
     let mut staged_reorder=None;
     for group in 0..groups.len() {
-        let x=18.0+group as f32*(stage_w+6.0);
+        let x=stage_left+group as f32*(stage_w+6.0);
         let y=stage_y;
         draw_rectangle(x,y,stage_w,117.0,PANEL);
         let hovering=inside(x,y,stage_w,117.0);
@@ -593,7 +595,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     label(&format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score),24.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
-        let x=sw-338.0+i as f32*109.0;
+        let x=(sw-321.0)/2.0+i as f32*109.0;
         if button(name,x,py-65.0,103.0,28.0,true) {g.sort=*mode;}
         if g.sort==*mode {draw_rectangle_lines(x,py-65.0,103.0,28.0,2.0,ACCENT);}
     }
