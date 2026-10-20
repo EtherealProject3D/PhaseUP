@@ -813,7 +813,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
-            let window_text=format!("{} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
+            let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
             if menu_button(&window_text,365.0){
                 *resolution_open=!*resolution_open;
             }
@@ -865,7 +865,7 @@ fn resolution_picker(x:f32,y:f32)->bool {
             let tw=menu_text_width(&text,19);
             menu_label(&text,bx+(228.0-tw)/2.0,by+31.0,19.0,WHITEISH);
             if hover&&is_mouse_button_pressed(MouseButton::Left) {
-                let fitted=(*w,*h);
+                let fitted=fit_window_to_desktop(*w,*h);
                 request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
                 save_window_size(fitted.0,fitted.1);
                 save_selected_resolution(*w,*h);
@@ -938,10 +938,9 @@ async fn main(){
         let shortcut_reset=is_key_pressed(KeyCode::Key0)
             && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
         if header_reset||shortcut_reset {
-            let fitted=(1920,1200);
+            let fitted=fit_window_to_desktop(1920,1200);
             request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
             save_window_size(fitted.0,fitted.1);
-            save_selected_resolution(1920,1200);
             saved_size=fitted;
             #[cfg(target_os="windows")]
             {center_after_resize=true;}
