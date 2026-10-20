@@ -807,7 +807,16 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         MenuScreen::Settings=>{
             menu_label("WINDOW",750.0,333.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
-            if menu_button(&format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"}),365.0){
+            let window_text=if let Some((w,h))=read_selected_resolution() {
+                if (w,h)!=(current_w,current_h) {
+                    format!("PRESET: {} x {}  {}",w,h,if *resolution_open {"▲"}else{"▼"})
+                }else{
+                    format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"})
+                }
+            }else{
+                format!("WINDOW SIZE: {} x {}  {}",current_w,current_h,if *resolution_open {"▲"}else{"▼"})
+            };
+            if menu_button(&window_text,365.0){
                 *resolution_open=!*resolution_open;
             }
             if !*resolution_open && menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
@@ -861,6 +870,7 @@ fn resolution_picker(x:f32,y:f32)->bool {
                 let fitted=fit_window_to_desktop(*w,*h);
                 request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
                 save_window_size(fitted.0,fitted.1);
+                save_selected_resolution(*w,*h);
                 return true;
             }
         }
