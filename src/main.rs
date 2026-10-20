@@ -545,7 +545,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // Center the banner between the human phase panels and staging.
         let phase_bottom=(sh-522.0)+116.0;
         phase_bottom+(stage_y-phase_bottom-43.0)/2.0
-    }else{sh-394.0};
+    }else{
+        let phase_bottom=(sh-532.0)+116.0;
+        phase_bottom+(stage_y-phase_bottom-43.0)/2.0
+    };
     // When a phase is ready, the entire guidance banner becomes the
     // LAY PHASE button. Draw it later, after staging validation.
     let guidance_x=(sw-770.0)/2.0;
