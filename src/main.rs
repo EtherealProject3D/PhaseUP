@@ -839,7 +839,7 @@ fn read_window_size() -> (i32,i32) {
             if (640..=7680).contains(&w)&&(480..=4320).contains(&h) {return (w,h);}
         }
     }
-    (1600,1000)
+    (1280,960)
 }
 fn save_window_size(w:i32,h:i32) {
     let path=window_size_path();
@@ -923,7 +923,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         }
         MenuScreen::Settings=>{
             label("WINDOW",590.0,300.0,26.0,WHITEISH);
-            if menu_button("RESET SIZE (1600 x 1000)",355.0){
+            if menu_button("RESET SIZE (1280 x 960)",355.0){
                 request_new_screen_size(1280.0,960.0);
                 save_window_size(1280,960);
             }
@@ -983,8 +983,8 @@ async fn main(){
         let shortcut_reset=is_key_pressed(KeyCode::Key0)
             && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
         if header_reset||shortcut_reset {
-            request_new_screen_size(1600.0,1000.0);
-            save_window_size(1600,1000);
+            request_new_screen_size(1280.0,960.0);
+            save_window_size(1280,960);
             saved_size=(1280,960);
         }
         if (show_moves,fullscreen)!=saved_preferences {
