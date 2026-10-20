@@ -159,3 +159,43 @@ fn cpu_matchmaking_uses_unique_names_and_nearby_levels() {
         }
     }
 }
+
+
+#[test]
+fn recycling_deck_keeps_top_discard_and_preserves_card_ids() {
+    let mut g=Game::new();
+    let top=number(9001,9,0);
+    let buried=number(9002,3,1);
+    g.deck.clear();
+    g.discard=vec![buried,top];
+    let drawn=g.draw_deck().expect("buried discard should recycle into draw pile");
+    assert_eq!(drawn.id,buried.id);
+    assert_eq!(g.discard.len(),1);
+    assert_eq!(g.discard[0].id,top.id);
+    assert!(g.deck.is_empty());
+}
+
+#[test]
+fn dealing_new_round_resets_transient_state_but_preserves_progress() {
+    let mut g=Game::new();
+    let first_round=g.round;
+    g.players[0].phase=2;
+    g.players[0].score=45;
+    g.players[0].laid=true;
+    g.selected.push(g.players[0].hand[0].id);
+    g.staged[0].push(g.players[0].hand[0].id);
+    g.turn=2;
+    g.stage=Stage::RoundOver;
+    g.deal();
+    assert_eq!(g.round,first_round+1);
+    assert_eq!(g.turn,0);
+    assert_eq!(g.stage,Stage::Draw);
+    assert_eq!(g.players[0].phase,2);
+    assert_eq!(g.players[0].score,45);
+    assert!(!g.players[0].laid);
+    assert!(g.selected.is_empty());
+    assert!(g.staged.iter().all(|bucket|bucket.is_empty()));
+    assert!(g.players.iter().all(|p|p.hand.len()==10 && p.table.is_empty()));
+    assert_eq!(g.discard.len(),1);
+    assert_eq!(g.deck.len(),67);
+}
