@@ -189,6 +189,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
 }
 
 pub(super) fn expire_human_flights(g:&mut Game) {
+    if g.human_phase_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration()) {g.human_phase_flight=None;}
     if g.human_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_draw_flight=None;}
     if g.human_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_discard_flight=None;}
 }
