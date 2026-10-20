@@ -1,3 +1,26 @@
+use std::cell::RefCell;
+thread_local! {static MENU_FONTS:RefCell<[Option<Font>;3]>=RefCell::new([None,None,None]);}
+pub(super) async fn load_menu_fonts(){
+    // Windows fonts are optional: keep the original renderer as fallback.
+    #[cfg(target_os="windows")]
+    for (i,path) in ["C:/Windows/Fonts/segoeui.ttf","C:/Windows/Fonts/ariblk.ttf","C:/Windows/Fonts/comic.ttf"].iter().enumerate(){
+        if let Ok(font)=load_ttf_font(path).await {
+            MENU_FONTS.with(|f|f.borrow_mut()[i]=Some(font));
+        }
+    }
+}
+fn with_menu_font<R>(f:impl FnOnce(Option<&Font>)->R)->R {
+    let i=match active_theme(){Theme::Modern=>0,Theme::Futuristic=>1,Theme::Playful=>2};
+    MENU_FONTS.with(|fonts|{let fonts=fonts.borrow();f(fonts[i].as_ref())})
+}
+pub(super) fn menu_text_width(text:&str,size:u16)->f32{
+    with_menu_font(|font|measure_text(text,font,size,1.0).width)
+}
+pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
+    with_menu_font(|font|{
+        draw_text_ex(text,x,y,TextParams{font,font_size:size as u16,font_scale:1.0,color:themed_color(color),..Default::default()});
+    });
+}
 use crate::*;
 
 pub(super) fn game_mouse()->(f32,f32) {
