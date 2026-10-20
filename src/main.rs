@@ -100,7 +100,7 @@ impl Game {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"discard"}else{"deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"the Discard pile"}else{"the Deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn lay(&mut self) {
         if self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
