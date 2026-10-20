@@ -11,7 +11,7 @@ pub(super) fn read_window_size() -> (i32,i32) {
             if (640..=7680).contains(&w)&&(480..=4320).contains(&h) {return fit_window_to_desktop(w,h);}
         }
     }
-    fit_window_to_desktop(1600,1200)
+    fit_window_to_desktop(1600,1000)
 }
 #[cfg(target_os="windows")]
 pub(super) fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){
