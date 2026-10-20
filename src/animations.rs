@@ -59,8 +59,8 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                 let start_x=origin_x+(count.saturating_sub(1) as f32*step)/2.0;
                 let start_y=119.0;
                 let base_x=24.0+(flight.player-1) as f32*((sw-50.0)/3.0);
-                let width=if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
-                let dest_x=base_x+group as f32*252.0;
+                let width=if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0};
+                let dest_x=base_x+group as f32*312.0;
                 let len=p.table[group].len();
                 let spacing=if len>1 {((width-12.0-55.0).max(0.0)/(len-1) as f32).min(56.0)}else{0.0};
                 let end_x=dest_x+6.0+slot as f32*spacing;
@@ -83,10 +83,10 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let from_y=119.0;
         let p=&g.players[flight.target];
         if let Some(cards)=p.table.get(flight.group) {
-            let x=if flight.target==0 {sw/2.0-350.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
+            let x=if flight.target==0 {sw/2.0-400.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
             let y=if flight.target==0 {656.0}else{207.0+35.0};
-            let width=if flight.target==0 {if p.table.len()==1 {700.0}else{347.0}}
-                else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
+            let width=if flight.target==0 {if p.table.len()==1 {800.0}else{397.0}}
+                else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0};
             let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
             let slot=cards.iter().position(|c|c.id==flight.card.id).unwrap_or(cards.len().saturating_sub(1));
             let spacing=if cards.len()>1 {((width-12.0-55.0).max(0.0)/(cards.len()-1) as f32).min(56.0)}else{0.0};
@@ -105,9 +105,9 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             if let Some((card,group,slot,from_x,from_y))=flight.cards.get(index).copied() {
                 let p=&g.players[0];
                 if let Some(cards)=p.table.get(group) {
-                    let width=if p.table.len()==1 {700.0}else{347.0};
+                    let width=if p.table.len()==1 {800.0}else{397.0};
                     let step=if cards.len()>1 {((width-12.0-55.0)/(cards.len()-1) as f32).min(56.0)}else{0.0};
-                    let to_x=sw/2.0-350.0+group as f32*353.0+6.0+slot as f32*step;
+                    let to_x=sw/2.0-400.0+group as f32*403.0+6.0+slot as f32*step;
                     let to_y=656.0+12.0+26.0;
                     let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
                     let eased=t*t*(3.0-2.0*t);
@@ -144,9 +144,9 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
     if let Some(flight)=&g.cpu_draw_flight {
         let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
         let eased=t*t*(3.0-2.0*t);
-        let start_x=if flight.from_discard {1600.0*0.56-54.0}else{1600.0*0.39-69.0};
+        let start_x=if flight.from_discard {1920.0*0.56-54.0}else{1920.0*0.39-69.0};
         let start_y=535.0-50.0;
-        let cpu_x=28.0+(flight.player-1) as f32*(1600.0-50.0)/3.0;
+        let cpu_x=28.0+(flight.player-1) as f32*(1920.0-50.0)/3.0;
         let count=g.players[flight.player].hand.len();
         let step=if count>1 {column_hand_width(count,65.0)/(count-1) as f32}else{0.0};
         let index=g.players[flight.player].hand.iter().position(|c|c.id==flight.card_id).unwrap_or(count.saturating_sub(1));
