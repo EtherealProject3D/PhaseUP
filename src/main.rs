@@ -472,15 +472,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    // Keep the CPU action status beside Recent Moves, away from laid cards.
-    if g.stage==Stage::Cpu {
-        let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
-        let notice=format!("{}  -  {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
-        draw_rectangle(1198.0,315.0,374.0,38.0,PANEL);
-        draw_rectangle_lines(1198.0,315.0,374.0,38.0,1.5,YELLOW);
-        let width=measure_text(&notice,None,19,1.0).width;
-        label(&notice,1385.0-width/2.0,341.0,19.0,YELLOW);
-    }
     let table_y=207.;label("CPU PHASES",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
@@ -570,8 +561,19 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
     draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
     label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
-    for (j,event) in g.move_log.iter().rev().take(7).enumerate(){
-        label(event,log_x+12.0,log_y+50.0+j as f32*23.0,16.0,WHITEISH);
+    // Put the live action *inside* the panel so laid phases cannot cover it.
+    let events_y=if g.stage==Stage::Cpu {
+        let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
+        let notice=format!("{} - {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
+        draw_rectangle(log_x+9.0,log_y+34.0,356.0,36.0,BG);
+        draw_rectangle_lines(log_x+9.0,log_y+34.0,356.0,36.0,1.5,YELLOW);
+        let width=measure_text(&notice,None,18,1.0).width;
+        label(&notice,log_x+187.0-width/2.0,log_y+59.0,18.0,YELLOW);
+        log_y+94.0
+    }else{log_y+50.0};
+    let max_events=if g.stage==Stage::Cpu {5}else{7};
+    for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
+        label(event,log_x+12.0,events_y+j as f32*23.0,16.0,WHITEISH);
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
