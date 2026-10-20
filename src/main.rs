@@ -23,6 +23,7 @@ fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
 }
 struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight> }
 
+mod game_rules;
 mod phases;
 use phases::*;
 mod cards;
@@ -100,15 +101,6 @@ impl Game {
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
         if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
     }
-    fn draw_deck(&mut self)->Option<Card> {
-        if self.deck.is_empty() && self.discard.len()>1 {let top=self.discard.pop().unwrap();self.deck.append(&mut self.discard);shuffle(&mut self.deck);self.discard.push(top);}
-        self.deck.pop()
-    }
-    fn remove_ids(hand:&mut Vec<Card>, ids:&[u32])->Vec<Card> {
-        let mut out=Vec::new();let mut i=0;
-        while i<hand.len() {if ids.contains(&hand[i].id){out.push(hand.remove(i));}else{i+=1;}}
-        out
-    }
     fn lay(&mut self) {
         if self.stage!=Stage::Play||self.players[0].laid{return;}
         let cards:Vec<Card>=self.players[0].hand.iter().copied().filter(|c|self.selected.contains(&c.id)).collect();
@@ -181,13 +173,6 @@ impl Game {
         if self.cpu_speed==0 && discard_remaining==0.0 {
             while self.stage==Stage::Cpu {self.cpu_action();}
         }
-    }
-    fn end_round(&mut self,winner:usize) {
-        for p in &mut self.players {p.score+=p.hand.iter().map(|c|card_points(*c)).sum::<u32>();if p.laid{p.phase+=1;}}
-        self.turn=winner;
-        self.log_move(format!("{} went out!",self.cpu_name(winner)));
-        if self.players.iter().any(|p|p.phase>=10){self.stage=Stage::GameOver;self.message=format!("Game complete! {} finished all 10 phases",self.cpu_name(winner));}
-        else{self.stage=Stage::RoundOver;self.message=format!("{} went out! Scores updated. Continue for next round.",self.cpu_name(winner));}
     }
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
