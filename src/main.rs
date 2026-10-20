@@ -669,7 +669,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Derive their position from the actual current staging width.
     let control_w=154.0;
     let control_h=30.0;
-    let control_x=(stage_left-control_w-12.0).max(12.0);
+    let control_x=(stage_left-control_w)/2.0;
     let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
