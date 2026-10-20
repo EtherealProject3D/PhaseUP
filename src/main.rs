@@ -614,14 +614,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
         });
     if staged_complete {
-        draw_rectangle(525.0,772.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
-        draw_rectangle_lines(525.0,772.0,550.0,31.0,1.5,GREEN);
-        let ready_text="PHASE COMPLETE";
-        let ready_w=menu_text_width(ready_text,21);
-        menu_label(ready_text,800.0-ready_w/2.0,794.0,21.0,GREEN);
-    }
-    if staged_complete {
-        if button("LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
+        // A single ready-to-lay banner avoids overlapping the laid-phase area.
+        if button("PHASE COMPLETE  -  LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
