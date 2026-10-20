@@ -84,7 +84,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let p=&g.players[flight.target];
         if let Some(cards)=p.table.get(flight.group) {
             let x=if flight.target==0 {sw/2.0-400.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
-            let y=if flight.target==0 {if game_canvas_height()<1150.0 {game_canvas_height()-508.0}else{game_canvas_height()-544.0}}else{if game_canvas_height()<1150.0 {224.0}else{242.0}};
+            let y=if flight.target==0 {if game_canvas_height()<1150.0 {game_canvas_height()-522.0}else{game_canvas_height()-544.0}}else{if game_canvas_height()<1150.0 {224.0}else{242.0}};
             let width=if flight.target==0 {if p.table.len()==1 {800.0}else{397.0}}
                 else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0};
             let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
@@ -108,7 +108,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                     let width=if p.table.len()==1 {800.0}else{397.0};
                     let step=if cards.len()>1 {((width-12.0-55.0)/(cards.len()-1) as f32).min(56.0)}else{0.0};
                     let to_x=sw/2.0-400.0+group as f32*403.0+6.0+slot as f32*step;
-                    let to_y=(if game_canvas_height()<1150.0 {game_canvas_height()-508.0}else{game_canvas_height()-544.0})+12.0+26.0;
+                    let to_y=(if game_canvas_height()<1150.0 {game_canvas_height()-522.0}else{game_canvas_height()-544.0})+12.0+26.0;
                     let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
                     let eased=t*t*(3.0-2.0*t);
                     let x=from_x+(to_x-from_x)*eased;
