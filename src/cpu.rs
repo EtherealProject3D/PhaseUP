@@ -27,7 +27,7 @@ impl Game {
                             started:get_time(),duration
                         });
                     }
-                    self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"discard"}else{"deck"}));
+                    self.log_move(format!("{} drew from {}",self.cpu_name(i),if use_discard {"the Discard pile"}else{"the Deck"}));
                 }
                 self.cpu_step=1;
             }
