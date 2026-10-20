@@ -786,7 +786,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         return None;
     }
     if game_canvas_height()<1150.0 {
-        panel_decoration(620.0,155.0,680.0,825.0);
+        panel_decoration(620.0,155.0,680.0,795.0);
     }else{
         panel_decoration(620.0,190.0,680.0,880.0);
     }
