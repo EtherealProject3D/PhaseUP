@@ -269,8 +269,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {if sh<1150.0 {sh-496.0}else{sh-532.0}}else{table_y+if sh<1150.0 {29.0}else{47.0}};
-            if i==0 {menu_label("YOUR LAID PHASE",x,if sh<1150.0 {sh-508.0}else{sh-544.0},17.0,player_color(i));}
+            let y=if i==0 {if sh<1150.0 {sh-510.0}else{sh-532.0}}else{table_y+if sh<1150.0 {29.0}else{47.0}};
+            if i==0 {menu_label("YOUR LAID PHASE",x,if sh<1150.0 {sh-522.0}else{sh-544.0},17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
@@ -285,7 +285,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {if sh<1150.0 {sh-508.0}else{sh-544.0}}else{table_y+if sh<1150.0 {17.0}else{35.0}};
+        let y=if i==0 {if sh<1150.0 {sh-522.0}else{sh-544.0}}else{table_y+if sh<1150.0 {17.0}else{35.0}};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
@@ -541,7 +541,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=if sh<1150.0 {sh-366.0}else{sh-394.0};
+    let guidance_y=if sh<1150.0 {sh-390.0}else{sh-394.0};
     // When a phase is ready, the entire guidance banner becomes the
     // LAY PHASE button. Draw it later, after staging validation.
     let guidance_x=(sw-770.0)/2.0;
