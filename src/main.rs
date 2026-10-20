@@ -321,8 +321,13 @@ impl Game {
         self.turn=1;
         self.cpu_step=0;
         self.stage=Stage::Cpu;
-        self.cpu_next_at=get_time()+0.15;
-        if self.cpu_speed==0 {
+        // Let a button-triggered discard finish before the next CPU draws.
+        // Drag-and-drop discards clear this flight and remain immediate.
+        let discard_remaining=self.human_discard_flight.as_ref()
+            .map(|flight|(0.60-(get_time()-flight.started)).max(0.0))
+            .unwrap_or(0.0);
+        self.cpu_next_at=get_time()+if discard_remaining>0.0 {discard_remaining+0.12}else{0.15};
+        if self.cpu_speed==0 && discard_remaining==0.0 {
             while self.stage==Stage::Cpu {self.cpu_action();}
         }
     }
@@ -466,7 +471,9 @@ impl Game {
         if self.cpu_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {self.cpu_discard_flight=None;}
         if self.stage!=Stage::Cpu{return;}
         if self.cpu_speed==0 {
-            while self.stage==Stage::Cpu {self.cpu_action();}
+            if get_time()>=self.cpu_next_at {
+                while self.stage==Stage::Cpu {self.cpu_action();}
+            }
         }else if get_time()>=self.cpu_next_at {
             self.cpu_action();
             let delay=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
