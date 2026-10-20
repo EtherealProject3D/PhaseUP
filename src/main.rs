@@ -359,7 +359,7 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn column_hand_width(count:usize,card_w:f32)->f32 {
-    if count<=1 {0.0}else{(count-1) as f32*17.0_f32.min((360.0-card_w)/(count-1) as f32)}
+    if count<=1 {0.0}else{(count-1) as f32*24.0_f32.min((450.0-card_w)/(count-1) as f32)}
 }
 fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
     draw_rectangle(x+2.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.28));
@@ -395,13 +395,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
-        let card_w=41.0;let card_h=55.0;
+        let card_w=65.0;let card_h=87.0;
         let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
         for k in 0..count {
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    let table_y=170.;label("TABLE",24.,table_y+18.,19.,MUTED);
+    let table_y=211.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
