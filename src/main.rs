@@ -269,8 +269,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {sh-532.0}else{table_y+47.0};
-            if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
+            let y=if i==0 {if sh<1150.0 {sh-510.0}else{sh-532.0}}else{table_y+47.0};
+            if i==0 {menu_label("YOUR LAID PHASE",x,if sh<1150.0 {sh-522.0}else{sh-544.0},17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
@@ -285,7 +285,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {sh-544.0}else{table_y+35.0};
+        let y=if i==0 {if sh<1150.0 {sh-522.0}else{sh-544.0}}else{table_y+35.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
@@ -354,7 +354,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
     }
     // Larger, layered piles share a stable hitbox with drag/drop and animations.
-    let center=if sh<1150.0 {458.0}else{535.0};
+    let center=if sh<1150.0 {443.0}else{535.0};
     let pile_y=center-50.0;
     let pile_w=112.0;
     let pile_h=150.0;
