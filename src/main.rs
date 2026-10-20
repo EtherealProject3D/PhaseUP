@@ -266,15 +266,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {692.0}else{table_y+47.0};
-            if i==0 {menu_label("YOUR LAID PHASE",x,680.0,17.0,player_color(i));}
+            let y=if i==0 {668.0}else{table_y+47.0};
+            if i==0 {menu_label("YOUR LAID PHASE",x,656.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {700.0}else{347.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
                 let gx=x+j as f32*if i==0 {353.0}else{252.0};
-                draw_rectangle(gx,y,width,102.0,Color::new(0.075,0.105,0.145,1.0));
-                draw_rectangle_lines(gx,y,width,102.0,1.0,Color::new(0.22,0.29,0.35,1.0));
+                draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
+                draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
                 label(&desc,gx+6.0,y+17.0,15.0,Color::new(0.38,0.45,0.51,1.0));
                 menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -282,7 +282,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {680.0}else{table_y+35.0};
+        let y=if i==0 {656.0}else{table_y+35.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
@@ -290,8 +290,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let x=if i==0 {x+j as f32*353.0}else{x+j as f32*252.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
-            draw_rectangle(x,yy,width,102.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
-            draw_rectangle_lines(x,yy,width,102.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
+            draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
+            draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             label(&desc,x+6.0,yy+17.0,15.0,WHITEISH);
             let card_w=55.0;
@@ -302,7 +302,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let (mx,my)=game_mouse();
                 if !is_mouse_button_down(MouseButton::Left)
                     || (mx-sx).abs()+(my-sy).abs()<=12.0
-                    || !inside(x,yy,width,102.0) || !g.players[0].laid
+                    || !inside(x,yy,width,116.0) || !g.players[0].laid
                     || g.stage!=Stage::Play {return None;}
                 let card=g.players[0].hand.iter().find(|c|c.id==id).copied()?;
                 if !can_hit(group,card,p.phase,j){return None;}
@@ -318,7 +318,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let step=if shown_len>1 {(available/(shown_len-1) as f32).min(56.0)} else {0.0};
             if let Some(slot)=preview {
                 let cx=x+6.0+slot as f32*step;
-                draw_rectangle_lines(cx,yy+23.0,card_w,card_h,2.5,YELLOW);
+                draw_rectangle_lines(cx,yy+26.0,card_w,card_h,2.5,YELLOW);
             }
             for (k,card) in group.iter().enumerate() {
                 if i==0 && g.human_phase_flight.as_ref().is_some_and(|flight|!flight.visible(card.id,get_time())) {continue;}
@@ -326,7 +326,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=x+6.0+shown as f32*step;
-                let cy=yy+23.0;
+                let cy=yy+26.0;
                 let color=color_for(card.kind);
                 draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
                 draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
@@ -334,12 +334,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let value=card_text(card.kind);
                 label(&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
             }
-            if can_place {label("CLICK TO ADD",x+7.0,yy+100.0,12.0,ACCENT);}
-            if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,102.0) {
+            if can_place {label("CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}
+            if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,116.0) {
                 hit_click=Some((i,j));
             }
             // Dropping a dragged hand card on a laid group plays it directly.
-            if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,102.0) {
+            if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,116.0) {
                 if let Some((id,sx,sy))=g.drag {
                     let (mx,my)=game_mouse();
                     if (mx-sx).abs()+(my-sy).abs()>12.0 {
@@ -468,7 +468,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if is_mouse_button_down(MouseButton::Left)
                 && (mx-sx).abs()+(my-sy).abs()>10.0
                 && inside(x,y,stage_w,117.0) {
-                let slot=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                let slot=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
                 Some((id,slot))
             } else {None}
         });
@@ -476,22 +476,22 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             .filter(|card|drag_preview.is_none_or(|(id,_)|card.id!=id)).collect();
         let insert_at=drag_preview.map(|(_,slot)|slot.min(visible_cards.len()));
         if let Some(slot)=insert_at {
-            let gap_x=x+10.0+slot as f32*52.0;
-            draw_rectangle_lines(gap_x,y+29.0,45.0,76.0,2.0,YELLOW);
+            let gap_x=x+10.0+slot as f32*57.0;
+            draw_rectangle_lines(gap_x,y+29.0,50.0,76.0,2.0,YELLOW);
         }
         for (i,card) in visible_cards.iter().enumerate() {
             let shifted=i+usize::from(insert_at.is_some_and(|slot|i>=slot));
-            let cx=x+10.0+shifted as f32*52.0;
-            if cx+46.0<x+stage_w {
+            let cx=x+10.0+shifted as f32*57.0;
+            if cx+51.0<x+stage_w {
                 let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
                     let (mx,my)=game_mouse();
                     id==card.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
                 });
                 if floating {
-                    draw_rectangle(cx,y+29.0,45.0,76.0,Color::new(0.24,0.32,0.40,0.45));
-                    draw_rectangle_lines(cx,y+29.0,45.0,76.0,1.0,MUTED);
-                } else {let _=card_ui(*card,cx,y+29.0,45.0,76.0,false);}
-                if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,y+29.0,45.0,76.0){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
+                    draw_rectangle(cx,y+29.0,50.0,76.0,Color::new(0.24,0.32,0.40,0.45));
+                    draw_rectangle_lines(cx,y+29.0,50.0,76.0,1.0,MUTED);
+                } else {let _=card_ui(*card,cx,y+29.0,50.0,76.0,false);}
+                if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,y+29.0,50.0,76.0){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
             }
         }
         if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {
@@ -499,7 +499,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if let Some((id,sx,sy))=g.staged_drag {
                 let (mx,my)=game_mouse();
                 if (mx-sx).abs()+(my-sy).abs()>10.0 {
-                    let slot=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                    let slot=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
                     let source=g.staged.iter().position(|bucket|bucket.contains(&id));
                     let target_index=if source==Some(group){let old=g.staged[group].iter().position(|v|*v==id).unwrap_or(0);if slot>old{slot.saturating_sub(1)}else{slot}}else{slot};
                     staged_reorder=Some((id,group,target_index));
@@ -512,7 +512,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             && is_mouse_button_pressed(MouseButton::Left)
             && inside(x+10.0,y+32.0,stage_w-20.0,75.0)
             && g.drag.is_none() && g.staged_drag.is_none()
-            && !cards.iter().enumerate().any(|(j,_)|inside(x+10.0+j as f32*52.0,y+30.0,45.0,78.0))
+            && !cards.iter().enumerate().any(|(j,_)|inside(x+10.0+j as f32*57.0,y+30.0,50.0,78.0))
         {
             g.stage_selected(group);
         }
@@ -613,7 +613,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                     g.human_discard_flight=None;
                 } else if let Some(group)=stage_drop {
                     let x=stage_left+group as f32*(stage_w+6.0);
-                    let index=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
+                    let index=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
                     g.stage_card_at(id,group,index);
                 }
             }
