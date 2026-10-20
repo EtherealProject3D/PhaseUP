@@ -6,10 +6,10 @@ pub(super) fn game_mouse()->(f32,f32) {
     let (mx,my)=mouse_position();
     ((mx-(pw-1600.0*scale)/2.0)/scale,(my-(ph-1200.0*scale)/2.0)/scale)
 }
-pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,color);}
+pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,crate::theme::themed_color(color));}
 pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
     let mouse=game_mouse();let hover=mouse.0>=x&&mouse.0<=x+w&&mouse.1>=y&&mouse.1<=y+h;
-    draw_rectangle(x,y,w,h,if !enabled{Color::new(0.18,0.22,0.28,1.)}else if hover{Color::new(0.22,0.66,0.61,1.)}else{Color::new(0.15,0.48,0.46,1.)});
+    draw_rectangle(x,y,w,h,if !enabled{Color::new(0.18,0.22,0.28,1.)}else if hover{crate::theme::active_theme().accent()}else{crate::theme::active_theme().panel()});
     let t=measure_text(text,None,19,1.);label(text,x+(w-t.width)/2.,y+h/2.+7.,19.,if enabled{WHITEISH}else{MUTED});
     enabled&&hover&&is_mouse_button_pressed(MouseButton::Left)
 }
