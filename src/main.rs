@@ -349,22 +349,52 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }
     }
-    // Reserve a separate central lane for draw/discard piles, away from laid groups.
+    // Larger, layered piles share a stable hitbox with drag/drop and animations.
     let center=535.0;
-    menu_label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
-    let deck_x=sw*0.39-55.;draw_rectangle(deck_x-5.,center-41.,92.,120.,active_theme().panel());
-    draw_rectangle_lines(deck_x-5.,center-41.,92.,120.,1.0,active_theme().accent());
-    draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
-    let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
-    menu_label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
-    let discard_x=sw*0.56-40.;
-    let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,center-36.,82.,110.);
-    draw_rectangle(discard_x-5.,center-41.,92.,120.,active_theme().panel());
-    draw_rectangle_lines(discard_x-5.,center-41.,92.,120.,1.0,active_theme().accent());
-    draw_rectangle(discard_x,center-36.,82.,110.,Color::new(0.10,0.18,0.23,1.));
-    draw_rectangle_lines(discard_x,center-36.,82.,110.,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
-    if let Some(c)=g.discard.last().copied(){if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){let _=card_ui(c,discard_x,center-36.,82.,110.,false);}if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
-    else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
+    let pile_y=center-50.0;
+    let pile_w=112.0;
+    let pile_h=150.0;
+    let deck_x=sw*0.39-69.0;
+    let discard_x=sw*0.56-54.0;
+    menu_label("DRAW",deck_x,pile_y-17.0,19.0,MUTED);
+    menu_label("DISCARD",discard_x,pile_y-17.0,19.0,MUTED);
+    // Offset layers expose the thickness of the remaining draw deck.
+    let layers=g.deck.len().min(3);
+    for layer in (0..layers).rev() {
+        let offset=layer as f32*4.0;
+        draw_rectangle(deck_x+offset+3.0,pile_y+offset+4.0,pile_w,pile_h,Color::new(0.035,0.055,0.085,1.0));
+        draw_rectangle(deck_x+offset,pile_y+offset,pile_w,pile_h,Color::new(0.13,0.29,0.40,1.0));
+        draw_rectangle_lines(deck_x+offset,pile_y+offset,pile_w,pile_h,1.5,active_theme().accent());
+    }
+    draw_rectangle(deck_x,pile_y,pile_w,pile_h,Color::new(0.19,0.39,0.52,1.0));
+    draw_rectangle_lines(deck_x,pile_y,pile_w,pile_h,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});
+    draw_line(deck_x+13.0,pile_y+15.0,deck_x+pile_w-13.0,pile_y+pile_h-15.0,1.0,active_theme().accent());
+    draw_line(deck_x+pile_w-13.0,pile_y+15.0,deck_x+13.0,pile_y+pile_h-15.0,1.0,active_theme().accent());
+    draw_rectangle(deck_x+8.0,pile_y+55.0,pile_w-16.0,51.0,Color::new(0.12,0.28,0.38,0.96));
+    let draw_text="DRAW";
+    menu_label(draw_text,deck_x+(pile_w-menu_text_width(draw_text,19))/2.0,pile_y+77.0,19.0,WHITEISH);
+    let count_text=format!("{} left",g.deck.len());
+    menu_label(&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0,pile_y+99.0,17.0,WHITEISH);
+    let m=game_mouse();
+    if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,pile_y,pile_w,pile_h){g.pile_drag=Some((false,m.0,m.1));}
+    let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,pile_y,pile_w,pile_h);
+    let discard_layers=g.discard.len().saturating_sub(1).min(2);
+    for layer in (1..=discard_layers).rev() {
+        let offset=layer as f32*4.0;
+        draw_rectangle(discard_x+offset+3.0,pile_y+offset+4.0,pile_w,pile_h,Color::new(0.035,0.055,0.085,1.0));
+        draw_rectangle(discard_x+offset,pile_y+offset,pile_w,pile_h,Color::new(0.17,0.24,0.30,1.0));
+        draw_rectangle_lines(discard_x+offset,pile_y+offset,pile_w,pile_h,1.5,MUTED);
+    }
+    draw_rectangle(discard_x,pile_y,pile_w,pile_h,Color::new(0.10,0.18,0.23,1.0));
+    draw_rectangle_lines(discard_x,pile_y,pile_w,pile_h,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
+    if let Some(c)=g.discard.last().copied(){
+        if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){
+            let _=card_ui(c,discard_x,pile_y,pile_w,pile_h,false);
+        }
+        if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,pile_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
+    }else{
+        menu_label("EMPTY",discard_x+20.0,pile_y+82.0,20.0,MUTED);
+    }
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
     let log_x=1198.0;let log_y=480.0;
@@ -574,7 +604,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let (mx,my)=game_mouse();
         if let Some((id,ox,oy))=g.drag {
             if (mx-ox).abs()+(my-oy).abs()>12.0 {
-                if g.stage==Stage::Play&&inside(sw*0.56-44.0,center-40.0,90.0,118.0) {
+                if g.stage==Stage::Play&&inside(discard_x,pile_y,pile_w,pile_h) {
                     g.selected=vec![id];
                     g.discard_selected();
                     // Drag-and-drop is already a direct physical movement.
@@ -590,7 +620,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         g.drag=None;
         if let Some((from_discard,sx,sy))=g.pile_drag {
             let moved=(mx-sx).abs()+(my-sy).abs()>12.0;
-            let source=if from_discard {inside(sw*0.56-40.0,center-36.0,82.0,110.0)}else{inside(deck_x,center-36.0,82.0,110.0)};
+            let source=if from_discard {inside(discard_x,pile_y,pile_w,pile_h)}else{inside(deck_x,pile_y,pile_w,pile_h)};
             if g.stage==Stage::Draw&&((!moved&&source)||(moved&&inside(12.0,py-72.0,sw-24.0,247.0))) {g.draw(from_discard,!moved);}
         }
         g.pile_drag=None;
