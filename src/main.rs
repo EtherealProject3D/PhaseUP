@@ -39,6 +39,11 @@ mod ui;
 use ui::*;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+fn phase_animation_start_time()->f64 {0.0}
+#[cfg(not(test))]
+fn phase_animation_start_time()->f64 {get_time()}
+
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
@@ -126,7 +131,7 @@ impl Game {
                 }
             }
             self.human_phase_flight=Some(HumanPhaseFlight{
-                cards:flights,started:get_time(),per_card:0.18
+                cards:flights,started:phase_animation_start_time(),per_card:0.18
             });
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
             self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
