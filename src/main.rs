@@ -213,7 +213,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
     label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
-    menu_label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
+    let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
+    let round_status_width=menu_text_width(&round_status,22);
+    // Right-align before the MENU button, leaving a clear gutter for wider theme fonts.
+    menu_label(&round_status,1390.0-22.0-round_status_width,38.0,22.0,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Cpu=>("CPU TURN  -  WATCH THE ACTIONS",YELLOW),
