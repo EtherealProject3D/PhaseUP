@@ -584,7 +584,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if let Some(id)=staged_click {g.unstage_card(id);}
     if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-157.0;
-    draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
+    draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
     let guidance_y=809.0;
@@ -597,7 +597,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
-        let sort_y=sh-30.0;
+        let sort_y=sh-43.0;
         if button(name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
         if g.sort==*mode {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
