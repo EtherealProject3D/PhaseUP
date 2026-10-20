@@ -55,7 +55,7 @@ pub(super) fn panel_decoration(x:f32,y:f32,w:f32,h:f32){
     }
 }
 pub(super) fn menu_background(){
-    let canvas_h=game_canvas_height();
+    let canvas_h=crate::game_canvas_height();
     let t=active_theme();
     clear_background(t.background());
     match t {
