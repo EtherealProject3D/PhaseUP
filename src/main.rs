@@ -329,8 +329,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
     let log_x=1198.0;let log_y=480.0;
-    draw_rectangle(log_x,log_y,374.0,207.0,active_theme().panel());
-    draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,active_theme().accent());
+    draw_rectangle(log_x,log_y,374.0,300.0,active_theme().panel());
+    draw_rectangle_lines(log_x,log_y,374.0,300.0,1.5,active_theme().accent());
     menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
     // Put the live action *inside* the panel so laid phases cannot cover it.
     let events_y=if g.stage==Stage::Cpu {
@@ -343,10 +343,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         menu_label(&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
         log_y+94.0
     }else{log_y+50.0};
-    let max_events=if g.stage==Stage::Cpu {5}else{7};
+    let max_events=8;
     for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
-        // Larger, brighter theme-aware entries for legibility at desktop resolutions.
-        menu_label(event,log_x+12.0,events_y+j as f32*23.0,18.0,WHITEISH);
+        // Highlight the newest completed move, while retaining the live CPU action above.
+        let entry_y=events_y+j as f32*23.0;
+        if j==0 {
+            draw_rectangle(log_x+7.0,entry_y-17.0,360.0,23.0,Color::new(0.14,0.27,0.35,1.0));
+            draw_rectangle(log_x+7.0,entry_y-17.0,3.0,23.0,active_theme().accent());
+        }
+        menu_label(event,log_x+14.0,entry_y,18.0,if j==0 {ACCENT}else{WHITEISH});
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
