@@ -36,6 +36,8 @@ mod animations;
 use animations::*;
 mod ui;
 use ui::*;
+#[cfg(test)]
+mod tests;
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
