@@ -427,10 +427,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
     let guidance_y=806.0;
-    draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
-    draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
-    let tw=measure_text(turn_text,None,25,1.0).width;
-    label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
+    // When a phase is ready, the entire guidance banner becomes the
+    // LAY PHASE button. Draw it later, after staging validation.
+    let guidance_x=415.0;
+    let guidance_w=770.0;
+    let guidance_h=43.0;
     let p=&g.players[0];
     let hand_info=format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score);
     let hand_info_width=measure_text(&hand_info,None,21,1.0).width;
@@ -534,10 +535,18 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         draw_rectangle(525.0,772.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
         draw_rectangle_lines(525.0,772.0,550.0,31.0,1.5,GREEN);
         label("PHASE COMPLETE",545.0,794.0,21.0,GREEN);
-        if button("LAY PHASE",852.0,774.0,206.0,27.0,true){
+    }
+    if staged_complete {
+        if button("LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
+        draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,3.0,GREEN);
+    } else {
+        draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
+        draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
+        let tw=measure_text(turn_text,None,25,1.0).width;
+        label(turn_text,800.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     }
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
