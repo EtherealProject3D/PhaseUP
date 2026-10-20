@@ -875,7 +875,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Contextual text is available through the game log; do not paint it
     // over the narrow gap reserved for the turn-status banner.
     if let Some((target,group))=hit_click {g.hit(target,group);}
-    if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
+    // Keep the board visible until the winning discard reaches the pile.
+    // The round result is already calculated, but its dialog waits for the flight.
+    let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();
+    if (g.stage==Stage::RoundOver||g.stage==Stage::GameOver)&&!discard_in_motion {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
         let game_over=g.stage==Stage::GameOver;
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
