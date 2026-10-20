@@ -596,7 +596,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
-        let sort_y=sh-34.0;
+        let sort_y=sh-30.0;
         if button(name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
         if g.sort==*mode {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
@@ -605,7 +605,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
     let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
     let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
-    let card_y=py+13.0;
+    let card_y=py+18.0;
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
@@ -702,7 +702,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     if button("LAY PHASE",24.0,sh-51.0,142.0,40.0,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
     if button("DISCARD",179.0,sh-51.0,122.0,40.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
-    if button("CLEAR",314.0,sh-51.0,104.0,40.0,!g.selected.is_empty()){g.selected.clear();}
+    if button("CLEAR",24.0,sh-145.0,104.0,34.0,!g.selected.is_empty()){g.selected.clear();}
     label(&g.message,435.0,sh-23.0,18.0,ACCENT);
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
