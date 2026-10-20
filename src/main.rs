@@ -683,8 +683,9 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     }
     panel_decoration(460.0,225.0,680.0,760.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
+    let title_y=if screen==MenuScreen::Settings {300.0} else {310.0};
     let w=measure_text(title,None,54,1.0).width;
-    label(title,800.0-w/2.0,310.0,54.0,ACCENT);
+    label(title,800.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
@@ -696,18 +697,20 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if has_game { label("ESC: resume game",690.0,750.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
-            label("WINDOW",590.0,300.0,26.0,WHITEISH);
-            if menu_button("RESET SIZE (1600 x 1200)",355.0){
+            label("WINDOW",590.0,353.0,22.0,MUTED);
+            if menu_button("RESET SIZE (1600 x 1200)",371.0){
                 request_new_screen_size(1600.0,1200.0);
                 save_window_size(1600,1200);
             }
-            if menu_button("TOGGLE FULLSCREEN",450.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            label("INTERFACE",590.0,555.0,26.0,WHITEISH);
-            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},595.0){*show_moves=!*show_moves;}
-            label("APPEARANCE",590.0,700.0,26.0,WHITEISH);
-            if menu_button(&format!("THEME: {}",active_theme().name()),740.0){let next=active_theme().next();set_theme(next);save_theme(next);}
-            if menu_button("BACK",840.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",930.0){return Some(MenuScreen::Resume);}
+            if menu_button("TOGGLE FULLSCREEN",447.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            label("INTERFACE",590.0,545.0,22.0,MUTED);
+            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},563.0){*show_moves=!*show_moves;}
+            label("APPEARANCE",590.0,660.0,22.0,MUTED);
+            if menu_button(&format!("THEME: {}",active_theme().name()),678.0){
+                let next=active_theme().next();set_theme(next);save_theme(next);
+            }
+            if menu_button("BACK",785.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
