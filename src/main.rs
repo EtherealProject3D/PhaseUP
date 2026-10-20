@@ -231,7 +231,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
     // Visible build/layout indicator to diagnose window and canvas selection.
     let layout_label=if sh<1150.0 {"LAYOUT 16:9"}else{"LAYOUT 16:10"};
-    menu_label(layout_label,24.0+logo_width+150.0,40.0,17.0,ACCENT);
+    menu_label(&format!("{}  ▼",layout_label),292.0,57.0,17.0,ACCENT);
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
     // Right-align before the MENU button, leaving a clear gutter for wider theme fonts.
@@ -541,7 +541,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=if sh<1150.0 {sh-402.0}else{sh-394.0};
+    let guidance_y=if sh<1150.0 {
+        // Center the banner between the human phase panels and staging.
+        let phase_bottom=(sh-522.0)+116.0;
+        phase_bottom+(stage_y-phase_bottom-43.0)/2.0
+    }else{sh-394.0};
     // When a phase is ready, the entire guidance banner becomes the
     // LAY PHASE button. Draw it later, after staging validation.
     let guidance_x=(sw-770.0)/2.0;
@@ -817,32 +821,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if has_game && !*resolution_open && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
-                // Two compact columns keep all nine presets visible.
-                draw_rectangle(708.0,426.0,504.0,326.0,active_theme().background());
-                draw_rectangle_lines(708.0,426.0,504.0,326.0,2.0,ACCENT);
-                menu_label("16:10",737.0,453.0,20.0,ACCENT);
-                menu_label("16:9",990.0,453.0,20.0,ACCENT);
-                let presets=[[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600)],
-                             [(1280,720),(1600,900),(1920,1080),(2560,1440),(0,0)]];
-                let (mx,my)=game_mouse();
-                for (column,options) in presets.iter().enumerate() {
-                    for (index,(w,h)) in options.iter().enumerate() {
-                        if *w==0 {continue;}
-                        let x=720.0+column as f32*252.0;
-                        let y=465.0+index as f32*54.0;
-                        let hover=mx>=x&&mx<=x+228.0&&my>=y&&my<=y+48.0;
-                        themed_button(x,y,228.0,48.0,hover);
-                        let text=format!("{} x {}",w,h);
-                        let tw=menu_text_width(&text,19);
-                        menu_label(&text,x+(228.0-tw)/2.0,y+31.0,19.0,WHITEISH);
-                        if hover&&is_mouse_button_pressed(MouseButton::Left) {
-                            let fitted=fit_window_to_desktop(*w,*h);
-                            request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
-                            save_window_size(fitted.0,fitted.1);
-                            *resolution_open=false;
-                        }
-                    }
-                }
+                if resolution_picker(708.0,426.0) {*resolution_open=false;}
                 if is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
                     if !(mx>=708.0&&mx<=1212.0&&my>=365.0&&my<=752.0){*resolution_open=false;}
@@ -858,6 +837,35 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }
     None
+}
+// Shared resolution picker for Settings and the in-game layout indicator.
+fn resolution_picker(x:f32,y:f32)->bool {
+    draw_rectangle(x,y,504.0,326.0,active_theme().background());
+    draw_rectangle_lines(x,y,504.0,326.0,2.0,ACCENT);
+    menu_label("16:10",x+29.0,y+27.0,20.0,ACCENT);
+    menu_label("16:9",x+282.0,y+27.0,20.0,ACCENT);
+    let presets=[[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600)],
+                 [(1280,720),(1600,900),(1920,1080),(2560,1440),(0,0)]];
+    let (mx,my)=game_mouse();
+    for (column,options) in presets.iter().enumerate() {
+        for (index,(w,h)) in options.iter().enumerate() {
+            if *w==0 {continue;}
+            let bx=x+12.0+column as f32*252.0;
+            let by=y+39.0+index as f32*54.0;
+            let hover=mx>=bx&&mx<=bx+228.0&&my>=by&&my<=by+48.0;
+            themed_button(bx,by,228.0,48.0,hover);
+            let text=format!("{} x {}",w,h);
+            let tw=menu_text_width(&text,19);
+            menu_label(&text,bx+(228.0-tw)/2.0,by+31.0,19.0,WHITEISH);
+            if hover&&is_mouse_button_pressed(MouseButton::Left) {
+                let fitted=fit_window_to_desktop(*w,*h);
+                request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                save_window_size(fitted.0,fitted.1);
+                return true;
+            }
+        }
+    }
+    false
 }
 // Windows window placement is independent of Macroquad's client-area sizing.
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
@@ -880,6 +888,7 @@ async fn main(){
     let mut menu=MenuScreen::Home;
     let mut help_scroll=0.0f32;
     let mut resolution_open=false;
+    let mut game_resolution_open=false;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -977,6 +986,23 @@ async fn main(){
             has_game=true;
             game.update_cpu();
             draw_game(&mut game,show_debug,show_moves);
+            // Quick resolution selector beside the active layout indicator.
+            let (mx,my)=game_mouse();
+            let layout_hover=mx>=282.0&&mx<=464.0&&my>=22.0&&my<=67.0;
+            if layout_hover&&is_mouse_button_pressed(MouseButton::Left) {
+                game_resolution_open=!game_resolution_open;
+            }
+            if layout_hover||game_resolution_open {
+                draw_rectangle_lines(282.0,26.0,182.0,39.0,1.5,ACCENT);
+            }
+            if game_resolution_open {
+                if resolution_picker(282.0,70.0) {
+                    game_resolution_open=false;
+                }else if is_mouse_button_pressed(MouseButton::Left)
+                    && !layout_hover && !(mx>=282.0&&mx<=786.0&&my>=70.0&&my<=396.0) {
+                    game_resolution_open=false;
+                }
+            }
             draw_rectangle(1710.0,8.0,100.0,40.0,PANEL);
             menu_label("MENU",1724.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
