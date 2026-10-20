@@ -62,14 +62,14 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                 let width=if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
                 let dest_x=base_x+group as f32*252.0;
                 let len=p.table[group].len();
-                let spacing=if len>1 {((width-12.0-48.0).max(0.0)/(len-1) as f32).min(50.0)}else{0.0};
+                let spacing=if len>1 {((width-12.0-55.0).max(0.0)/(len-1) as f32).min(56.0)}else{0.0};
                 let end_x=dest_x+6.0+slot as f32*spacing;
                 let end_y=207.0+35.0+12.0+23.0;
                 let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
                 let eased=t*t*(3.0-2.0*t);
                 let x=start_x+(end_x-start_x)*eased;
                 let y=start_y+(end_y-start_y)*eased-30.0*(4.0*t*(1.0-t));
-                let _=card_ui(card,x,y,48.0+17.0*(1.0-t),76.0+11.0*(1.0-t),false);
+                let _=card_ui(card,x,y,55.0+10.0*(1.0-t),84.0+3.0*(1.0-t),false);
             }
         }
     }
@@ -89,12 +89,12 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                 else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
             let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
             let slot=cards.iter().position(|c|c.id==flight.card.id).unwrap_or(cards.len().saturating_sub(1));
-            let spacing=if cards.len()>1 {((width-12.0-48.0).max(0.0)/(cards.len()-1) as f32).min(50.0)}else{0.0};
+            let spacing=if cards.len()>1 {((width-12.0-55.0).max(0.0)/(cards.len()-1) as f32).min(56.0)}else{0.0};
             let to_x=x+6.0+slot as f32*spacing;
             let to_y=y+12.0+23.0;
             let px=from_x+(to_x-from_x)*eased;
             let py=from_y+(to_y-from_y)*eased-45.0*(4.0*t*(1.0-t));
-            let _=card_ui(flight.card,px,py,65.0-17.0*eased,87.0-11.0*eased,false);
+            let _=card_ui(flight.card,px,py,65.0-10.0*eased,87.0-3.0*eased,false);
         }
     }
     // Human phase: move cards from their staging slots to the laid phase.
@@ -106,14 +106,14 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
                 let p=&g.players[0];
                 if let Some(cards)=p.table.get(group) {
                     let width=if p.table.len()==1 {700.0}else{347.0};
-                    let step=if cards.len()>1 {((width-12.0-48.0)/(cards.len()-1) as f32).min(50.0)}else{0.0};
+                    let step=if cards.len()>1 {((width-12.0-55.0)/(cards.len()-1) as f32).min(56.0)}else{0.0};
                     let to_x=sw/2.0-350.0+group as f32*353.0+6.0+slot as f32*step;
                     let to_y=680.0+12.0+23.0;
                     let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
                     let eased=t*t*(3.0-2.0*t);
                     let x=from_x+(to_x-from_x)*eased;
                     let y=from_y+(to_y-from_y)*eased-35.0*(4.0*t*(1.0-t));
-                    let _=card_ui(card,x,y,45.0+3.0*eased,76.0,false);
+                    let _=card_ui(card,x,y,45.0+10.0*eased,76.0+8.0*eased,false);
                 }
             }
         }
