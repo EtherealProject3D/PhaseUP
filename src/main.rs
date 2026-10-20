@@ -726,10 +726,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
-    let control_x=30.0;
+    // Position the clear controls immediately left of the phase staging slots.
+    // Two-group phases have a 254px gutter; one-group phases have a 450px gutter.
     let control_w=154.0;
     let control_h=30.0;
-    let control_y=sh-151.0;
+    let control_x=stage_left-control_w-16.0;
+    let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
         if button("CLEAR",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
