@@ -59,16 +59,16 @@ pub(super) fn menu_background(){
     clear_background(t.background());
     match t {
         Theme::Modern=>{
-            draw_rectangle(0.,0.,1920.,8.,t.accent());
+            draw_rectangle(-160.,0.,2240.,8.,t.accent());
             draw_circle(1820.,110.,180.,Color::new(0.10,0.22,0.28,0.22));
             draw_circle(110.,1040.,240.,Color::new(0.08,0.25,0.24,0.18));
         }
         Theme::Futuristic=>{
             let grid=Color::new(0.04,0.22,0.32,0.36);
-            for x in (0..=1920).step_by(80){draw_line(x as f32,0.,x as f32,1200.,1.,grid);}
-            for y in (0..=1200).step_by(80){draw_line(0.,y as f32,1920.,y as f32,1.,grid);}
-            draw_line(0.,100.,1920.,100.,2.,t.accent());
-            draw_line(0.,1100.,1920.,1100.,2.,t.accent());
+            for x in (-160..=2080).step_by(80){draw_line(x as f32,0.,x as f32,1200.,1.,grid);}
+            for y in (0..=1200).step_by(80){draw_line(-160.,y as f32,2080.,y as f32,1.,grid);}
+            draw_line(-160.,100.,2080.,100.,2.,t.accent());
+            draw_line(-160.,1100.,2080.,1100.,2.,t.accent());
         }
         Theme::Playful=>{
             let dots=[(120.,150.,27.),(1730.,190.,43.),(205.,920.,36.),(1690.,960.,28.),(315.,400.,18.),(1560.,620.,22.)];
@@ -76,7 +76,7 @@ pub(super) fn menu_background(){
                 let color=if i%2==0 {Color::new(1.,0.52,0.43,0.30)}else{Color::new(0.40,0.81,0.72,0.28)};
                 draw_circle(*x,*y,*r,color);
             }
-            draw_rectangle(0.,0.,1920.,12.,t.accent());
+            draw_rectangle(-160.,0.,2240.,12.,t.accent());
         }
     }
 }
