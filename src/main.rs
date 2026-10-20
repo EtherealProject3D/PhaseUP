@@ -38,8 +38,9 @@ struct CpuDrawFlight { player:usize, from_discard:bool, card_id:u32, started:f64
 struct CpuDiscardFlight { card:Card, player:usize, origin_index:usize, origin_count:usize, started:f64, duration:f64 }
 
 struct HumanDrawFlight { card_id:u32, from_discard:bool, started:f64 }
+struct HumanDiscardFlight { card:Card, from_x:f32, from_y:f32, started:f64 }
 
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight>, cpu_discard_flight:Option<CpuDiscardFlight> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, human_draw_flight:Option<HumanDrawFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight> }
 
 const PHASES: [&[usize]; 10] = [
     &[3,3], &[3,4], &[4,4], &[7], &[8], &[9], &[4,4], &[7], &[5,2], &[5,3],
@@ -191,13 +192,13 @@ impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let names=["Alex","Blake","Casey","Dakota","Emery","Finley","Harper","Jamie","Jordan","Kai","Morgan","Parker","Quinn","Reese","Riley","Rowan","Sage","Taylor"];let mut chosen=Vec::new();while chosen.len()<3 {let name=names[macroquad::rand::gen_range(0,names.len() as i32) as usize];if !chosen.contains(&name){chosen.push(name);}}let cpu_names=[chosen[0].to_string(),chosen[1].to_string(),chosen[2].to_string()];
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,human_draw_flight:None,cpu_discard_flight:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,human_draw_flight:None,cpu_discard_flight:None,human_discard_flight:None};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
     fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.cpu_discard_flight=None;self.cpu_draw_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.cpu_discard_flight=None;self.human_discard_flight=None;self.cpu_draw_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
@@ -242,11 +243,11 @@ impl Game {
         let ids=self.selected.clone();
         for id in ids {self.stage_card(id,group);}
     }
-    fn draw(&mut self,discard:bool) {
+    fn draw(&mut self,discard:bool,animate:bool) {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()});self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn draw_deck(&mut self)->Option<Card> {
         if self.deck.is_empty() && self.discard.len()>1 {let top=self.discard.pop().unwrap();self.deck.append(&mut self.discard);shuffle(&mut self.deck);self.discard.push(top);}
@@ -292,9 +293,24 @@ impl Game {
     }
     fn discard_selected(&mut self) {
         if self.stage!=Stage::Play||self.selected.len()!=1{return;}
-        let id=self.selected[0];let card=Self::remove_ids(&mut self.players[0].hand,&[id]);
+        let id=self.selected[0];
+        // Capture the card's actual sorted hand slot before removing it.
+        let mut sorted:Vec<Card>=self.players[0].hand.iter().copied()
+            .filter(|c|!self.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
+        sorted.sort_by_key(|c|sort_key(*c,self.sort));
+        let n=sorted.len();
+        let width=((1600.0-48.0)/(n.max(1) as f32)).min(75.0);
+        let spacing=if n>1 {((1600.0-48.0-width)/(n-1) as f32).min(81.0)}else{0.0};
+        let left=(1600.0-(spacing*(n.saturating_sub(1) as f32)+width))/2.0;
+        let index=sorted.iter().position(|c|c.id==id).unwrap_or(n.saturating_sub(1));
+        let from_x=left+index as f32*spacing;
+        let from_y=1200.0-166.0;
+        let card=Self::remove_ids(&mut self.players[0].hand,&[id]);
         if card.is_empty(){return;}
-        let c=card[0];self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
+        let c=card[0];
+        self.human_draw_flight=None;
+        self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time()});
+        self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
         if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
@@ -511,6 +527,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     set_camera(&camera);
     if g.human_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_draw_flight=None;}
+    if g.human_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_discard_flight=None;}
     label("PHASEUP",24.,42.,32.,ACCENT);
     label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
     label("v0.3.2-dev",184.,40.,19.,MUTED);
@@ -615,7 +632,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,center-36.,82.,110.);
     draw_rectangle(discard_x,center-36.,82.,110.,Color::new(0.10,0.18,0.23,1.));
     draw_rectangle_lines(discard_x,center-36.,82.,110.,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
-    if let Some(c)=g.discard.last().copied(){if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){let _=card_ui(c,discard_x,center-36.,82.,110.,false);}if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
+    if let Some(c)=g.discard.last().copied(){if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){let _=card_ui(c,discard_x,center-36.,82.,110.,false);}if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
     else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
@@ -816,7 +833,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         if let Some((from_discard,sx,sy))=g.pile_drag {
             let moved=(mx-sx).abs()+(my-sy).abs()>12.0;
             let source=if from_discard {inside(sw*0.56-40.0,center-36.0,82.0,110.0)}else{inside(deck_x,center-36.0,82.0,110.0)};
-            if g.stage==Stage::Draw&&((!moved&&source)||(moved&&inside(12.0,py-72.0,sw-24.0,247.0))) {g.draw(from_discard);}
+            if g.stage==Stage::Draw&&((!moved&&source)||(moved&&inside(12.0,py-72.0,sw-24.0,247.0))) {g.draw(from_discard,!moved);}
         }
         g.pile_drag=None;
     }
@@ -927,6 +944,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }else{
             cpu_card_back(x,y,65.0,87.0);
         }
+    }
+    // A button-triggered human discard flies from its sorted hand slot.
+    if let Some(flight)=&g.human_discard_flight {
+        let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
+        let eased=t*t*(3.0-2.0*t);
+        let x=flight.from_x+(sw*0.56-40.0-flight.from_x)*eased;
+        let y=flight.from_y+(535.0-36.0-flight.from_y)*eased-50.0*(4.0*t*(1.0-t));
+        let _=card_ui(flight.card,x,y,75.0+7.0*t,105.0+5.0*t,false);
     }
     // CPU discards fly face-up from the former hand slot to the discard pile.
     if let Some(flight)=&g.cpu_discard_flight {
