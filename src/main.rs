@@ -564,9 +564,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.lay();
         }
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,3.0,GREEN);
-        let lay_text="LAY PHASE";
-        let lay_w=menu_text_width(lay_text,25);
-        menu_label(lay_text,800.0-lay_w/2.0,guidance_y+30.0,25.0,WHITEISH);
     } else {
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
