@@ -305,12 +305,11 @@ impl Game {
                 // Find any exact subset satisfying this phase.
                 if needed<=n {
                     let hand=self.players[i].hand.clone();
-                    let mut found=None;
                     fn search(hand:&[Card],needed:usize,start:usize,idx:&mut Vec<usize>,phase:usize)->Option<Vec<Vec<Card>>>{
                         if idx.len()==needed {let subset:Vec<Card>=idx.iter().map(|i|hand[*i]).collect();return partition_phase(&subset,phase);}
                         for j in start..hand.len() {idx.push(j);if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}idx.pop();}None
                     }
-                    found=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase);
+                    let found=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase);
                     if let Some(mut groups)=found {order_table_groups(&mut groups,self.players[i].phase);let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();Self::remove_ids(&mut self.players[i].hand,&ids);self.players[i].table=groups;self.players[i].laid=true;self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));}
                 }
             }
@@ -360,7 +359,7 @@ fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn column_hand_width(count:usize,card_w:f32)->f32 {
-    if count<=1 {0.0}else{(count-1) as f32*17.0.min((360.0-card_w)/(count-1) as f32)}
+    if count<=1 {0.0}else{(count-1) as f32*17.0_f32.min((360.0-card_w)/(count-1) as f32)}
 }
 fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
     draw_rectangle(x+2.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.28));
