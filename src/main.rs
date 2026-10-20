@@ -100,7 +100,7 @@ impl Game {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"discard"}else{"deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn lay(&mut self) {
         if self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
@@ -139,6 +139,7 @@ impl Game {
             });
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
             self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
+            self.log_move(format!("You laid phase {}",phase+1));
             self.message="Phase completed! Hit any laid phase or discard to finish.".into();
         }else{self.message=format!("Selected cards do not match phase {} ({})",phase+1,phase_name(phase));}
     }
@@ -151,6 +152,7 @@ impl Game {
         let phase=self.players[target].phase;
         if can_hit(&self.players[target].table[group],card,phase,group) {
             Self::remove_ids(&mut self.players[0].hand,&[card.id]);self.players[target].table[group].push(card);if requirement(phase,group)=="run"{order_run(&mut self.players[target].table[group]);}self.unstage_card(card.id);self.selected.clear();
+            self.log_move(format!("You hit {} with {}",self.cpu_name(target),card_text(card.kind)));
             self.message=format!("Added {} to {}'s {}!",card_text(card.kind),if target==0 {"your".to_string()}else{format!("CPU {}",target)},requirement(phase,group));
             if self.players[0].hand.is_empty(){self.end_round(0);}
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
@@ -175,8 +177,9 @@ impl Game {
         self.human_draw_flight=None;
         self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time()});
         self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
+        self.log_move(format!("You discarded {}",card_text(c.kind)));
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
-        if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.ai_cycle(Some(target));}
+        if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.log_move(format!("You skipped {}",self.cpu_name(target)));self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
     }
     fn ai_cycle(&mut self,skip:Option<usize>) {
@@ -353,7 +356,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             draw_rectangle(log_x+7.0,entry_y-17.0,360.0,23.0,Color::new(0.14,0.27,0.35,1.0));
             draw_rectangle(log_x+7.0,entry_y-17.0,3.0,23.0,active_theme().accent());
         }
-        menu_label(event,log_x+14.0,entry_y,18.0,if j==0 {ACCENT}else{WHITEISH});
+        menu_label(event,log_x+14.0,entry_y,18.0,if j==0 || event.starts_with("You ") {ACCENT}else{WHITEISH});
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
