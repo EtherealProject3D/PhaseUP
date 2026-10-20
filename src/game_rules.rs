@@ -5,7 +5,7 @@ use crate::*;
 impl Game {
     pub(super) fn deal(&mut self) {
         self.move_log.clear();
-        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.cpu_discard_flight=None;self.human_discard_flight=None;self.cpu_draw_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
+        self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.cpu_discard_flight=None;self.human_discard_flight=None;self.cpu_draw_flight=None;self.cpu_phase_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
         self.discard.push(self.deck.pop().unwrap());
