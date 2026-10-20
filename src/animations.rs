@@ -1,11 +1,11 @@
 use crate::*;
 
-struct CpuDrawFlight { player:usize, from_discard:bool, card_id:u32, started:f64, duration:f64 }
+pub(super) struct CpuDrawFlight { pub(super) player:usize, pub(super) from_discard:bool, pub(super) card_id:u32, pub(super) started:f64, pub(super) duration:f64 }
 
-struct CpuDiscardFlight { card:Card, player:usize, origin_index:usize, origin_count:usize, started:f64, duration:f64 }
+pub(super) struct CpuDiscardFlight { pub(super) card:Card, pub(super) player:usize, pub(super) origin_index:usize, pub(super) origin_count:usize, pub(super) started:f64, pub(super) duration:f64 }
 
-struct HumanDrawFlight { card_id:u32, from_discard:bool, started:f64 }
-struct HumanDiscardFlight { card:Card, from_x:f32, from_y:f32, started:f64 }
+pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
+pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
 
 pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
     // Human draw: show the face-up card flying to its sorted hand slot.
