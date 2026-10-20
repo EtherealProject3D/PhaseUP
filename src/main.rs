@@ -664,8 +664,7 @@ enum MenuScreen { Home, Settings, HowToPlay, Rules, ConfirmNew, Playing, Resume 
 fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
-    draw_rectangle(570.0,y,460.0,64.0,if hovered {active_theme().accent()} else {active_theme().panel()});
-    draw_rectangle_lines(570.0,y,460.0,64.0,2.0,active_theme().accent());
+    themed_button(570.0,y,460.0,64.0,hovered);
     let w=measure_text(title,None,28,1.0).width;
     label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
@@ -676,13 +675,13 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/1600.0).min(ph/1200.0);
     set_camera(&Camera2D{target:vec2(800.0,600.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
         if button("BACK TO MENU",570.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    draw_rectangle(460.0,225.0,680.0,760.0,active_theme().panel());
-    draw_rectangle_lines(460.0,225.0,680.0,760.0,2.0,active_theme().accent());
+    panel_decoration(460.0,225.0,680.0,760.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     let w=measure_text(title,None,54,1.0).width;
     label(title,800.0-w/2.0,310.0,54.0,ACCENT);
