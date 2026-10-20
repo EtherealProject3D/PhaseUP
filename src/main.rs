@@ -868,6 +868,8 @@ async fn main(){
     let mut windowed_size=read_window_size();
     let mut previous_fullscreen=fullscreen;
     #[cfg(target_os="windows")]
+    let mut center_after_resize=false;
+    #[cfg(target_os="windows")]
     {
         window_placement::restore();
     }
@@ -894,6 +896,8 @@ async fn main(){
                 last_size=(w,h);
                 saved_size=(w,h);
                 size_changed_at=get_time();
+                #[cfg(target_os="windows")]
+                {center_after_resize=true;}
             }
             previous_fullscreen=fullscreen;
         }
@@ -911,6 +915,8 @@ async fn main(){
             request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
             save_window_size(fitted.0,fitted.1);
             saved_size=fitted;
+            #[cfg(target_os="windows")]
+            {center_after_resize=true;}
         }
         #[cfg(target_os="windows")]
         if !fullscreen {
@@ -931,7 +937,23 @@ async fn main(){
             saved_preferences=(show_moves,fullscreen);
         }
         let size=(screen_width().round() as i32,screen_height().round() as i32);
-        if size!=last_size {last_size=size;size_changed_at=get_time();}
+        if size!=last_size {
+            last_size=size;
+            size_changed_at=get_time();
+            #[cfg(target_os="windows")]
+            if !fullscreen {center_after_resize=true;}
+        }
+        // Center only after the window manager has applied the new client size.
+        #[cfg(target_os="windows")]
+        if center_after_resize && !fullscreen && get_time()-size_changed_at>0.25 {
+            if let Some((x,y))=window_placement::center(){
+                window_placement::save(x,y);
+                last_position=Some((x,y));
+                saved_position=Some((x,y));
+                position_changed_at=get_time();
+            }
+            center_after_resize=false;
+        }
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
             if !fullscreen {
