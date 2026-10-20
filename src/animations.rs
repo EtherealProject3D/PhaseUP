@@ -84,7 +84,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let p=&g.players[flight.target];
         if let Some(cards)=p.table.get(flight.group) {
             let x=if flight.target==0 {sw/2.0-400.0}else{24.0+(flight.target-1) as f32*((sw-50.0)/3.0)};
-            let y=if flight.target==0 {if game_canvas_height()<1150.0 {game_canvas_height()-508.0}else{game_canvas_height()-544.0}}else{207.0+35.0};
+            let y=if flight.target==0 {if game_canvas_height()<1150.0 {game_canvas_height()-508.0}else{game_canvas_height()-544.0}}else{if game_canvas_height()<1150.0 {224.0}else{242.0}};
             let width=if flight.target==0 {if p.table.len()==1 {800.0}else{397.0}}
                 else if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0};
             let x=x+flight.group as f32*if flight.target==0 {353.0}else{252.0};
