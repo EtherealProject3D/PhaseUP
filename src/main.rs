@@ -332,6 +332,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(log_x,log_y,374.0,300.0,active_theme().panel());
     draw_rectangle_lines(log_x,log_y,374.0,300.0,1.5,active_theme().accent());
     menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
+    // Separate the panel heading from the history, including the newest-move highlight.
+    draw_line(log_x+10.0,log_y+39.0,log_x+364.0,log_y+39.0,1.0,active_theme().accent());
     // Put the live action *inside* the panel so laid phases cannot cover it.
     let events_y=if g.stage==Stage::Cpu {
         let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
@@ -341,8 +343,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let notice_size=17;
         let width=menu_text_width(&notice,notice_size);
         menu_label(&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
-        log_y+94.0
-    }else{log_y+50.0};
+        log_y+113.0
+    }else{log_y+69.0};
     let max_events=8;
     for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
         // Highlight the newest completed move, while retaining the live CPU action above.
