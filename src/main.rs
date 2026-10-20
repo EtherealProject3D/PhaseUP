@@ -619,7 +619,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
+        // Keep the original phase-complete green fill, inside the clickable button.
+        draw_rectangle(guidance_x+4.0,guidance_y+4.0,guidance_w-8.0,guidance_h-8.0,Color::new(0.08,0.28,0.22,1.0));
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,3.0,GREEN);
+        let ready_text="PHASE COMPLETE  -  LAY PHASE";
+        let ready_w=menu_text_width(ready_text,21);
+        menu_label(ready_text,guidance_x+(guidance_w-ready_w)/2.0,guidance_y+guidance_h/2.0+7.0,21.0,GREEN);
     } else {
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
