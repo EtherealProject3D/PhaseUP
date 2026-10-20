@@ -912,7 +912,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     draw_rectangle_lines(460.0,225.0,680.0,760.0,2.0,ACCENT);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume=>""};
     let w=measure_text(title,None,54,1.0).width;
-    label(title,800.0-w/2.0,230.0,54.0,ACCENT);
+    label(title,800.0-w/2.0,310.0,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
