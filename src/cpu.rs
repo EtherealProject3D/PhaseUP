@@ -165,13 +165,24 @@ impl Game {
             let previous_turn=self.turn;
             self.cpu_action();
             let delay=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
-            // Give each CPU's final discard time to land before the next
-            // player begins. Keep the normal pacing between actions intact.
+            // A turn handoff is measured from the outgoing discard landing,
+            // rather than from the instant the discard action was processed.
+            // This prevents the next CPU drawing over the previous animation.
             let handoff_delay: f64=if self.turn!=previous_turn && self.stage==Stage::Cpu {
-                match self.cpu_speed {1=>0.48,3=>1.40,_=>0.78}
+                let pause_after_landing: f64=match self.cpu_speed {1=>0.18,3=>0.35,_=>0.25};
+                let discard_remaining=self.cpu_discard_flight.as_ref()
+                    .map(|flight|(flight.started+flight.duration-get_time()).max(0.0))
+                    .unwrap_or(0.0);
+                // Skip turns have no discard of their own, so still show a
+                // readable beat before advancing to the following CPU.
+                if self.cpu_skip.is_some() || self.cpu_step==0 && discard_remaining==0.0 {
+                    delay.max(pause_after_landing)
+                }else{
+                    discard_remaining+pause_after_landing
+                }
             }else{delay};
             let phase_delay=self.cpu_phase_flight.as_ref()
-                .map(|flight|(flight.started+flight.duration()-get_time()+0.10).max(0.0))
+                .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
                 .unwrap_or(0.0);
             let hit_delay=self.cpu_hit_flight.as_ref()
                 .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
