@@ -813,7 +813,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
-            let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
+            let window_text=format!("{} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
             if menu_button(&window_text,365.0){
                 *resolution_open=!*resolution_open;
             }
@@ -941,6 +941,7 @@ async fn main(){
             let fitted=fit_window_to_desktop(1920,1200);
             request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
             save_window_size(fitted.0,fitted.1);
+            save_selected_resolution(1920,1200);
             saved_size=fitted;
             #[cfg(target_os="windows")]
             {center_after_resize=true;}
