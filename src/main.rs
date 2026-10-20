@@ -248,7 +248,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    let table_y=207.;menu_label("CPU PHASES",24.,table_y+18.,19.,MUTED);
+    let table_y=207.;
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
