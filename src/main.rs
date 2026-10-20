@@ -683,18 +683,18 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     }
     panel_decoration(460.0,225.0,680.0,760.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    let title_y=if screen==MenuScreen::Settings {300.0} else {310.0};
+    let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>300.0,_=>310.0};
     let w=measure_text(title,None,54,1.0).width;
     label(title,800.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
-            if has_game && menu_button("RESUME GAME",310.0){return Some(MenuScreen::Playing);}
-            if menu_button("NEW GAME",400.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
-            if menu_button("HOW TO PLAY",490.0){return Some(MenuScreen::HowToPlay);}
-            if menu_button("GAME RULES",580.0){return Some(MenuScreen::Rules);}
-            if menu_button("SETTINGS",670.0){return Some(MenuScreen::Settings);}
-            if menu_button("QUIT",760.0){std::process::exit(0);}
-            if has_game { label("ESC: resume game",690.0,750.0,20.0,MUTED); }
+            if has_game && menu_button("RESUME GAME",345.0){return Some(MenuScreen::Playing);}
+            if menu_button("NEW GAME",435.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
+            if menu_button("HOW TO PLAY",525.0){return Some(MenuScreen::HowToPlay);}
+            if menu_button("GAME RULES",615.0){return Some(MenuScreen::Rules);}
+            if menu_button("SETTINGS",705.0){return Some(MenuScreen::Settings);}
+            if menu_button("QUIT",795.0){std::process::exit(0);}
+            if has_game { label("ESC: resume game",690.0,925.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
             label("WINDOW",590.0,353.0,22.0,MUTED);

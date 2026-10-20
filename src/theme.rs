@@ -97,13 +97,24 @@ pub(super) fn themed_button(x:f32,y:f32,w:f32,h:f32,hover:bool){
             draw_line(x+w-30.,y,x+w,y,4.,a);
         }
         Theme::Playful=>{
-            draw_rectangle(x+5.,y+7.,w,h,Color::new(0.,0.05,0.06,0.4));
-            draw_rectangle(x,y,w,h,if hover{Color::new(0.28,0.51,0.46,1.)}else{Color::new(0.20,0.39,0.37,1.)});
-            draw_rectangle_lines(x,y,w,h,4.,a);
-            draw_circle(x+13.,y+13.,8.,a);
-            draw_circle(x+w-13.,y+13.,8.,a);
-            draw_circle(x+13.,y+h-13.,8.,a);
-            draw_circle(x+w-13.,y+h-13.,8.,a);
+            // Rounded, layered buttons instead of decorative corner rivets.
+            let r=(h*0.25).min(16.).min(w*0.25);
+            let shadow=Color::new(0.,0.05,0.06,0.38);
+            rounded_fill(x+3.,y+5.,w,h,r,shadow);
+            rounded_fill(x,y,w,h,r,a);
+            let fill=if hover {Color::new(0.32,0.56,0.49,1.)} else {Color::new(0.20,0.39,0.37,1.)};
+            rounded_fill(x+3.,y+3.,w-6.,h-6.,(r-3.).max(1.),fill);
         }
+    }
+}
+
+fn rounded_fill(x:f32,y:f32,w:f32,h:f32,r:f32,color:Color){
+    if w<=0. || h<=0. {return;}
+    let r=r.min(w/2.).min(h/2.);
+    draw_rectangle(x+r,y,w-2.*r,h,color);
+    draw_rectangle(x,y+r,r,h-2.*r,color);
+    draw_rectangle(x+w-r,y+r,r,h-2.*r,color);
+    for (cx,cy) in [(x+r,y+r),(x+w-r,y+r),(x+r,y+h-r),(x+w-r,y+h-r)]{
+        draw_circle(cx,cy,r,color);
     }
 }
