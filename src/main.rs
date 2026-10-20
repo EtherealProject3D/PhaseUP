@@ -338,13 +338,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let notice=format!("{} - {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
         draw_rectangle(log_x+9.0,log_y+34.0,356.0,36.0,BG);
         draw_rectangle_lines(log_x+9.0,log_y+34.0,356.0,36.0,1.5,YELLOW);
-        let width=measure_text(&notice,None,18,1.0).width;
-        label(&notice,log_x+187.0-width/2.0,log_y+59.0,18.0,YELLOW);
+        let notice_size=17;
+        let width=menu_text_width(&notice,notice_size);
+        menu_label(&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
         log_y+94.0
     }else{log_y+50.0};
     let max_events=if g.stage==Stage::Cpu {5}else{7};
     for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
-        label(event,log_x+12.0,events_y+j as f32*23.0,16.0,WHITEISH);
+        // Larger, brighter theme-aware entries for legibility at desktop resolutions.
+        menu_label(event,log_x+12.0,events_y+j as f32*23.0,18.0,WHITEISH);
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
