@@ -118,8 +118,8 @@ impl Game {
         if let Some(mut groups)=staged_groups.or_else(||partition_phase_flexible(&cards,phase)) {
             order_table_groups(&mut groups,phase);
             // Capture the original staging positions before clearing the staging area.
-            let stage_w=if PHASES[phase].len()==1 {700.0}else{540.0};
-            let stage_left=(1600.0-(PHASES[phase].len() as f32*stage_w
+            let stage_w=if PHASES[phase].len()==1 {800.0}else{680.0};
+            let stage_left=(1920.0-(PHASES[phase].len() as f32*stage_w
                 +(PHASES[phase].len().saturating_sub(1)) as f32*6.0))/2.0;
             let mut flights=Vec::new();
             for (group_idx,group_cards) in groups.iter().enumerate() {
@@ -127,9 +127,9 @@ impl Game {
                     let staged=self.staged.iter().enumerate().find_map(|(g,ids)|
                         ids.iter().position(|id|*id==card.id).map(|idx|(g,idx)));
                     let (from_x,from_y)=if let Some((g,idx))=staged {
-                        (stage_left+g as f32*(stage_w+6.0)+10.0+idx as f32*52.0,1200.0-347.0+29.0)
+                        (stage_left+g as f32*(stage_w+6.0)+10.0+idx as f32*57.0,1200.0-347.0+29.0)
                     }else{
-                        (800.0,1200.0-166.0)
+                        (960.0,1200.0-166.0)
                     };
                     flights.push((card,group_idx,slot,from_x,from_y));
                 }
@@ -165,9 +165,9 @@ impl Game {
             .filter(|c|!self.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
         sorted.sort_by_key(|c|sort_key(*c,self.sort));
         let n=sorted.len();
-        let width=((1600.0-48.0)/(n.max(1) as f32)).min(75.0);
+        let width=((1920.0-48.0)/(n.max(1) as f32)).min(75.0);
         let spacing=if n>1 {((1600.0-48.0-width)/(n-1) as f32).min(81.0)}else{0.0};
-        let left=(1600.0-(spacing*(n.saturating_sub(1) as f32)+width))/2.0;
+        let left=(1920.0-(spacing*(n.saturating_sub(1) as f32)+width))/2.0;
         let index=sorted.iter().position(|c|c.id==id).unwrap_or(n.saturating_sub(1));
         let from_x=left+index as f32*spacing;
         let from_y=1200.0-166.0;
@@ -216,7 +216,7 @@ fn player_color(i:usize)->Color {
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_default_camera();
     clear_background(active_theme().background());
-    let sw=1600.0;let sh=1200.0;
+    let sw=1920.0;let sh=1200.0;
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
@@ -232,7 +232,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
     // Right-align before the MENU button, leaving a clear gutter for wider theme fonts.
-    menu_label(&round_status,1390.0-22.0-round_status_width,38.0,22.0,MUTED);
+    menu_label(&round_status,1710.0-22.0-round_status_width,38.0,22.0,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Cpu=>("CPU TURN  -  WATCH THE ACTIONS",YELLOW),
@@ -265,14 +265,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // The human placeholder is separate from the interactive staging area.
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
-            let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+            let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
             let y=if i==0 {668.0}else{table_y+47.0};
             if i==0 {menu_label("YOUR LAID PHASE",x,656.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
-                let width=if i==0 {if group_count==1 {700.0}else{347.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
-                let gx=x+j as f32*if i==0 {353.0}else{252.0};
+                let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
+                let gx=x+j as f32*if i==0 {403.0}else{312.0};
                 draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                 draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
@@ -286,8 +286,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
-            let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
-            let x=if i==0 {x+j as f32*353.0}else{x+j as f32*252.0};
+            let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
+            let x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
@@ -398,7 +398,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
-    let log_x=1198.0;let log_y=480.0;
+    let log_x=1538.0;let log_y=480.0;
     draw_rectangle(log_x,log_y,374.0,300.0,active_theme().panel());
     draw_rectangle_lines(log_x,log_y,374.0,300.0,1.5,active_theme().accent());
     menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
@@ -443,7 +443,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // The completed player advances to phase index 10, beyond the ten phase definitions.
     // Keep rendering the final phase while the GameOver overlay is displayed.
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
-    let stage_w=if groups.len()==1 {700.0}else{540.0};
+    let stage_w=if groups.len()==1 {800.0}else{680.0};
     let stage_left=(sw-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
     let mut staged_click=None;
     let mut stage_drop=None;
@@ -693,7 +693,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let discard_y=sh-51.0;
     let discard_width=103.0;
     // Mirror the right discard button across the center of the game board.
-    for discard_x in [1600.0-1050.0-discard_width,1050.0] {
+    for discard_x in [1920.0-1250.0-discard_width,1250.0] {
         if button("DISCARD",discard_x,discard_y,discard_width,28.0,discard_ready){
             g.discard_selected();
         }
@@ -745,14 +745,14 @@ fn debug_overlay(g:&Game) {
     let lines=[
         format!("FPS: {}",get_fps()),
         format!("Window: {} x {}",pw.round() as i32,ph.round() as i32),
-        format!("Canvas: 1600 x 1000 ({:.2}x)",(pw/1600.0).min(ph/1200.0)),
+        format!("Canvas: 1920 x 1200 (16:10, {:.2}x)",(pw/1920.0).min(ph/1200.0)),
         format!("Mouse (canvas): {:.0}, {:.0}",mx,my),
         format!("Round: {}  Turn: {}",g.round,if g.turn==0{"You".to_string()}else{format!("CPU {}",g.turn)}),
         format!("Stage: {}",match g.stage {Stage::Draw=>"Draw",Stage::Play=>"Play",Stage::Cpu=>"CPU",Stage::RoundOver=>"RoundOver",Stage::GameOver=>"GameOver"}),
         format!("Selected: {}  Dragging: {}",g.selected.len(),g.drag.is_some()),
         "F3: hide debug info".to_string(),
     ];
-    let x=1170.0;let y=65.0;
+    let x=1490.0;let y=65.0;
     draw_rectangle(x,y,410.0,lines.len() as f32*23.0+20.0,Color::new(0.02,0.04,0.08,0.93));
     draw_rectangle_lines(x,y,410.0,lines.len() as f32*23.0+20.0,1.5,ACCENT);
     for (i,line) in lines.iter().enumerate(){draw_text(line,x+12.0,y+29.0+i as f32*23.0,18.0,WHITEISH);}
@@ -772,8 +772,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1600.0).min(ph/1200.0);
-    set_camera(&Camera2D{target:vec2(800.0,600.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    let scale=(pw/1920.0).min(ph/1200.0);
+    set_camera(&Camera2D{target:vec2(960.0,600.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
     menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
@@ -797,19 +797,22 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         }
         MenuScreen::Settings=>{
             menu_label("WINDOW",590.0,353.0,22.0,MUTED);
-            if menu_button("RESET SIZE (1600 x 1200)",371.0){
-                request_new_screen_size(1600.0,1200.0);
-                save_window_size(1600,1200);
+            for (index,(w,h)) in [(1280,800),(1440,900),(1600,1000),(1920,1200)].iter().enumerate(){
+                if menu_button(&format!("WINDOW: {} x {} (16:10)",w,h),365.0+index as f32*65.0){
+                    let fitted=fit_window_to_desktop(*w,*h);
+                    request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                    save_window_size(fitted.0,fitted.1);
+                }
             }
-            if menu_button("TOGGLE FULLSCREEN",447.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",590.0,545.0,22.0,MUTED);
-            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},563.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",590.0,660.0,22.0,MUTED);
-            if menu_button(&format!("THEME: {}",active_theme().name()),678.0){
+            if menu_button("TOGGLE FULLSCREEN",641.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",590.0,710.0,22.0,MUTED);
+            if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},724.0){*show_moves=!*show_moves;}
+            menu_label("APPEARANCE",590.0,805.0,22.0,MUTED);
+            if menu_button(&format!("THEME: {}",active_theme().name()),817.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if menu_button("BACK",785.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
+            if menu_button("BACK",912.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",989.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
@@ -860,7 +863,7 @@ async fn main(){
     // Normalize the drawable client area to 4:3 at launch, including when
     // Windows restores a window with a different client-area ratio.
     if !fullscreen && last_size.0>0 && last_size.1>0 {
-        let target_h=((last_size.0 as f32)*12.0/16.0).round() as i32;
+        let target_h=((last_size.0 as f32)*10.0/16.0).round() as i32;
         if (last_size.1-target_h).abs()>2 {
             request_new_screen_size(last_size.0 as f32,target_h as f32);
             saved_size=(last_size.0,target_h);
@@ -887,9 +890,10 @@ async fn main(){
         let shortcut_reset=is_key_pressed(KeyCode::Key0)
             && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
         if header_reset||shortcut_reset {
-            request_new_screen_size(1600.0,1200.0);
-            save_window_size(1600,1200);
-            saved_size=(1600,1200);
+            let fitted=fit_window_to_desktop(1920,1200);
+            request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+            save_window_size(fitted.0,fitted.1);
+            saved_size=fitted;
         }
         #[cfg(target_os="windows")]
         if !fullscreen {
@@ -917,7 +921,7 @@ async fn main(){
                 let fitted=fit_window_to_desktop(size.0,size.1);
                 let scale=(fitted.0 as f32/size.0 as f32).min(fitted.1 as f32/size.1 as f32);
                 let fit_w=((size.0 as f32*scale).round() as i32).max(640);
-                let fit_h=((fit_w as f32)*0.75).round() as i32;
+                let fit_h=((fit_w as f32)*0.625).round() as i32;
                 if (size.0-fit_w).abs()>2 || (size.1-fit_h).abs()>2 {
                     request_new_screen_size(fit_w as f32,fit_h as f32);
                     saved_size=(fit_w,fit_h);
@@ -932,10 +936,10 @@ async fn main(){
             has_game=true;
             game.update_cpu();
             draw_game(&mut game,show_debug,show_moves);
-            draw_rectangle(1390.0,8.0,100.0,40.0,PANEL);
-            menu_label("MENU",1404.0,35.0,22.0,ACCENT);
+            draw_rectangle(1710.0,8.0,100.0,40.0,PANEL);
+            menu_label("MENU",1724.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
-            if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
+            if is_mouse_button_pressed(MouseButton::Left)&&mx>=1710.0&&mx<=1810.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
             let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll);
