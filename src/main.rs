@@ -261,16 +261,18 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
-        // Unlaid CPU phases retain dim silhouettes so every player has a stable table area.
+        // Unlaid phases retain dim silhouettes for every player, including you.
+        // The human placeholder is separate from the interactive staging area.
         // These placeholders are decorative, not valid hit targets.
-        if i!=0 && !p.laid {
-            let x=24.0+(i-1) as f32*((sw-50.0)/3.0);
-            let y=table_y+47.0;
+        if !p.laid {
+            let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+            let y=if i==0 {692.0}else{table_y+47.0};
+            if i==0 {menu_label("YOUR LAID PHASE",x,680.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
-                let width=if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0};
-                let gx=x+j as f32*252.0;
+                let width=if i==0 {if group_count==1 {700.0}else{347.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
+                let gx=x+j as f32*if i==0 {353.0}else{252.0};
                 draw_rectangle(gx,y,width,102.0,Color::new(0.075,0.105,0.145,1.0));
                 draw_rectangle_lines(gx,y,width,102.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
