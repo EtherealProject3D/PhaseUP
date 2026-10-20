@@ -61,7 +61,27 @@ pub(super) fn read_preferences()->(bool,bool){
 pub(super) fn save_preferences(show_moves:bool,fullscreen:bool){
     let path=preferences_path();
     if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
-    let _=std::fs::write(path,format!("recent_moves={}\nfullscreen={}\n",show_moves,fullscreen));
+    let theme=read_theme();
+    let _=std::fs::write(path,format!("recent_moves={}\nfullscreen={}\ntheme={}\n",show_moves,fullscreen,theme.key()));
+}
+
+pub(super) fn read_theme()->crate::theme::Theme {
+    if let Ok(data)=std::fs::read_to_string(preferences_path()){
+        for line in data.lines(){
+            if let Some((key,value))=line.split_once('='){
+                if key.trim()=="theme" {return crate::theme::Theme::from_key(value.trim());}
+            }
+        }
+    }
+    crate::theme::Theme::Modern
+}
+pub(super) fn save_theme(theme:crate::theme::Theme){
+    let path=preferences_path();
+    let data=std::fs::read_to_string(&path).unwrap_or_default();
+    let mut lines:Vec<String>=data.lines().filter(|line|!line.starts_with("theme=")).map(str::to_owned).collect();
+    lines.push(format!("theme={}",theme.key()));
+    if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
+    let _=std::fs::write(path,format!("{}\n",lines.join("\n")));
 }
 
 #[cfg(target_os="windows")]
