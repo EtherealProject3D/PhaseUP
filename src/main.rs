@@ -395,13 +395,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,22.,WHITEISH);label(&format!("Score {}{}",p.score,if p.laid{"  - LAID"}else{""}),x,104.,19.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
-        let card_w=29.0;let card_h=43.0;
-        let step=if count>1 {(column_hand_width(count,card_w)/(count-1) as f32).min(17.0)}else{0.0};
+        let card_w=41.0;let card_h=55.0;
+        let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
         for k in 0..count {
-            cpu_card_back(x+k as f32*step,125.0,card_w,card_h);
+            cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    let table_y=135.;label("TABLE",24.,table_y+18.,19.,MUTED);
+    let table_y=170.;label("TABLE",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
