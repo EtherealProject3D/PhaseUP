@@ -665,8 +665,8 @@ fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=570.0&&mx<=1030.0&&my>=y&&my<=y+64.0;
     themed_button(570.0,y,460.0,64.0,hovered);
-    let w=measure_text(title,None,28,1.0).width;
-    label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
+    let w=menu_text_width(title,28);
+    menu_label(title,800.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32)->Option<MenuScreen> {
@@ -684,8 +684,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     panel_decoration(460.0,225.0,680.0,760.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>300.0,_=>310.0};
-    let w=measure_text(title,None,54,1.0).width;
-    label(title,800.0-w/2.0,title_y,54.0,ACCENT);
+    let w=menu_text_width(title,54);
+    menu_label(title,800.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
             if has_game && menu_button("RESUME GAME",345.0){return Some(MenuScreen::Playing);}
@@ -694,18 +694,18 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("GAME RULES",615.0){return Some(MenuScreen::Rules);}
             if menu_button("SETTINGS",705.0){return Some(MenuScreen::Settings);}
             if menu_button("QUIT",795.0){std::process::exit(0);}
-            if has_game { label("ESC: resume game",690.0,925.0,20.0,MUTED); }
+            if has_game { menu_label("ESC: resume game",690.0,925.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
-            label("WINDOW",590.0,353.0,22.0,MUTED);
+            menu_label("WINDOW",590.0,353.0,22.0,MUTED);
             if menu_button("RESET SIZE (1600 x 1200)",371.0){
                 request_new_screen_size(1600.0,1200.0);
                 save_window_size(1600,1200);
             }
             if menu_button("TOGGLE FULLSCREEN",447.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            label("INTERFACE",590.0,545.0,22.0,MUTED);
+            menu_label("INTERFACE",590.0,545.0,22.0,MUTED);
             if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},563.0){*show_moves=!*show_moves;}
-            label("APPEARANCE",590.0,660.0,22.0,MUTED);
+            menu_label("APPEARANCE",590.0,660.0,22.0,MUTED);
             if menu_button(&format!("THEME: {}",active_theme().name()),678.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
@@ -734,6 +734,7 @@ async fn main(){
         .unwrap_or(0x50484153455550);
     macroquad::rand::srand(seed);
     set_theme(read_theme());
+    load_menu_fonts().await;
     let mut game=Game::new();
     let mut show_debug=false;
     let (mut show_moves,mut fullscreen)=read_preferences();
