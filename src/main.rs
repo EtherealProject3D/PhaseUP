@@ -229,6 +229,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
     label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
+    // Visible build/layout indicator to diagnose window and canvas selection.
+    let layout_label=if sh<1150.0 {"LAYOUT 16:9"}else{"LAYOUT 16:10"};
+    menu_label(layout_label,24.0+logo_width+150.0,40.0,17.0,ACCENT);
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
     // Right-align before the MENU button, leaving a clear gutter for wider theme fonts.
