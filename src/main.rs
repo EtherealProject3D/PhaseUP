@@ -14,7 +14,7 @@ enum Kind { Number(u8, u8), Wild, Skip }
 #[derive(Clone, Copy)]
 struct Card { id: u32, kind: Kind }
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Stage { Draw, Play, Cpu, RoundOver, GameOver }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SortMode { Runs, Colors, Sets }
