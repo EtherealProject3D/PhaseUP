@@ -495,7 +495,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
-    let stage_y=sh-365.0;
+    let stage_y=sh-347.0;
     // The completed player advances to phase index 10, beyond the ten phase definitions.
     // Keep rendering the final phase while the GameOver overlay is displayed.
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
@@ -581,12 +581,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=18.0+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
-    let py=sh-175.0;
+    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=measure_text(t,None,24,1.0).width;label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    let py=sh-157.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,247.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=791.0;
+    let guidance_y=809.0;
     draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
     draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,25,1.0).width;
@@ -596,8 +596,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
-        if button(name,x,py-65.0,103.0,28.0,true) {g.sort=*mode;}
-        if g.sort==*mode {draw_rectangle_lines(x,py-65.0,103.0,28.0,2.0,ACCENT);}
+        let sort_y=sh-34.0;
+        if button(name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
+        if g.sort==*mode {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
     let mut hand:Vec<Card>=p.hand.iter().copied().filter(|c|!g.staged.iter().any(|v|v.contains(&c.id))).collect();
     hand.sort_by_key(|c|sort_key(*c,g.sort));
@@ -651,7 +652,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                     g.selected=vec![id];
                     g.discard_selected();
                 } else if let Some(group)=stage_drop {
-                    let x=18.0+group as f32*(stage_w+6.0);
+                    let x=stage_left+group as f32*(stage_w+6.0);
                     let index=(((mx-(x+10.0)+26.0)/52.0).floor().max(0.0)) as usize;
                     g.stage_card_at(id,group,index);
                 }
@@ -684,10 +685,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
         });
     if staged_complete {
-        draw_rectangle(525.0,758.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
-        draw_rectangle_lines(525.0,758.0,550.0,31.0,1.5,GREEN);
-        label("PHASE COMPLETE",545.0,780.0,21.0,GREEN);
-        if button("LAY PHASE",852.0,760.0,206.0,27.0,true){
+        draw_rectangle(525.0,776.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
+        draw_rectangle_lines(525.0,776.0,550.0,31.0,1.5,GREEN);
+        label("PHASE COMPLETE",545.0,798.0,21.0,GREEN);
+        if button("LAY PHASE",852.0,778.0,206.0,27.0,true){
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
