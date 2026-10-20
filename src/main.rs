@@ -177,9 +177,9 @@ impl Game {
         self.human_draw_flight=None;
         self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time()});
         self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
-        self.log_move(format!("You discarded {}",card_text(c.kind)));
+        if c.kind!=Kind::Skip {self.log_move(format!("You discarded {}",card_text(c.kind)));}
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
-        if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.log_move(format!("You skipped {}",self.cpu_name(target)));self.ai_cycle(Some(target));}
+        if c.kind==Kind::Skip {let target=(1..4).find(|i|self.players[*i].hand.len()>0).unwrap_or(1);self.message=format!("Skip played on CPU {}",target);self.log_move(format!("{} was skipped",self.cpu_name(target)));self.ai_cycle(Some(target));}
         else {self.ai_cycle(None);}
     }
     fn ai_cycle(&mut self,skip:Option<usize>) {
