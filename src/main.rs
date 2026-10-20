@@ -722,25 +722,29 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.lay();
         }
     }
-    // Staging controls follow the number of groups required by this phase.
-    // Clearing a group returns its cards to the hand without discarding them.
+    // Keep controls in the left gutter: the staging slots begin at stage_left.
+    // A compact vertical stack prevents overlap with either slot or the hand.
+    let control_x=24.0;
+    let control_w=154.0;
+    let control_h=30.0;
+    let control_y=stage_y+4.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
-        if button("CLEAR",24.0,stage_y+38.0,122.0,36.0,!g.staged[0].is_empty()) {
+        if button("CLEAR",control_x,control_y,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
-        if button("DISCARD",159.0,stage_y+38.0,122.0,36.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
+        if button("DISCARD",control_x,control_y+39.0,control_w,control_h,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     } else {
-        if button("CLEAR ALL",24.0,stage_y+38.0,122.0,36.0,has_staged) {
+        if button("CLEAR ALL",control_x,control_y,control_w,control_h,has_staged) {
             g.staged=[vec![],vec![]];
         }
-        if button("CLEAR 1",159.0,stage_y+38.0,122.0,36.0,!g.staged[0].is_empty()) {
+        if button("CLEAR 1",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
-        if button("CLEAR 2",294.0,stage_y+38.0,122.0,36.0,!g.staged[1].is_empty()) {
+        if button("CLEAR 2",control_x,control_y+78.0,control_w,control_h,!g.staged[1].is_empty()) {
             g.staged[1].clear();
         }
-        if button("DISCARD",429.0,stage_y+38.0,122.0,36.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
+        if button("DISCARD",control_x,control_y+117.0,control_w,control_h,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     }
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
