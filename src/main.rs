@@ -780,9 +780,9 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         if button("BACK TO MENU",570.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    panel_decoration(460.0,225.0,680.0,760.0);
+    panel_decoration(460.0,190.0,680.0,880.0);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>300.0,_=>310.0};
+    let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>260.0,_=>310.0};
     let w=menu_text_width(title,54);
     menu_label(title,800.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
@@ -796,7 +796,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if has_game { menu_label("ESC: resume game",690.0,925.0,20.0,MUTED); }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",590.0,353.0,22.0,MUTED);
+            menu_label("WINDOW",590.0,333.0,22.0,MUTED);
             for (index,(w,h)) in [(1280,800),(1440,900),(1600,1000),(1920,1200)].iter().enumerate(){
                 if menu_button(&format!("WINDOW: {} x {} (16:10)",w,h),365.0+index as f32*65.0){
                     let fitted=fit_window_to_desktop(*w,*h);
