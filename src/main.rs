@@ -370,6 +370,7 @@ fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
     draw_line(x+w-8.0,y+8.0,x+8.0,y+h-8.0,1.0,ACCENT);
 }
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
+    set_default_camera();
     clear_background(BG);
     let sw=1600.0;let sh=1000.0;
     let (pw,ph)=(screen_width(),screen_height());
@@ -815,6 +816,7 @@ fn menu_button(title:&str,y:f32)->bool {
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool)->Option<MenuScreen> {
+    set_default_camera();
     clear_background(BG);
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/1600.0).min(ph/1000.0);
@@ -874,6 +876,15 @@ async fn main(){
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
+    // Normalize the drawable client area to 16:10 at launch, including when
+    // Windows restores a window with a different client-area ratio.
+    if !fullscreen && last_size.0>0 && last_size.1>0 {
+        let target_h=((last_size.0 as f32)*10.0/16.0).round() as i32;
+        if (last_size.1-target_h).abs()>2 {
+            request_new_screen_size(last_size.0 as f32,target_h as f32);
+            saved_size=(last_size.0,target_h);
+        }
+    }
     loop {
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
@@ -897,8 +908,16 @@ async fn main(){
         if size!=last_size {last_size=size;size_changed_at=get_time();}
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
-            save_window_size(size.0,size.1);
-            saved_size=size;
+            if !fullscreen {
+                let target_h=((size.0 as f32)*10.0/16.0).round() as i32;
+                if (size.1-target_h).abs()>2 {
+                    request_new_screen_size(size.0 as f32,target_h as f32);
+                    saved_size=(size.0,target_h);
+                } else {
+                    save_window_size(size.0,size.1);
+                    saved_size=size;
+                }
+            }
         }
         if menu==MenuScreen::Playing {
             has_game=true;
