@@ -645,7 +645,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 }
             }
         }
-        if button(&format!("STAGE {}",group+1),x+stage_w-103.0,y+4.0,96.0,24.0,g.stage==Stage::Play&&!g.selected.is_empty()) {g.stage_selected(group);}
+        // The whole empty portion of the staging panel acts as the click target
+        // for selected hand cards; no separate STAGE 1 / STAGE 2 button needed.
+        if g.stage==Stage::Play && !g.selected.is_empty()
+            && is_mouse_button_pressed(MouseButton::Left)
+            && inside(x+10.0,y+32.0,stage_w-20.0,75.0)
+            && g.drag.is_none() && g.staged_drag.is_none()
+            && !cards.iter().enumerate().any(|(j,_)|inside(x+10.0+j as f32*52.0,y+30.0,45.0,78.0))
+        {
+            g.stage_selected(group);
+        }
     }
     if is_mouse_button_released(MouseButton::Left){
         if let Some((id,sx,sy))=g.staged_drag {
