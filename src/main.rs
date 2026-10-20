@@ -810,21 +810,35 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if has_game && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
-                let choices=[(1280,800),(1440,900),(1600,1000),(1920,1200)];
-                draw_rectangle(724.0,428.0,472.0,252.0,active_theme().background());
-                draw_rectangle_lines(724.0,428.0,472.0,252.0,2.0,ACCENT);
-                for (index,(w,h)) in choices.iter().enumerate() {
-                    let y=432.0+index as f32*61.0;
-                    if menu_button(&format!("{} x {}  (16:10)",w,h),y){
-                        let fitted=fit_window_to_desktop(*w,*h);
-                        request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
-                        save_window_size(fitted.0,fitted.1);
-                        *resolution_open=false;
+                // Two compact columns keep all nine presets visible.
+                draw_rectangle(708.0,426.0,504.0,326.0,active_theme().background());
+                draw_rectangle_lines(708.0,426.0,504.0,326.0,2.0,ACCENT);
+                menu_label("16:10",737.0,453.0,20.0,ACCENT);
+                menu_label("16:9",990.0,453.0,20.0,ACCENT);
+                let presets=[[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600)],
+                             [(1280,720),(1600,900),(1920,1080),(2560,1440),(0,0)]];
+                let (mx,my)=game_mouse();
+                for (column,options) in presets.iter().enumerate() {
+                    for (index,(w,h)) in options.iter().enumerate() {
+                        if *w==0 {continue;}
+                        let x=720.0+column as f32*252.0;
+                        let y=465.0+index as f32*54.0;
+                        let hover=mx>=x&&mx<=x+228.0&&my>=y&&my<=y+48.0;
+                        themed_button(x,y,228.0,48.0,hover);
+                        let text=format!("{} x {}",w,h);
+                        let tw=menu_text_width(&text,19);
+                        menu_label(&text,x+(228.0-tw)/2.0,y+31.0,19.0,WHITEISH);
+                        if hover&&is_mouse_button_pressed(MouseButton::Left) {
+                            let fitted=fit_window_to_desktop(*w,*h);
+                            request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                            save_window_size(fitted.0,fitted.1);
+                            *resolution_open=false;
+                        }
                     }
                 }
                 if is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    if !(mx>=724.0&&mx<=1196.0&&my>=365.0&&my<=680.0){*resolution_open=false;}
+                    if !(mx>=708.0&&mx<=1212.0&&my>=365.0&&my<=752.0){*resolution_open=false;}
                 }
             }
         }
@@ -877,15 +891,6 @@ async fn main(){
     let mut saved_position=last_position;
     #[cfg(target_os="windows")]
     let mut position_changed_at=get_time();
-    // Normalize the drawable client area to 4:3 at launch, including when
-    // Windows restores a window with a different client-area ratio.
-    if !fullscreen && last_size.0>0 && last_size.1>0 {
-        let target_h=((last_size.0 as f32)*10.0/16.0).round() as i32;
-        if (last_size.1-target_h).abs()>2 {
-            request_new_screen_size(last_size.0 as f32,target_h as f32);
-            saved_size=(last_size.0,target_h);
-        }
-    }
     loop {
         if previous_fullscreen!=fullscreen {
             if !fullscreen {
@@ -955,18 +960,10 @@ async fn main(){
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
             if !fullscreen {
-                let fitted=fit_window_to_desktop(size.0,size.1);
-                let scale=(fitted.0 as f32/size.0 as f32).min(fitted.1 as f32/size.1 as f32);
-                let fit_w=((size.0 as f32*scale).round() as i32).max(640);
-                let fit_h=((fit_w as f32)*0.625).round() as i32;
-                if (size.0-fit_w).abs()>2 || (size.1-fit_h).abs()>2 {
-                    request_new_screen_size(fit_w as f32,fit_h as f32);
-                    saved_size=(fit_w,fit_h);
-                } else {
-                    save_window_size(size.0,size.1);
-                    windowed_size=size;
-                    saved_size=size;
-                }
+                // Preserve the chosen ratio; do not force 16:9 back to 16:10.
+                save_window_size(size.0,size.1);
+                windowed_size=size;
+                saved_size=size;
             }
         }
         if menu==MenuScreen::Playing {
