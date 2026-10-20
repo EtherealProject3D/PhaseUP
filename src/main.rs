@@ -408,9 +408,9 @@ impl Game {
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn game_mouse()->(f32,f32) {
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1600.0).min(ph/1000.0);
+    let scale=(pw/1600.0).min(ph/1200.0);
     let (mx,my)=mouse_position();
-    ((mx-(pw-1600.0*scale)/2.0)/scale,(my-(ph-1000.0*scale)/2.0)/scale)
+    ((mx-(pw-1600.0*scale)/2.0)/scale,(my-(ph-1200.0*scale)/2.0)/scale)
 }
 fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,color);}
 fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
@@ -441,7 +441,7 @@ fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_default_camera();
     clear_background(BG);
-    let sw=1600.0;let sh=1000.0;
+    let sw=1600.0;let sh=1200.0;
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
@@ -478,7 +478,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let p=&g.players[i];
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {477.0}else{table_y+35.0};
+        let y=if i==0 {680.0}else{table_y+35.0};
         let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
         label(&phase_label,x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
@@ -544,7 +544,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
     }
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
-    let center=sh*0.395;
+    let center=535.0;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
     let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
     let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
@@ -557,7 +557,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
-    let log_x=1198.0;let log_y=360.0;
+    let log_x=1198.0;let log_y=480.0;
     draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
     draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
     label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
@@ -677,7 +677,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=606.0;
+    let guidance_y=806.0;
     draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
     draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,25,1.0).width;
@@ -776,10 +776,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
         });
     if staged_complete {
-        draw_rectangle(525.0,566.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
-        draw_rectangle_lines(525.0,566.0,550.0,31.0,1.5,GREEN);
-        label("PHASE COMPLETE",545.0,588.0,21.0,GREEN);
-        if button("LAY PHASE",852.0,568.0,206.0,27.0,true){
+        draw_rectangle(525.0,772.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
+        draw_rectangle_lines(525.0,772.0,550.0,31.0,1.5,GREEN);
+        label("PHASE COMPLETE",545.0,794.0,21.0,GREEN);
+        if button("LAY PHASE",852.0,774.0,206.0,27.0,true){
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
@@ -878,7 +878,7 @@ fn debug_overlay(g:&Game) {
     let lines=[
         format!("FPS: {}",get_fps()),
         format!("Window: {} x {}",pw.round() as i32,ph.round() as i32),
-        format!("Canvas: 1600 x 1000 ({:.2}x)",(pw/1600.0).min(ph/1000.0)),
+        format!("Canvas: 1600 x 1000 ({:.2}x)",(pw/1600.0).min(ph/1200.0)),
         format!("Mouse (canvas): {:.0}, {:.0}",mx,my),
         format!("Round: {}  Turn: {}",g.round,if g.turn==0{"You".to_string()}else{format!("CPU {}",g.turn)}),
         format!("Stage: {}",match g.stage {Stage::Draw=>"Draw",Stage::Play=>"Play",Stage::Cpu=>"CPU",Stage::RoundOver=>"RoundOver",Stage::GameOver=>"GameOver"}),
@@ -906,10 +906,10 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     set_default_camera();
     clear_background(BG);
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1600.0).min(ph/1000.0);
-    set_camera(&Camera2D{target:vec2(800.0,500.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
-    draw_rectangle(460.0,125.0,680.0,760.0,PANEL);
-    draw_rectangle_lines(460.0,125.0,680.0,760.0,2.0,ACCENT);
+    let scale=(pw/1600.0).min(ph/1200.0);
+    set_camera(&Camera2D{target:vec2(800.0,600.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    draw_rectangle(460.0,225.0,680.0,760.0,PANEL);
+    draw_rectangle_lines(460.0,225.0,680.0,760.0,2.0,ACCENT);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume=>""};
     let w=measure_text(title,None,54,1.0).width;
     label(title,800.0-w/2.0,230.0,54.0,ACCENT);
@@ -924,8 +924,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         MenuScreen::Settings=>{
             label("WINDOW",590.0,300.0,26.0,WHITEISH);
             if menu_button("RESET SIZE (1600 x 1000)",355.0){
-                request_new_screen_size(1600.0,1000.0);
-                save_window_size(1600,1000);
+                request_new_screen_size(1280.0,960.0);
+                save_window_size(1280,960);
             }
             if menu_button("TOGGLE FULLSCREEN",450.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
             label("INTERFACE",590.0,555.0,26.0,WHITEISH);
@@ -963,10 +963,10 @@ async fn main(){
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
-    // Normalize the drawable client area to 16:10 at launch, including when
+    // Normalize the drawable client area to 4:3 at launch, including when
     // Windows restores a window with a different client-area ratio.
     if !fullscreen && last_size.0>0 && last_size.1>0 {
-        let target_h=((last_size.0 as f32)*10.0/16.0).round() as i32;
+        let target_h=((last_size.0 as f32)*12.0/16.0).round() as i32;
         if (last_size.1-target_h).abs()>2 {
             request_new_screen_size(last_size.0 as f32,target_h as f32);
             saved_size=(last_size.0,target_h);
@@ -985,7 +985,7 @@ async fn main(){
         if header_reset||shortcut_reset {
             request_new_screen_size(1600.0,1000.0);
             save_window_size(1600,1000);
-            saved_size=(1600,1000);
+            saved_size=(1280,960);
         }
         if (show_moves,fullscreen)!=saved_preferences {
             save_preferences(show_moves,fullscreen);
@@ -996,7 +996,7 @@ async fn main(){
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
             if !fullscreen {
-                let target_h=((size.0 as f32)*10.0/16.0).round() as i32;
+                let target_h=((size.0 as f32)*12.0/16.0).round() as i32;
                 if (size.1-target_h).abs()>2 {
                     request_new_screen_size(size.0 as f32,target_h as f32);
                     saved_size=(size.0,target_h);
