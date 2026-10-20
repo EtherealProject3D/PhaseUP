@@ -39,6 +39,22 @@ pub(super) fn save_window_size(w:i32,h:i32) {
     }
     let _=std::fs::write(path,format!("{w} {h}\n"));
 }
+// Keep the requested preset separate from the fitted client-area dimensions.
+pub(super) fn selected_resolution_path()->std::path::PathBuf {
+    window_size_path().with_file_name("selected_resolution.txt")
+}
+pub(super) fn save_selected_resolution(w:i32,h:i32) {
+    let path=selected_resolution_path();
+    if let Some(parent)=path.parent(){let _=std::fs::create_dir_all(parent);}
+    let _=std::fs::write(path,format!("{w} {h}\n"));
+}
+pub(super) fn read_selected_resolution()->Option<(i32,i32)> {
+    let data=std::fs::read_to_string(selected_resolution_path()).ok()?;
+    let mut parts=data.split_whitespace();
+    let w=parts.next()?.parse::<i32>().ok()?;
+    let h=parts.next()?.parse::<i32>().ok()?;
+    if (640..=7680).contains(&w)&&(480..=4320).contains(&h){Some((w,h))}else{None}
+}
 // Persist interface preferences alongside the existing window-size file.
 pub(super) fn preferences_path()->std::path::PathBuf {
     window_size_path().with_file_name("settings.txt")
