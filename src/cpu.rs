@@ -11,7 +11,6 @@ impl Game {
         }
         let i=self.turn;
         if self.cpu_skip==Some(i) {
-            self.log_move(format!("{} was skipped",self.cpu_name(i)));
             self.cpu_skip=None;
             self.turn+=1;self.cpu_step=0;return;
         }
@@ -126,11 +125,11 @@ impl Game {
                     });
                 }
                 self.discard.push(card);
-                self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(card.kind)));
+                if card.kind!=Kind::Skip {self.log_move(format!("{} discarded {}",self.cpu_name(i),card_text(card.kind)));}
                 if self.players[i].hand.is_empty(){self.end_round(i);return;}
                 if card.kind==Kind::Skip {
                     let target=(i+1)%4;
-                    self.log_move(format!("{} skipped {}",self.cpu_name(i),self.cpu_name(target)));
+                    self.log_move(format!("{} was skipped",self.cpu_name(target)));
                     if target==0 {
                         // The last CPU skipped the human. Start the next CPU
                         // cycle without exposing a playable human turn.
