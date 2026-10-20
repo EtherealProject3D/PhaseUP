@@ -211,8 +211,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_camera(&camera);
     expire_human_flights(g);
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
-    label("Right-click logo: reset window  |  Ctrl+0",310.,37.,16.,MUTED);
-    label("v0.3.2-dev",184.,40.,19.,MUTED);
+    label("Right-click logo: reset window  |  Ctrl+0",355.,37.,16.,MUTED);
+    let logo_width=menu_text_width("PHASEUP",32);
+    label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
     label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
@@ -241,7 +242,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {680.0}else{table_y+35.0};
         let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
-        label(&phase_label,x,y,17.0,ACCENT);
+        menu_label(&phase_label,x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
             let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
@@ -310,11 +311,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
     let center=535.0;
     menu_label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
-    let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
+    let deck_x=sw*0.39-55.;draw_rectangle(deck_x-5.,center-41.,92.,120.,active_theme().panel());
+    draw_rectangle_lines(deck_x-5.,center-41.,92.,120.,1.0,active_theme().accent());
+    draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
     let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
     menu_label("DISCARD",sw*0.56-50.,center-48.,19.,MUTED);
     let discard_x=sw*0.56-40.;
     let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,center-36.,82.,110.);
+    draw_rectangle(discard_x-5.,center-41.,92.,120.,active_theme().panel());
+    draw_rectangle_lines(discard_x-5.,center-41.,92.,120.,1.0,active_theme().accent());
     draw_rectangle(discard_x,center-36.,82.,110.,Color::new(0.10,0.18,0.23,1.));
     draw_rectangle_lines(discard_x,center-36.,82.,110.,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
     if let Some(c)=g.discard.last().copied(){if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){let _=card_ui(c,discard_x,center-36.,82.,110.,false);}if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,center-36.,82.,110.){g.pile_drag=Some((true,m.0,m.1));}}
@@ -323,7 +328,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if show_moves {
     let log_x=1198.0;let log_y=480.0;
     draw_rectangle(log_x,log_y,374.0,207.0,active_theme().panel());
-    draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
+    draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,active_theme().accent());
     menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
     // Put the live action *inside* the panel so laid phases cannot cover it.
     let events_y=if g.stage==Stage::Cpu {
