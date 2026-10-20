@@ -746,8 +746,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.staged[1].clear();
         }
     }
-    if button("DISCARD",1050.0,sh-43.0,154.0,28.0,g.stage==Stage::Play&&g.selected.len()==1){
+    let discard_ready=g.stage==Stage::Play&&g.selected.len()==1;
+    let discard_x=1050.0;
+    let discard_y=sh-43.0;
+    if button("DISCARD",discard_x,discard_y,103.0,28.0,discard_ready){
         g.discard_selected();
+    }
+    // Draw a bright outline while exactly one card is selected for discard.
+    if discard_ready {
+        draw_rectangle_lines(discard_x,discard_y,103.0,28.0,3.0,YELLOW);
     }
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
