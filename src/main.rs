@@ -406,10 +406,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     for i in 0..4 {
         let p=&g.players[i];
         if !p.laid {continue;}
-        let column_w=(sw-50.0)/4.0;
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {478.0}else{table_y+35.0};
-        label(if i==0 {"YOUR LAID PHASE"}else{&g.cpu_name(i).to_uppercase()},x,y,17.0,ACCENT);
+        let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
+        label(&phase_label,x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+12.0+j as f32*108.0};
             let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{((sw-50.0)/3.0-8.0).max(95.0)};
