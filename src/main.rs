@@ -722,18 +722,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.lay();
         }
     }
-    // Keep controls in the left gutter: the staging slots begin at stage_left.
-    // A compact vertical stack prevents overlap with either slot or the hand.
-    let control_x=24.0;
+    // Hand-area controls match the mockup: clears in the left margin,
+    // discard at the right, and sorting buttons remain centered.
+    let control_x=30.0;
     let control_w=154.0;
     let control_h=30.0;
-    let control_y=stage_y+4.0;
+    let control_y=sh-151.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
-        if button("CLEAR",control_x,control_y,control_w,control_h,!g.staged[0].is_empty()) {
+        if button("CLEAR",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
-        if button("DISCARD",control_x,control_y+39.0,control_w,control_h,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     } else {
         if button("CLEAR ALL",control_x,control_y,control_w,control_h,has_staged) {
             g.staged=[vec![],vec![]];
@@ -744,7 +743,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         if button("CLEAR 2",control_x,control_y+78.0,control_w,control_h,!g.staged[1].is_empty()) {
             g.staged[1].clear();
         }
-        if button("DISCARD",control_x,control_y+117.0,control_w,control_h,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
+    }
+    if button("DISCARD",1050.0,sh-40.0,154.0,30.0,g.stage==Stage::Play&&g.selected.len()==1){
+        g.discard_selected();
     }
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
