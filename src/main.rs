@@ -583,7 +583,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let groups=PHASES[g.players[0].phase.min(PHASES.len()-1)];
     let stage_w=if groups.len()==1 {700.0}else{540.0};
     let stage_left=(sw-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
-    label(if g.stage==Stage::Draw {"PHASE STAGING  -  DRAW FIRST TO UNLOCK"}else{"PHASE STAGING  -  drag cards here, or select and press STAGE"},24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
+    label("PHASE STAGING",24.0,stage_y-10.0,18.0,if g.stage==Stage::Draw {MUTED}else{ACCENT});
     let mut staged_click=None;
     let mut stage_drop=None;
     let mut staged_reorder=None;
@@ -645,7 +645,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 }
             }
         }
-        if button(&format!("STAGE {}",group+1),x+stage_w-99.0,y-27.0,96.0,24.0,g.stage==Stage::Play&&!g.selected.is_empty()) {g.stage_selected(group);}
+        if button(&format!("STAGE {}",group+1),x+stage_w-103.0,y+4.0,96.0,24.0,g.stage==Stage::Play&&!g.selected.is_empty()) {g.stage_selected(group);}
     }
     if is_mouse_button_released(MouseButton::Left){
         if let Some((id,sx,sy))=g.staged_drag {
