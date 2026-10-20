@@ -1094,6 +1094,49 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     }
     None
 }
+// Windows window placement is independent of Macroquad's client-area sizing.
+#[cfg(target_os="windows")]
+mod window_placement {
+    use std::ffi::c_void;
+    type Hwnd=*mut c_void;
+    #[repr(C)]
+    struct Rect {left:i32,top:i32,right:i32,bottom:i32}
+    #[link(name="user32")]
+    extern "system" {
+        fn FindWindowW(class_name:*const u16,window_name:*const u16)->Hwnd;
+        fn GetWindowRect(hwnd:Hwnd,rect:*mut Rect)->i32;
+        fn SetWindowPos(hwnd:Hwnd,after:Hwnd,x:i32,y:i32,cx:i32,cy:i32,flags:u32)->i32;
+        fn GetSystemMetrics(index:i32)->i32;
+    }
+    fn hwnd()->Hwnd {
+        let title:Vec<u16>="PhaseUP - Offline Card Game".encode_utf16().chain(std::iter::once(0)).collect();
+        unsafe {FindWindowW(std::ptr::null(),title.as_ptr())}
+    }
+    fn path()->std::path::PathBuf {
+        super::window_size_path().with_file_name("window_position.txt")
+    }
+    pub fn current()->Option<(i32,i32)> {
+        let h=hwnd();if h.is_null(){return None;}
+        let mut r=Rect{left:0,top:0,right:0,bottom:0};
+        if unsafe{GetWindowRect(h,&mut r)}==0{return None;}
+        Some((r.left,r.top))
+    }
+    pub fn restore() {
+        let Ok(data)=std::fs::read_to_string(path()) else{return;};
+        let mut p=data.split_whitespace();
+        let (Some(x),Some(y))=(p.next().and_then(|v|v.parse::<i32>().ok()),p.next().and_then(|v|v.parse::<i32>().ok())) else{return;};
+        // Avoid restoring a completely off-screen position after monitor changes.
+        let (left,top,width,height)=unsafe{(GetSystemMetrics(76),GetSystemMetrics(77),GetSystemMetrics(78),GetSystemMetrics(79))};
+        if width<=0||height<=0||x<left-100||y<top-100||x>left+width-100||y>top+height-100{return;}
+        let h=hwnd();if h.is_null(){return;}
+        unsafe {SetWindowPos(h,std::ptr::null_mut(),x,y,0,0,0x0001|0x0004|0x0010);}
+    }
+    pub fn save(x:i32,y:i32) {
+        let p=path();
+        if let Some(parent)=p.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
+        let _=std::fs::write(p,format!("{x} {y}\n"));
+    }
+}
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){
@@ -1114,6 +1157,16 @@ async fn main(){
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
     let mut saved_size=last_size;
+    #[cfg(target_os="windows")]
+    {
+        window_placement::restore();
+    }
+    #[cfg(target_os="windows")]
+    let mut last_position=window_placement::current();
+    #[cfg(target_os="windows")]
+    let mut saved_position=last_position;
+    #[cfg(target_os="windows")]
+    let mut position_changed_at=get_time();
     // Normalize the drawable client area to 4:3 at launch, including when
     // Windows restores a window with a different client-area ratio.
     if !fullscreen && last_size.0>0 && last_size.1>0 {
@@ -1137,6 +1190,20 @@ async fn main(){
             request_new_screen_size(1600.0,1200.0);
             save_window_size(1600,1200);
             saved_size=(1600,1200);
+        }
+        #[cfg(target_os="windows")]
+        if !fullscreen {
+            let position=window_placement::current();
+            if position!=last_position {
+                last_position=position;
+                position_changed_at=get_time();
+            }
+            if let Some(pos)=position {
+                if Some(pos)!=saved_position && get_time()-position_changed_at>0.8 {
+                    window_placement::save(pos.0,pos.1);
+                    saved_position=Some(pos);
+                }
+            }
         }
         if (show_moves,fullscreen)!=saved_preferences {
             save_preferences(show_moves,fullscreen);
