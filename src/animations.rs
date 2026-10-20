@@ -137,7 +137,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             let eased=t*t*(3.0-2.0*t);
             let x=start_x+(end_x-start_x)*eased;
             let y=start_y+(end_y-start_y)*eased-50.0*(4.0*t*(1.0-t));
-            let _=card_ui(card,x,y,w,105.0,false);
+            let _=card_ui(card,x,y,112.0+(w-112.0)*eased,150.0+(105.0-150.0)*eased,false);
         }
     }
     // Animate the arriving card above the board, without duplicating its hand back.
@@ -156,10 +156,10 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let y=start_y+(end_y-start_y)*eased-50.0*(4.0*t*(1.0-t));
         if flight.from_discard {
             if let Some(card)=g.players[flight.player].hand.iter().find(|c|c.id==flight.card_id).copied(){
-                let _=card_ui(card,x,y,65.0,87.0,false);
+                let _=card_ui(card,x,y,112.0+(65.0-112.0)*eased,150.0+(87.0-150.0)*eased,false);
             }
         }else{
-            cpu_card_back(x,y,65.0,87.0);
+            cpu_card_back(x,y,112.0+(65.0-112.0)*eased,150.0+(87.0-150.0)*eased);
         }
     }
     // A button-triggered human discard flies from its sorted hand slot.
@@ -168,7 +168,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let eased=t*t*(3.0-2.0*t);
         let x=flight.from_x+(sw*0.56-54.0-flight.from_x)*eased;
         let y=flight.from_y+(535.0-50.0-flight.from_y)*eased-50.0*(4.0*t*(1.0-t));
-        let _=card_ui(flight.card,x,y,75.0+7.0*t,105.0+5.0*t,false);
+        let _=card_ui(flight.card,x,y,75.0+(112.0-75.0)*eased,105.0+(150.0-105.0)*eased,false);
     }
     // CPU discards fly face-up from the former hand slot to the discard pile.
     if let Some(flight)=&g.cpu_discard_flight {
@@ -184,7 +184,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
         let to_y=535.0-50.0;
         let x=from_x+(to_x-from_x)*eased;
         let y=from_y+(to_y-from_y)*eased-50.0*(4.0*t*(1.0-t));
-        let _=card_ui(flight.card,x,y,65.0+17.0*t,87.0+23.0*t,false);
+        let _=card_ui(flight.card,x,y,65.0+(112.0-65.0)*eased,87.0+(150.0-87.0)*eased,false);
     }
 }
 
