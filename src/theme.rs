@@ -55,6 +55,7 @@ pub(super) fn panel_decoration(x:f32,y:f32,w:f32,h:f32){
     }
 }
 pub(super) fn menu_background(){
+    let canvas_h=game_canvas_height();
     let t=active_theme();
     clear_background(t.background());
     match t {
@@ -65,10 +66,10 @@ pub(super) fn menu_background(){
         }
         Theme::Futuristic=>{
             let grid=Color::new(0.04,0.22,0.32,0.36);
-            for x in (-160..=2080).step_by(80){draw_line(x as f32,0.,x as f32,1200.,1.,grid);}
-            for y in (0..=1200).step_by(80){draw_line(-160.,y as f32,2080.,y as f32,1.,grid);}
+            for x in (-160..=2080).step_by(80){draw_line(x as f32,0.,x as f32,canvas_h,1.,grid);}
+            for y in (0..=(canvas_h as i32)).step_by(80){draw_line(-160.,y as f32,2080.,y as f32,1.,grid);}
             draw_line(-160.,100.,2080.,100.,2.,t.accent());
-            draw_line(-160.,1100.,2080.,1100.,2.,t.accent());
+            draw_line(-160.,canvas_h-100.,2080.,canvas_h-100.,2.,t.accent());
         }
         Theme::Playful=>{
             let dots=[(120.,150.,27.),(1730.,190.,43.),(205.,920.,36.),(1690.,960.,28.),(315.,400.,18.),(1560.,620.,22.)];
