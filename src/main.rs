@@ -211,10 +211,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_camera(&camera);
     expire_human_flights(g);
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
-    label("Right-click logo: reset window  |  Ctrl+0",355.,37.,16.,MUTED);
     let logo_width=menu_text_width("PHASEUP",32);
     label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
-    label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
+    menu_label(&format!("ROUND {}  |  TURN {}",g.round,g.turn_count),sw-300.,38.,22.,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Cpu=>("CPU TURN  -  WATCH THE ACTIONS",YELLOW),
@@ -841,7 +840,7 @@ async fn main(){
             game.update_cpu();
             draw_game(&mut game,show_debug,show_moves);
             draw_rectangle(1390.0,8.0,100.0,40.0,PANEL);
-            label("MENU",1404.0,35.0,22.0,ACCENT);
+            menu_label("MENU",1404.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1390.0&&mx<=1490.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
