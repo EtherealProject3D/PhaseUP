@@ -324,7 +324,7 @@ impl Game {
                 if let Some(c)=card {
                     self.players[i].hand.push(c);
                     if self.cpu_speed!=0 {
-                        let duration=match self.cpu_speed {1=>0.25,3=>0.9,_=>0.48};
+                        let duration=match self.cpu_speed {1=>0.30,3=>1.05,_=>0.60};
                         self.cpu_draw_flight=Some(CpuDrawFlight {
                             player:i,from_discard:use_discard,card_id:c.id,
                             started:get_time(),duration
