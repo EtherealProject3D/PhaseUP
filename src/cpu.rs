@@ -93,7 +93,7 @@ impl Game {
                     if requirement(self.players[target].phase.min(9),group)=="run" {
                         order_run(&mut self.players[target].table[group]);
                     }
-                    self.log_move(if target==i {format!("{} hit with a {}",self.cpu_name(i),card_text(card.kind))}else{format!("{} hit {} with a {}",self.cpu_name(i),self.cpu_name(target),card_text(card.kind))});
+                    self.log_move(if target==i {format!("{} hit with {} {}",self.cpu_name(i),card_article(card.kind),card_text(card.kind))}else{format!("{} hit {} with {} {}",self.cpu_name(i),self.cpu_name(target),card_article(card.kind),card_text(card.kind))});
                 } else {self.cpu_step=3;}
             }
             _ => {
@@ -125,7 +125,7 @@ impl Game {
                     });
                 }
                 self.discard.push(card);
-                if card.kind!=Kind::Skip {self.log_move(format!("{} discarded a {}",self.cpu_name(i),card_text(card.kind)));}
+                if card.kind!=Kind::Skip {self.log_move(format!("{} discarded {} {}",self.cpu_name(i),card_article(card.kind),card_text(card.kind)));}
                 if self.players[i].hand.is_empty(){self.end_round(i);return;}
                 if card.kind==Kind::Skip {
                     let target=(i+1)%4;
