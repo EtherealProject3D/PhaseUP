@@ -722,16 +722,26 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             g.lay();
         }
     }
-    if button("SELECT STAGED",24.0,sh-99.0,155.0,32.0,g.stage==Stage::Play&&g.staged.iter().any(|v|!v.is_empty())) {
-        g.selected=g.staged.iter().flatten().copied().collect();
-        g.message="Staged cards selected. Add other cards or lay your phase.".into();
+    // Staging controls follow the number of groups required by this phase.
+    // Clearing a group returns its cards to the hand without discarding them.
+    let has_staged=g.staged.iter().any(|group|!group.is_empty());
+    if groups.len()==1 {
+        if button("CLEAR",24.0,sh-99.0,122.0,36.0,!g.staged[0].is_empty()) {
+            g.staged[0].clear();
+        }
+        if button("DISCARD",159.0,sh-99.0,122.0,36.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
+    } else {
+        if button("CLEAR ALL",24.0,sh-99.0,122.0,36.0,has_staged) {
+            g.staged=[vec![],vec![]];
+        }
+        if button("CLEAR 1",159.0,sh-99.0,122.0,36.0,!g.staged[0].is_empty()) {
+            g.staged[0].clear();
+        }
+        if button("CLEAR 2",294.0,sh-99.0,122.0,36.0,!g.staged[1].is_empty()) {
+            g.staged[1].clear();
+        }
+        if button("DISCARD",429.0,sh-99.0,122.0,36.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
     }
-    if button("RETURN ALL",190.0,sh-99.0,138.0,32.0,g.staged.iter().any(|v|!v.is_empty())) {
-        g.staged=[vec![],vec![]];
-    }
-    if button("LAY PHASE",24.0,sh-64.0,142.0,36.0,g.stage==Stage::Play&&!g.players[0].laid){g.lay();}
-    if button("DISCARD",179.0,sh-64.0,122.0,36.0,g.stage==Stage::Play&&g.selected.len()==1){g.discard_selected();}
-    if button("CLEAR",24.0,sh-145.0,104.0,34.0,!g.selected.is_empty()){g.selected.clear();}
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
     // Contextual text is available through the game log; do not paint it
