@@ -37,6 +37,8 @@ mod animations;
 use animations::*;
 mod ui;
 use ui::*;
+mod theme;
+use theme::*;
 mod help;
 use help::*;
 #[cfg(test)]
@@ -703,8 +705,10 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("TOGGLE FULLSCREEN",450.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
             label("INTERFACE",590.0,555.0,26.0,WHITEISH);
             if menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},595.0){*show_moves=!*show_moves;}
-            if menu_button("BACK",705.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",790.0){return Some(MenuScreen::Resume);}
+            label("APPEARANCE",590.0,700.0,26.0,WHITEISH);
+            if menu_button(&format!("THEME: {}",active_theme().name()),740.0){let next=active_theme().next();set_theme(next);save_theme(next);}
+            if menu_button("BACK",840.0){return Some(MenuScreen::Home;}
+            if has_game && menu_button("RESUME GAME",930.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",515.0,310.0,22.0,WHITEISH);
@@ -727,6 +731,7 @@ async fn main(){
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0x50484153455550);
     macroquad::rand::srand(seed);
+    set_theme(read_theme());
     let mut game=Game::new();
     let mut show_debug=false;
     let (mut show_moves,mut fullscreen)=read_preferences();
