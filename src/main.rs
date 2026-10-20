@@ -587,7 +587,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=809.0;
+    let guidance_y=777.0;
     draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
     draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,25,1.0).width;
@@ -606,7 +606,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
     let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
     let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
-    let card_y=py+18.0;
+    let card_y=py-14.0;
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
