@@ -199,6 +199,15 @@ impl Game {
         }
     }
 }
+// Stable player identity colors used in the scoreboard and move history.
+fn player_color(i:usize)->Color {
+    match i {
+        0=>Color::new(0.35,0.87,0.98,1.0), // You: cyan
+        1=>Color::new(1.0,0.73,0.37,1.0),  // CPU 1: amber
+        2=>Color::new(0.53,0.91,0.60,1.0), // CPU 2: mint
+        _=>Color::new(0.89,0.62,1.0,1.0), // CPU 3: lavender
+    }
+}
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_default_camera();
@@ -229,7 +238,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,154.0,3.0,YELLOW);}menu_label(&format!("{}  |  Phase {}  |  {} cards",g.cpu_name(i),p.phase.min(9)+1,p.hand.len()),x,79.,20.,WHITEISH);menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,104.,16.,MUTED);
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,154.0,3.0,YELLOW);}let name=g.cpu_name(i);menu_label(&name,x,79.,20.,player_color(i));let name_width=menu_text_width(&name,20);menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+name_width,79.,20.,WHITEISH);menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,104.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=65.0;let card_h=87.0;
@@ -247,7 +256,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {680.0}else{table_y+35.0};
         let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
-        menu_label(&phase_label,x,y,17.0,ACCENT);
+        menu_label(&phase_label,x,y,17.0,player_color(i));
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
             let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
@@ -356,7 +365,19 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             draw_rectangle(log_x+7.0,entry_y-17.0,360.0,23.0,Color::new(0.14,0.27,0.35,1.0));
             draw_rectangle(log_x+7.0,entry_y-17.0,3.0,23.0,active_theme().accent());
         }
-        menu_label(event,log_x+14.0,entry_y,18.0,if j==0 || event.starts_with("You ") {ACCENT}else{WHITEISH});
+        // Color the actor's name, or the skipped player's name for passive skip events.
+        let actor=(0..4).find_map(|i|{
+            let name=g.cpu_name(i);
+            let is_actor=event==&name || event.starts_with(&format!("{} ",name));
+            if is_actor {Some((i,name))}else{None}
+        });
+        if let Some((i,name))=actor {
+            menu_label(&name,log_x+14.0,entry_y,18.0,player_color(i));
+            let rest=&event[name.len()..];
+            menu_label(rest,log_x+14.0+menu_text_width(&name,18),entry_y,18.0,WHITEISH);
+        }else{
+            menu_label(event,log_x+14.0,entry_y,18.0,WHITEISH);
+        }
     }
     }
     // Phase staging: cards remain in the player's actual hand until played.
