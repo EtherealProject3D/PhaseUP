@@ -468,7 +468,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         } else {if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}if g.drawn_card==Some(c.id){let y=if g.selected.contains(&c.id){card_y-15.0}else{card_y};draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);}}
         if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){card_y-15.0}else{card_y},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
     }
-    if let Some(id)=toggle {if g.selected.contains(&id){g.selected.retain(|x|*x!=id);}else{g.selected.push(id);}}
+    // Clicking a hand card toggles only that card; phase staging still supports multiple cards.
+    if let Some(id)=toggle {if g.selected.contains(&id){g.selected.clear();}else{g.selected=vec![id];}}
     // Draw the dragged card last so it floats above every other UI element.
     if let Some((id,ox,oy))=g.drag {
         let (mx,my)=game_mouse();
