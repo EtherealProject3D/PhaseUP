@@ -147,9 +147,15 @@ impl Game {
                 while self.stage==Stage::Cpu {self.cpu_action();}
             }
         }else if get_time()>=self.cpu_next_at {
+            let previous_turn=self.turn;
             self.cpu_action();
             let delay=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
-            self.cpu_next_at=get_time()+delay;
+            // Give each CPU's final discard time to land before the next
+            // player begins. Keep the normal pacing between actions intact.
+            let handoff_delay=if self.turn!=previous_turn && self.stage==Stage::Cpu {
+                match self.cpu_speed {1=>0.75,3=>1.85,_=>1.20}
+            }else{delay};
+            self.cpu_next_at=get_time()+handoff_delay;
         }
     }
 }
