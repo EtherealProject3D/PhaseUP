@@ -276,7 +276,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                 draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
-                menu_label(&desc,gx+8.0,y+22.0,19.0,Color::new(0.62,0.71,0.78,1.0));
+                menu_label(&desc,gx+8.0,y+22.0,17.0,Color::new(0.62,0.71,0.78,1.0));
                 menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
@@ -293,7 +293,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
             draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
-            menu_label(&desc,x+8.0,yy+22.0,19.0,WHITEISH);
+            menu_label(&desc,x+8.0,yy+22.0,17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
