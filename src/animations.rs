@@ -29,6 +29,19 @@ pub(super) struct CpuHitFlight {
     pub(super) duration:f64,
 }
 
+pub(super) struct HumanPhaseFlight {
+    pub(super) cards:Vec<(Card,usize,usize,f32,f32)>,
+    pub(super) started:f64,
+    pub(super) per_card:f64,
+}
+impl HumanPhaseFlight {
+    pub(super) fn duration(&self)->f64 {self.cards.len() as f64*self.per_card}
+    pub(super) fn visible(&self,card_id:u32,now:f64)->bool {
+        self.cards.iter().position(|(card,_,_,_,_)|card.id==card_id)
+            .is_none_or(|n|now-self.started>=(n+1) as f64*self.per_card)
+    }
+}
+
 pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
 pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
 
@@ -82,6 +95,27 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             let px=from_x+(to_x-from_x)*eased;
             let py=from_y+(to_y-from_y)*eased-45.0*(4.0*t*(1.0-t));
             let _=card_ui(flight.card,px,py,65.0-26.0*eased,87.0-18.0*eased,false);
+        }
+    }
+    // Human phase: move cards from their staging slots to the laid phase.
+    if let Some(flight)=&g.human_phase_flight {
+        let elapsed=get_time()-flight.started;
+        if elapsed>=0.0 && elapsed<flight.duration() {
+            let index=(elapsed/flight.per_card) as usize;
+            if let Some((card,group,slot,from_x,from_y))=flight.cards.get(index).copied() {
+                let p=&g.players[0];
+                if let Some(cards)=p.table.get(group) {
+                    let width=if p.table.len()==1 {700.0}else{347.0};
+                    let step=if cards.len()>1 {((width-12.0-39.0)/(cards.len()-1) as f32).min(42.0)}else{0.0};
+                    let to_x=sw/2.0-350.0+group as f32*353.0+6.0+slot as f32*step;
+                    let to_y=680.0+12.0+23.0;
+                    let t=((elapsed-index as f64*flight.per_card)/flight.per_card).clamp(0.0,1.0) as f32;
+                    let eased=t*t*(3.0-2.0*t);
+                    let x=from_x+(to_x-from_x)*eased;
+                    let y=from_y+(to_y-from_y)*eased-35.0*(4.0*t*(1.0-t));
+                    let _=card_ui(card,x,y,45.0-6.0*eased,76.0-7.0*eased,false);
+                }
+            }
         }
     }
     // Human draw: show the face-up card flying to its sorted hand slot.
