@@ -401,19 +401,19 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
         }
     }
-    let table_y=211.;label("TABLE",24.,table_y+18.,19.,MUTED);
+    let table_y=207.;label("CPU PHASES",24.,table_y+18.,19.,MUTED);
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {478.0}else{table_y+35.0};
+        let y=if i==0 {477.0}else{table_y+35.0};
         let phase_label=if i==0 {"YOUR LAID PHASE".to_string()}else{g.cpu_name(i).to_uppercase()};
         label(&phase_label,x,y,17.0,ACCENT);
         for (j,group) in p.table.iter().enumerate() {
-            let yy=if i==0 {y+12.0}else{y+12.0+j as f32*108.0};
-            let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{((sw-50.0)/3.0-8.0).max(95.0)};
-            let x=if i==0 {x+j as f32*353.0}else{x};
+            let yy=y+12.0;
+            let width=if i==0 {if p.table.len()==1 {700.0}else{347.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{245.0}};
+            let x=if i==0 {x+j as f32*353.0}else{x+j as f32*252.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             draw_rectangle(x,yy,width,102.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
@@ -473,7 +473,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
     }
     // Reserve a separate central lane for draw/discard piles, away from laid groups.
-    let center=sh*0.49;
+    let center=sh*0.395;
     label("DRAW",sw*0.39-55.,center-48.,19.,MUTED);
     let deck_x=sw*0.39-55.;draw_rectangle(deck_x,center-36.,82.,110.,Color::new(0.19,0.39,0.52,1.));draw_rectangle_lines(deck_x,center-36.,82.,110.,if g.stage==Stage::Draw {4.0}else{2.0},if g.stage==Stage::Draw {YELLOW}else{ACCENT});label("DRAW",deck_x+12.,center+9.,19.,WHITEISH);label(&format!("{} left",g.deck.len()),deck_x+11.,center+36.,17.,WHITEISH);
     let m=game_mouse();if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,center-36.,82.,110.){g.pile_drag=Some((false,m.0,m.1));}
@@ -486,7 +486,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     else {label("DISCARD",discard_x+5.,center+12.,17.,MUTED);label("EMPTY",discard_x+14.,center+36.,16.,MUTED);}
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
-    let log_x=1198.0;let log_y=404.0;
+    let log_x=1198.0;let log_y=360.0;
     draw_rectangle(log_x,log_y,374.0,207.0,PANEL);
     draw_rectangle_lines(log_x,log_y,374.0,207.0,1.5,ACCENT);
     label("RECENT MOVES",log_x+12.0,log_y+25.0,19.0,ACCENT);
@@ -706,9 +706,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
     if !g.message.is_empty() {
-        draw_rectangle(390.0,607.0,650.0,32.0,BG);
+        draw_rectangle(390.0,610.0,650.0,32.0,BG);
         let msg_width=measure_text(&g.message,None,18,1.0).width;
-        label(&g.message,715.0-msg_width/2.0,629.0,18.0,ACCENT);
+        label(&g.message,715.0-msg_width/2.0,632.0,18.0,ACCENT);
     }
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
