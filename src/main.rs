@@ -666,7 +666,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,PANEL);
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=800.0;
+    let guidance_y=510.0;
     draw_rectangle(415.0,guidance_y,770.0,43.0,BG);
     draw_rectangle_lines(415.0,guidance_y,770.0,43.0,2.0,turn_color);
     let tw=measure_text(turn_text,None,25,1.0).width;
@@ -685,7 +685,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
     let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
     let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
-    let card_y=py+5.0;
+    let card_y=py-9.0;
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
@@ -765,10 +765,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
         });
     if staged_complete {
-        draw_rectangle(525.0,776.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
-        draw_rectangle_lines(525.0,776.0,550.0,31.0,1.5,GREEN);
-        label("PHASE COMPLETE",545.0,798.0,21.0,GREEN);
-        if button("LAY PHASE",852.0,778.0,206.0,27.0,true){
+        draw_rectangle(525.0,566.0,550.0,31.0,Color::new(0.08,0.28,0.22,1.0));
+        draw_rectangle_lines(525.0,566.0,550.0,31.0,1.5,GREEN);
+        label("PHASE COMPLETE",545.0,588.0,21.0,GREEN);
+        if button("LAY PHASE",852.0,568.0,206.0,27.0,true){
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
@@ -786,9 +786,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     // Show contextual instructions above staging, not beneath the hand cards
     // where they collided with the sorting controls.
     if !g.message.is_empty() {
-        draw_rectangle(390.0,610.0,650.0,32.0,BG);
+        draw_rectangle(390.0,602.0,650.0,30.0,BG);
         let msg_width=measure_text(&g.message,None,18,1.0).width;
-        label(&g.message,715.0-msg_width/2.0,632.0,18.0,ACCENT);
+        label(&g.message,715.0-msg_width/2.0,623.0,18.0,ACCENT);
     }
     if let Some((target,group))=hit_click {g.hit(target,group);}
     if g.stage==Stage::RoundOver||g.stage==Stage::GameOver {
