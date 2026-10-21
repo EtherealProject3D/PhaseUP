@@ -803,8 +803,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         MenuScreen::Home=>{
             // Keep the title-to-buttons gap and bottom padding balanced at
             // both 16:9 and 16:10 without changing any resolution presets.
-            let first_y=panel_y+225.0;
-            let step=if compact {79.0}else{85.0};
+            let first_y=panel_y+if has_game {195.0}else{225.0};
+            let step=if has_game {if compact {77.0}else{82.0}}else if compact {79.0}else{85.0};
             let mut row=0.0;
             if has_game {
                 if menu_button("RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
