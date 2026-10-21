@@ -195,3 +195,22 @@ pub(super) fn cpu_choose_phase(
     search(hand,phase,level,advanced,needed,0,&mut Vec::new(),&mut best);
     best.map(|(_,groups)|groups)
 }
+
+
+/// Once a CPU has laid its phase, it can hit any visible completed phase.
+/// Normal+ inspect every public table; Novice/Easy retain the simpler policy.
+pub(super) fn cpu_should_take_visible_hit(
+    top:Card,own_phase:usize,own_table:&[Vec<Card>],
+    visible_tables:&[(usize,Vec<Vec<Card>>)],
+    level:super::Difficulty,
+)->bool {
+    if top.kind==Kind::Skip {return false;}
+    if top.kind==Kind::Wild {return true;}
+    if matches!(level,super::Difficulty::Novice|super::Difficulty::Easy) {
+        return own_table.iter().enumerate().any(|(g,cards)|
+            super::can_hit(cards,top,own_phase.min(9),g));
+    }
+    visible_tables.iter().any(|(phase,groups)|
+        groups.iter().enumerate().any(|(g,cards)|
+            super::can_hit(cards,top,(*phase).min(9),g)))
+}
