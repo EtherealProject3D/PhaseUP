@@ -278,7 +278,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
-            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y,800.0,116.0,group_count==1);
+            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y-12.0,800.0,132.0,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let gx=x+j as f32*if i==0 {403.0}else{312.0};
@@ -303,7 +303,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
-        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y+12.0,800.0,116.0,p.table.len()==1);
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y,800.0,132.0,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
