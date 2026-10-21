@@ -124,3 +124,26 @@ pub(super) fn cpu_defense_weight(level:super::Difficulty)->i32 {
         super::Difficulty::Expert => 3,
     }
 }
+
+
+/// A Skip always targets the next player under the current rules.
+/// Advanced CPUs save it when that player is safe and spend it when
+/// public hand size and a laid phase signal an imminent round finish.
+pub(super) fn cpu_skip_discard_adjustment(
+    level:super::Difficulty,next_laid:bool,next_hand_count:usize,
+)->i32 {
+    match level {
+        super::Difficulty::Novice|super::Difficulty::Easy|super::Difficulty::Normal => 0,
+        super::Difficulty::Hard => {
+            if next_laid && next_hand_count<=2 {450}
+            else if next_laid && next_hand_count<=4 {180}
+            else {-180}
+        },
+        super::Difficulty::Expert => {
+            if next_laid && next_hand_count<=2 {750}
+            else if next_laid && next_hand_count<=4 {300}
+            else if next_hand_count<=2 {200}
+            else {-280}
+        },
+    }
+}
