@@ -300,7 +300,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }
         if !p.laid {continue;}
-        let x=if i==0 {sw/2.0-350.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+        let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y+18.0,800.0,108.0,p.table.len()==1);
@@ -318,7 +318,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
-            menu_label(&desc,desc_x,yy+if player_art {22.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            menu_label(&desc,desc_x,yy+if player_art {38.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -1159,23 +1159,54 @@ async fn main(){
                         p.table=PHASES[p.phase.min(PHASES.len()-1)].iter().map(|_|Vec::new()).collect();
                     }
                 }
-                if button("PHASE CARD +",610.0,990.0,215.0,48.0,true){
+                // Jump directly between one- and two-requirement phase layouts.
+                if button("SINGLE REQUIREMENT",24.0,928.0,265.0,48.0,true){
+                    if let Some(phase)=PHASES.iter().position(|requirements|requirements.len()==1){
+                        workshop_preview.players[0].phase=phase;
+                        workshop_preview.players[0].laid=false;
+                        workshop_preview.players[0].table.clear();
+                        workshop_preview.staged=[vec![],vec![]];
+                    }
+                }
+                if button("DOUBLE REQUIREMENT",305.0,928.0,290.0,48.0,true){
+                    if let Some(phase)=PHASES.iter().position(|requirements|requirements.len()==2){
+                        workshop_preview.players[0].phase=phase;
+                        workshop_preview.players[0].laid=false;
+                        workshop_preview.players[0].table.clear();
+                        workshop_preview.staged=[vec![],vec![]];
+                    }
+                }
+                if button("GROUP 1 +",610.0,990.0,215.0,48.0,true){
                     let p=&mut workshop_preview.players[0];
                     if !p.laid {p.laid=true;}
                     if p.table.is_empty(){
                         p.table=PHASES[p.phase.min(PHASES.len()-1)].iter().map(|_|Vec::new()).collect();
                     }
-                    let group=p.table.iter().enumerate().min_by_key(|(_,cards)|cards.len()).map(|(i,_)|i).unwrap_or(0);
-                    let n=p.table.iter().map(|cards|cards.len()).sum::<usize>() as u32;
-                    if n<24 {
-                        p.table[group].push(Card{id:20000+n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});
+                    if p.table.len()>0 {
+                        let n=p.table.iter().flat_map(|group|group.iter()).map(|card|card.id).max().unwrap_or(19999)+1;
+                        if p.table[0].len()<18 {
+                            p.table[0].push(Card{id:n,kind:Kind::Number(((n-20000)%12+1) as u8,((n-20000)%4) as u8)});
+                        }
                     }
                 }
-                if button("PHASE CARD -",840.0,990.0,215.0,48.0,true){
+                if button("GROUP 1 -",840.0,990.0,215.0,48.0,true){
+                    if let Some(group)=workshop_preview.players[0].table.get_mut(0){group.pop();}
+                }
+                if button("GROUP 2 +",1070.0,990.0,215.0,48.0,true){
                     let p=&mut workshop_preview.players[0];
-                    if let Some(group)=p.table.iter_mut().max_by_key(|cards|cards.len()){
-                        group.pop();
+                    if !p.laid {p.laid=true;}
+                    if p.table.is_empty(){
+                        p.table=PHASES[p.phase.min(PHASES.len()-1)].iter().map(|_|Vec::new()).collect();
                     }
+                    if p.table.len()>1 {
+                        let n=p.table.iter().flat_map(|group|group.iter()).map(|card|card.id).max().unwrap_or(19999)+1;
+                        if p.table[1].len()<18 {
+                            p.table[1].push(Card{id:n,kind:Kind::Number(((n-20000)%12+1) as u8,((n-20000)%4) as u8)});
+                        }
+                    }
+                }
+                if button("GROUP 2 -",1300.0,990.0,215.0,48.0,true){
+                    if let Some(group)=workshop_preview.players[0].table.get_mut(1){group.pop();}
                 }
                 if button("STAGE CARD +",1070.0,990.0,215.0,48.0,true){
                     let p=&mut workshop_preview.players[0];
