@@ -3,7 +3,7 @@
 use crate::*;
 
 #[derive(Default,Debug)]
-struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;5] }
+struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;5], games:u32, game_wins:[u32;5], game_rounds:u32 }
 
 fn random(state:&mut u64)->u64 {
     *state=state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -27,7 +27,11 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
     let levels=[Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert];
     let mut state=seed;
     let mut stats=Stats::default();
-    // Rotate the difficulty positions to reduce first-seat advantage.
+    let mut progress=[0usize;4];
+    let mut scores=[0u32;4];
+    let mut game_round=0u32;
+    let mut game_index=0usize;
+    // Rotate difficulty seats between completed games.
     for round in 0..round_limit {
         let mut deck=Vec::new();
         let mut id=0u32;
@@ -40,10 +44,10 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         let mut hands=vec![Vec::<Card>::new();4];
         let mut tables=vec![Vec::<Vec<Card>>::new();4];
         let mut laid=[false;4];
-        let phase=[0usize;4];
+        let phase=progress;
         let mut difficulty=[Difficulty::Normal;4];
         for p in 0..4 {
-            difficulty[p]=levels[((round as usize)+p)%5];
+            difficulty[p]=levels[(game_index+p)%5];
             for _ in 0..10 {hands[p].push(deck.pop().unwrap());}
         }
         let mut discard=vec![deck.pop().unwrap()];
@@ -118,6 +122,18 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         if let Some(p)=winner {
             stats.completed+=1;
             stats.wins[difficulty[p].level() as usize]+=1;
+            for j in 0..4 {
+                scores[j]+=hands[j].iter().map(|&card|card_points(card)).sum::<u32>();
+                if laid[j] {progress[j]+=1;}
+            }
+            game_round+=1;
+            if progress.iter().any(|&v|v>=10) {
+                let champion=(0..4).filter(|&j|progress[j]>=10).min_by_key(|&j|(scores[j],j)).unwrap();
+                stats.games+=1;
+                stats.game_wins[difficulty[champion].level() as usize]+=1;
+                stats.game_rounds+=game_round;
+                progress=[0;4];scores=[0;4];game_round=0;game_index+=1;
+            }
         }
     }
     stats
@@ -136,5 +152,21 @@ fn seeded_cpu_rounds_complete_without_illegal_moves() {
 fn seeded_cpu_simulation_is_reproducible() {
     let a=run_seed(20261020,4,200);
     let b=run_seed(20261020,4,200);
+    assert_eq!(format!("{a:?}"),format!("{b:?}"));
+}
+
+#[test]
+fn ten_phase_games_complete_and_track_winners() {
+    let s=run_seed(0xFACE2026,120,350);
+    assert!(s.games>0,"no complete games: {s:?}");
+    assert_eq!(s.game_wins.iter().sum::<u32>(),s.games);
+    assert!(s.game_rounds>=s.games*10);
+    println!("Full game CPU balance: {s:?}");
+}
+
+#[test]
+fn ten_phase_game_results_are_reproducible() {
+    let a=run_seed(0xDEADBEEF,100,350);
+    let b=run_seed(0xDEADBEEF,100,350);
     assert_eq!(format!("{a:?}"),format!("{b:?}"));
 }
