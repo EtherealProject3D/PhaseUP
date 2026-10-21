@@ -334,3 +334,20 @@ fn novice_cpu_avoids_number_discard_pile_but_takes_wild() {
     assert!(cpu_should_take_discard_for_level(&hand,wild(4),0,false,&[],Difficulty::Novice));
     assert!(!cpu_should_take_discard_for_level(&hand,skip(5),0,false,&[],Difficulty::Expert));
 }
+
+#[test]
+fn cpu_difficulty_selector_cycles_all_five_levels() {
+    let mut level=Difficulty::Novice;
+    for expected in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert,Difficulty::Novice] {
+        level=level.next();
+        assert_eq!(level,expected);
+    }
+}
+
+#[test]
+fn cpu_difficulty_storage_keys_round_trip() {
+    for level in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        assert_eq!(Difficulty::from_key(level.key()),level);
+    }
+    assert_eq!(Difficulty::from_key("unknown"),Difficulty::Normal);
+}
