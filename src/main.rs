@@ -363,6 +363,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let discard_x=sw/2.0+88.0;
     menu_label("DRAW",deck_x,pile_y-17.0,19.0,MUTED);
     menu_label("DISCARD",discard_x,pile_y-17.0,19.0,MUTED);
+    if active_theme()==Theme::Futuristic && neon_draw_back(deck_x,pile_y,pile_w,pile_h) {
+        if g.stage==Stage::Draw {
+            draw_rectangle_lines(deck_x-2.0,pile_y-2.0,pile_w+4.0,pile_h+4.0,2.0,active_theme().accent());
+        }
+        let count_text=format!("{} left",g.deck.len());
+        menu_label(&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0,pile_y+pile_h+22.0,17.0,WHITEISH);
+    } else {
     // Offset layers expose the thickness of the remaining draw deck.
     let layers=g.deck.len().min(3);
     for layer in (0..layers).rev() {
@@ -380,6 +387,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     menu_label(draw_text,deck_x+(pile_w-menu_text_width(draw_text,19))/2.0,pile_y+77.0,19.0,WHITEISH);
     let count_text=format!("{} left",g.deck.len());
     menu_label(&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0,pile_y+99.0,17.0,WHITEISH);
+    }
     let m=game_mouse();
     if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,pile_y,pile_w,pile_h){g.pile_drag=Some((false,m.0,m.1));}
     let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,pile_y,pile_w,pile_h);
