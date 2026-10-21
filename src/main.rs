@@ -330,7 +330,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let available=(width-12.0-card_w).max(0.0);
             let step=if shown_len>1 {(available/(shown_len-1) as f32).min(56.0)} else {0.0};
             if let Some(slot)=preview {
-                let cx=x+if i>0 && has_neon_cpu_panel(){22.0}else{6.0}+slot as f32*step;
+                let cx=x+if i>0 && has_neon_cpu_panel(){12.0}else{6.0}+slot as f32*step;
                 draw_rectangle_lines(cx,yy+26.0,card_w,card_h,2.5,YELLOW);
             }
             for (k,card) in group.iter().enumerate() {
@@ -338,7 +338,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if i!=0 && g.cpu_phase_flight.as_ref().is_some_and(|flight|flight.player==i && !flight.visible(j,k,get_time())) {continue;}
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
-                let cx=x+if i>0 && has_neon_cpu_panel(){22.0}else{6.0}+shown as f32*step;
+                let cx=x+if i>0 && has_neon_cpu_panel(){12.0}else{6.0}+shown as f32*step;
                 let cy=yy+if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
