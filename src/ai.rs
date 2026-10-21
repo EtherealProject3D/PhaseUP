@@ -120,6 +120,15 @@ pub(super) fn cpu_should_take_discard_for_level(
     if top.kind==Kind::Wild {return true;}
     if laid {return cpu_should_take_discard(hand,top,phase,laid,table);}
     if level==super::Difficulty::Novice {return false;}
+    if matches!(level,super::Difficulty::Hard|super::Difficulty::Expert) {
+        // A visible card that completes the phase is always worth taking.
+        // Avoid comparing only heuristic card scores when the actual phase
+        // can be laid immediately after drawing.
+        let mut with_top=hand.to_vec();
+        with_top.push(top);
+        if cpu_choose_phase(&with_top,phase,level).is_some()
+            && cpu_choose_phase(hand,phase,level).is_none() {return true;}
+    }
     if level!=super::Difficulty::Easy {return cpu_should_take_discard(hand,top,phase,laid,table);}
     let mut combined=hand.to_vec();
     combined.push(top);
