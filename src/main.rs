@@ -278,14 +278,15 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
+            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y,800.0,116.0,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let gx=x+j as f32*if i==0 {403.0}else{312.0};
-                if !(active_theme()==Theme::Futuristic && i>0 && has_neon_cpu_panel()) {
+                if !player_art && !(active_theme()==Theme::Futuristic && i>0 && has_neon_cpu_panel()) {
                     draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                     draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
                 }
-                if active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
+                if !player_art && active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
                 // Single-requirement phases occupy the full CPU frame: center
                 // their labels across both decorative lower panels.
@@ -302,13 +303,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let x=if i==0 {sw/2.0-350.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y+12.0,800.0,116.0,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
             let x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
-            if !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
+            if !player_art && !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
                 draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
                 draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             }
