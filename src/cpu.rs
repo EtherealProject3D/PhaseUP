@@ -16,10 +16,22 @@ impl Game {
         }
         match self.cpu_step {
             0 => {
-                let use_discard=self.discard.last().is_some_and(|&top|cpu_should_take_discard_for_level(
-                    &self.players[i].hand,top,self.players[i].phase,
-                    self.players[i].laid,&self.players[i].table,
-                    self.cpu_roster[i-1].difficulty));
+                let difficulty=self.cpu_roster[i-1].difficulty;
+                let visible_tables:Vec<(usize,Vec<Vec<Card>>)>=self.players.iter()
+                    .filter(|player|player.laid)
+                    .map(|player|(player.phase,player.table.clone()))
+                    .collect();
+                let use_discard=self.discard.last().is_some_and(|&top| {
+                    if self.players[i].laid {
+                        cpu_should_take_visible_hit(
+                            top,self.players[i].phase,&self.players[i].table,
+                            &visible_tables,difficulty)
+                    }else{
+                        cpu_should_take_discard_for_level(
+                            &self.players[i].hand,top,self.players[i].phase,
+                            false,&self.players[i].table,difficulty)
+                    }
+                });
                 let card=if use_discard {self.discard.pop()}else{self.draw_deck()};
                 if let Some(c)=card {
                     self.players[i].hand.push(c);
