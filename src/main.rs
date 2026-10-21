@@ -322,16 +322,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
             menu_label(&desc,desc_x,yy+if player_art {-3.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
-                let available=(width-12.0-card_w).max(0.0);
-                let step=if group.len()>1 {(available/(group.len()-1) as f32).min(56.0)}else{0.0};
-                let cards_end=x+6.0+if group.is_empty(){0.0}else{(group.len()-1) as f32*step+card_w};
-                let remaining=(x+width-12.0-cards_end).max(0.0);
-                if remaining>menu_text_width(&desc,17)+16.0 {
-                    cards_end+(remaining-menu_text_width(&desc,17))/2.0
-                }else{desc_x}
-            }else{desc_x};
-            menu_label(&desc,desc_x,yy+if player_art {if group.len()>0 && desc_x==x+(width-menu_text_width(&desc,17))/2.0 {0.0}else{55.0}}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
-            let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
             // will occupy and shift the existing table cards around that gap.
