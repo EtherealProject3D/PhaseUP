@@ -144,3 +144,11 @@ Suggested regression scenarios for future work:
 5. Before coding, read this file and the current source. Working behavior and user decisions outrank speculative roadmap items.
 6. Update this document after significant design decisions or newly recovered older ideas.
 7. Treat the list as **recoverable knowledge, not exhaustive transcripts**. Earlier conversations may contain details not yet captured; add them when found.
+
+
+## CPU simulation and balancing (2026-10-20)
+- **Confirmed:** User reported 43 passing unit tests and a successful release build after opponent-awareness work.
+- **Implemented, awaiting local verification:** `src/simulation.rs` adds seeded headless CPU-vs-CPU round simulations and reproducibility checks, registered under `#[cfg(test)]` in `src/main.rs`.
+- The initial harness exercises Phase 1 rounds, rotating five difficulty levels through four seats, and reports round completions, turns, phases laid, Wilds laid, Skips and difficulty wins. It is **not** a full ten-phase game simulation or a reliable difficulty ranking yet.
+- **Next:** Validate harness on Windows with `cargo test -- --nocapture`; then extend to complete games, collect larger samples, and tune difficulty based on measured outcomes.
+- **UI freeze remains in effect:** Do not change menus, sizing or resolution until CPU work is finished or the user explicitly requests UI changes.
