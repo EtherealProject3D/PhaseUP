@@ -64,7 +64,18 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=if selected{y-15.}else{y};let c=color_for(card.kind);
-    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) && neon_card_texture(match card.kind {Kind::Number(_,color)=>color as usize,_=>0},x,yy,w,h) {
+    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){4}else{1},x,yy,w,h) {
+        // Special cards share the Neon Forge texture family until dedicated art is available.
+        let symbol=card_text(card.kind);
+        let size=if w<45.0 {22_u16}else{35_u16};
+        let tw=menu_text_width(&symbol,size);
+        let tx=x+(w-tw)/2.0;
+        let ty=yy+h*0.63;
+        draw_rectangle(x+w*0.26,yy+h*0.38,w*0.48,h*0.30,Color::new(0.015,0.035,0.065,0.90));
+        menu_label(&symbol,tx+1.5,ty+2.0,size as f32,BLACK);
+        menu_label(&symbol,tx,ty,size as f32,WHITEISH);
+        if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
+    } else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) && neon_card_texture(match card.kind {Kind::Number(_,color)=>color as usize,_=>0},x,yy,w,h) {
         let t=card_text(card.kind);
         let size=if w<45.0 {22_u16}else{35_u16};
         let tw=menu_text_width(&t,size);
@@ -132,6 +143,9 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
 }
 pub(super) fn column_hand_width(count:usize,card_w:f32)->f32 {
     if count<=1 {0.0}else{(count-1) as f32*24.0_f32.min((450.0-card_w)/(count-1) as f32)}
+}
+pub(super) fn neon_draw_back(x:f32,y:f32,w:f32,h:f32)->bool {
+    active_theme()==Theme::Futuristic && neon_card_texture(4,x,y,w,h)
 }
 pub(super) fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
     if active_theme()==Theme::Futuristic && neon_card_texture(4,x,y,w,h){return;}
