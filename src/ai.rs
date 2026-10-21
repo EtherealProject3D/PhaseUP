@@ -60,38 +60,30 @@ pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 
     }
 }
 
-// For long runs, measure whether a visible card improves the best legal
-// window after replacing one existing card. Ignore duplicate ranks and Skips.
-fn cpu_best_run_coverage(hand:&[Card],length:usize)->i32 {
-    if !(1..=12).contains(&length) {return 0;}
-    let mut best=0;
+// A visible number is worth taking only if it fills a missing rank in
+// an already strong run window. Require at least length-2 distinct naturals
+// before the draw, and count Wilds as potential gap fillers.
+pub(super) fn cpu_long_run_discard_improves(hand:&[Card],top:Card,phase:usize)->bool {
+    let Kind::Number(n,_) = top.kind else{return false;};
+    if !matches!(phase,3|4|5) {return false;}
+    let length=super::PHASES[phase][0];
+    let wilds=hand.iter().filter(|c|c.kind==Kind::Wild).count();
     for start in 1..=(13-length) {
         let end=start+length-1;
+        if (n as usize)<start || (n as usize)>end {continue;}
         let mut seen=[false;13];
         for card in hand {
-            if let Kind::Number(n,_) = card.kind {
-                let n=n as usize;
-                if n>=start && n<=end {seen[n]=true;}
+            if let Kind::Number(m,_) = card.kind {
+                let m=m as usize;
+                if m>=start && m<=end {seen[m]=true;}
             }
         }
-        best=best.max(seen[start..=end].iter().filter(|&&present|present).count() as i32);
+        let coverage=seen[start..=end].iter().filter(|&&v|v).count();
+        if !seen[n as usize] && coverage>=length-2 && coverage+wilds>=length-1 {
+            return true;
+        }
     }
-    best
-}
-
-pub(super) fn cpu_long_run_discard_improves(hand:&[Card],top:Card,phase:usize)->bool {
-    if !matches!(phase,3|4|5) || !matches!(top.kind,Kind::Number(_,_)) {return false;}
-    let length=super::PHASES[phase][0];
-    let before=cpu_best_run_coverage(hand,length);
-    // Compare the best possible hand after taking and discarding one card,
-    // rather than treating a duplicate number as progress.
-    hand.iter().enumerate().any(|(i,card)| {
-        if card.kind==Kind::Wild {return false;}
-        let mut candidate=Vec::with_capacity(hand.len());
-        candidate.extend(hand.iter().enumerate().filter_map(|(j,&c)|if i==j {None}else{Some(c)}));
-        candidate.push(top);
-        cpu_best_run_coverage(&candidate,length)>before
-    })
+    false
 }
 
 // Choose a visible discard only when it improves the CPU's hand.
