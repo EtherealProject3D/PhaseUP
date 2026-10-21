@@ -247,7 +247,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
-    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0});}}
+    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}}
     for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
         menu_label(&cpu_status,status_x,124.,16.,MUTED); 
@@ -1159,7 +1159,7 @@ async fn main(){
                 menu_label("CPU PANEL: CLICK TO CHANGE ACTIVE PLAYER",704.0,710.0,20.0,ACCENT);
                 for i in 0..3 {
                     let x=700.0+i as f32*175.0;
-                    neon_cpu_panel(x,730.0,165.0,140.0,if i==workshop_cpu{1.0}else{0.0});
+                    neon_cpu_panel(x,730.0,165.0,140.0,if i==workshop_cpu{1.0}else{0.0},i==0);
                     menu_label(&format!("CPU {}",i+1),x+40.0,805.0,20.0,WHITEISH);
                     if inside(x,730.0,165.0,140.0)&&is_mouse_button_pressed(MouseButton::Left){workshop_cpu=i;}
                 }
