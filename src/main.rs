@@ -298,7 +298,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-            let x=if i==0 {x+j as f32*403.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){x+j as f32*310.0}else{x+j as f32*312.0};
+            let x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             if !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
@@ -338,7 +338,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if i!=0 && g.cpu_phase_flight.as_ref().is_some_and(|flight|flight.player==i && !flight.visible(j,k,get_time())) {continue;}
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
-                let cx=x+6.0+shown as f32*step;
+                let cx=x+if i>0 && has_neon_cpu_panel(){12.0}else{6.0}+shown as f32*step;
                 let cy=yy+if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
