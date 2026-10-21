@@ -303,7 +303,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
-        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y+18.0,800.0,108.0,p.table.len()==1);
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y+12.0,800.0,116.0,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
@@ -318,7 +318,19 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
-            menu_label(&desc,desc_x,yy+if player_art {38.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            // In the player's panel, keep the requirement clear of laid cards.
+            // The cards occupy the left side; the label uses the remaining space.
+            let desc_x=if player_art {
+                let card_w=55.0;
+                let available=(width-12.0-card_w).max(0.0);
+                let step=if group.len()>1 {(available/(group.len()-1) as f32).min(56.0)}else{0.0};
+                let cards_end=x+6.0+if group.is_empty(){0.0}else{(group.len()-1) as f32*step+card_w};
+                let remaining=(x+width-12.0-cards_end).max(0.0);
+                if remaining>menu_text_width(&desc,17)+16.0 {
+                    cards_end+(remaining-menu_text_width(&desc,17))/2.0
+                }else{desc_x}
+            }else{desc_x};
+            menu_label(&desc,desc_x,yy+if player_art {if group.len()>0 && desc_x==x+(width-menu_text_width(&desc,17))/2.0 {0.0}else{55.0}}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
