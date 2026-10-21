@@ -44,10 +44,30 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=if selected{y-15.}else{y};let c=color_for(card.kind);
-    draw_rectangle(x+2.,yy+3.,w,h,Color::new(0.,0.,0.,0.3));draw_rectangle(x,yy,w,h,WHITEISH);
-    draw_rectangle(x+5.,yy+5.,w-10.,h-10.,c);
-    let t=card_text(card.kind);let size: f32=if w<45.0{23.0}else{32.0};let dims=measure_text(&t,None,size as u16,1.0);
-    label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) {
+        // Dark chassis, inset color surface, and restrained neon edge detailing.
+        let edge=Color::new(0.13,0.31,0.40,1.0);
+        let chassis=Color::new(0.025,0.065,0.105,1.0);
+        draw_rectangle(x+3.0,yy+5.0,w,h,Color::new(0.0,0.0,0.0,0.38));
+        draw_rectangle(x,yy,w,h,chassis);
+        draw_rectangle_lines(x,yy,w,h,2.0,if selected{ACCENT}else{edge});
+        draw_rectangle(x+5.0,yy+5.0,w-10.0,h-10.0,c);
+        // Top sheen and bottom shadow give depth without obscuring card color.
+        draw_rectangle(x+5.0,yy+5.0,w-10.0,(h*0.18).max(5.0),Color::new(1.0,1.0,1.0,0.12));
+        draw_rectangle(x+5.0,yy+h-14.0,w-10.0,9.0,Color::new(0.0,0.0,0.0,0.16));
+        draw_line(x+7.0,yy+9.0,x+(w*0.38).max(10.0),yy+9.0,2.0,WHITEISH);
+        draw_line(x+w-(w*0.38).max(10.0),yy+h-9.0,x+w-7.0,yy+h-9.0,2.0,WHITEISH);
+        let t=card_text(card.kind);
+        let size=if w<45.0{25_u16}else{38_u16};
+        let tw=menu_text_width(&t,size);
+        let text_color=if matches!(card.kind,Kind::Number(_,2)){chassis}else{WHITEISH};
+        menu_label(&t,x+(w-tw)/2.0,yy+h/2.0+size as f32*0.35,size as f32,text_color);
+    } else {
+        draw_rectangle(x+2.,yy+3.,w,h,Color::new(0.,0.,0.,0.3));draw_rectangle(x,yy,w,h,WHITEISH);
+        draw_rectangle(x+5.,yy+5.,w-10.,h-10.,c);
+        let t=card_text(card.kind);let size: f32=if w<45.0{23.0}else{32.0};let dims=measure_text(&t,None,size as u16,1.0);
+        label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+    }
     let m=game_mouse();m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 pub(super) fn column_hand_width(count:usize,card_w:f32)->f32 {
