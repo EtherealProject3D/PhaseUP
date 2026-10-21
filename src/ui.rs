@@ -77,6 +77,19 @@ pub(super) fn neon_frame(x:f32,y:f32,w:f32,h:f32,bright:bool){
         let color=Color::new(0.0,0.79,1.0,alpha*strength);
         draw_rectangle_lines(x+offset,y+offset,w-2.0*offset,h-2.0*offset,thickness,color);
     }
+    // Layered dark-metal rails and inset bevels give the frame physical depth.
+    let outer_rail=Color::new(0.11,0.23,0.30,0.95);
+    let inner_rail=Color::new(0.025,0.16,0.22,0.90);
+    draw_rectangle_lines(x+2.0,y+2.0,w-4.0,h-4.0,3.0,outer_rail);
+    draw_rectangle_lines(x+8.0,y+8.0,w-16.0,h-16.0,1.5,inner_rail);
+    // Corner armor: short stacked bevels, with a lit inset seam.
+    let arm=(w*0.10).min(h*0.28).min(28.0).max(7.0);
+    for &(sx,sy,dx,dy) in &[(x,y,1.0,1.0),(x+w,y,-1.0,1.0),(x,y+h,1.0,-1.0),(x+w,y+h,-1.0,-1.0)] {
+        let dark=Color::new(0.015,0.035,0.055,1.0);
+        draw_line(sx+dx*3.0,sy+dy*(arm+6.0),sx+dx*(arm+6.0),sy+dy*3.0,7.0,dark);
+        draw_line(sx+dx*4.0,sy+dy*(arm+6.0),sx+dx*(arm+6.0),sy+dy*4.0,2.0,metal);
+        draw_line(sx+dx*9.0,sy+dy*(arm+4.0),sx+dx*(arm+4.0),sy+dy*9.0,1.3,Color::new(0.0,0.70,0.91,0.65));
+    }
     draw_rectangle_lines(x,y,w,h,2.0,metal);
     let edge=Color::new(0.0,0.80,1.0,if bright{0.95}else{0.78});
     for &(sx,sy,dx,dy) in &[(x,y,1.0,1.0),(x+w,y,-1.0,1.0),(x,y+h,1.0,-1.0),(x+w,y+h,-1.0,-1.0)]{
