@@ -292,11 +292,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 // their labels across both decorative lower panels.
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
                 let label_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0}
-                    else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0-10.0}else{gx+8.0};
-                menu_label(&desc,label_x,y+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                    else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
+                menu_label(&desc,label_x,y+if player_art {38.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width("NOT LAID",17))/2.0}
-                    else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else{gx+10.0};
-                menu_label("NOT LAID",not_laid_x,y+if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
+                    else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
+                menu_label("NOT LAID",not_laid_x,y+if player_art {85.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
         if !p.laid {continue;}
@@ -317,8 +317,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0
-            } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else{x+8.0};
-            menu_label(&desc,desc_x,yy+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
+            menu_label(&desc,desc_x,yy+if player_art {22.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
