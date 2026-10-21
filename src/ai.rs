@@ -146,3 +146,52 @@ pub(super) fn cpu_skip_discard_adjustment(
         },
     }
 }
+
+
+/// Find a legal phase layout. Advanced CPUs compare all eligible card subsets
+/// rather than accepting the first valid one, preserving valuable Wilds and
+/// reducing the points left in hand when possible.
+pub(super) fn cpu_choose_phase(
+    hand:&[Card],phase:usize,level:super::Difficulty,
+)->Option<Vec<Vec<Card>>> {
+    if phase>=super::PHASES.len(){return None;}
+    let needed:usize=super::PHASES[phase].iter().sum();
+    if needed>hand.len(){return None;}
+    let advanced=matches!(level,super::Difficulty::Hard|super::Difficulty::Expert);
+    let mut best:Option<(i32,Vec<Vec<Card>>)>=None;
+    fn search(
+        hand:&[Card],phase:usize,level:super::Difficulty,advanced:bool,
+        needed:usize,start:usize,indices:&mut Vec<usize>,
+        best:&mut Option<(i32,Vec<Vec<Card>>)>,
+    )->bool {
+        if indices.len()==needed {
+            let subset:Vec<Card>=indices.iter().map(|&j|hand[j]).collect();
+            if let Some(groups)=super::partition_phase(&subset,phase) {
+                if !advanced {
+                    *best=Some((0,groups));
+                    return true;
+                }
+                let wilds=subset.iter().filter(|c|c.kind==Kind::Wild).count() as i32;
+                let points=subset.iter().map(|&c|card_points(c) as i32).sum::<i32>();
+                // Hard conserves Wilds; Expert conserves them even more strongly.
+                // Among equal Wild usage, shedding high-value cards reduces risk.
+                let weight=if level==super::Difficulty::Expert {200}else{100};
+                let score=points-wilds*weight;
+                if best.as_ref().is_none_or(|(current,_)|score>*current) {
+                    *best=Some((score,groups));
+                }
+            }
+            return false;
+        }
+        let missing=needed-indices.len();
+        if start+missing>hand.len(){return false;}
+        for j in start..=hand.len()-missing {
+            indices.push(j);
+            if search(hand,phase,level,advanced,needed,j+1,indices,best) {return true;}
+            indices.pop();
+        }
+        false
+    }
+    search(hand,phase,level,advanced,needed,0,&mut Vec::new(),&mut best);
+    best.map(|(_,groups)|groups)
+}
