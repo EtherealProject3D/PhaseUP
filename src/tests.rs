@@ -351,3 +351,26 @@ fn cpu_difficulty_storage_keys_round_trip() {
     }
     assert_eq!(Difficulty::from_key("unknown"),Difficulty::Normal);
 }
+
+#[test]
+fn hard_cpu_saves_skip_until_next_player_is_threatening() {
+    assert!(cpu_skip_discard_adjustment(Difficulty::Hard,true,2)>0);
+    assert!(cpu_skip_discard_adjustment(Difficulty::Hard,true,8)<0);
+    assert!(cpu_skip_discard_adjustment(Difficulty::Hard,false,2)<0);
+}
+
+#[test]
+fn expert_cpu_reacts_to_imminent_finish_more_strongly() {
+    assert!(cpu_skip_discard_adjustment(Difficulty::Expert,true,1)
+        >cpu_skip_discard_adjustment(Difficulty::Hard,true,1));
+    assert!(cpu_skip_discard_adjustment(Difficulty::Expert,false,2)>0);
+    assert!(cpu_skip_discard_adjustment(Difficulty::Expert,false,8)<0);
+}
+
+#[test]
+fn lower_difficulties_keep_original_skip_timing() {
+    for level in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal] {
+        assert_eq!(cpu_skip_discard_adjustment(level,true,1),0);
+        assert_eq!(cpu_skip_discard_adjustment(level,false,10),0);
+    }
+}
