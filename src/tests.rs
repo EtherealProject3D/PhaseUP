@@ -500,11 +500,11 @@ fn easy_run_phase_does_not_prioritize_unneeded_number_pairs() {
 }
 
 #[test]
-fn long_run_cpu_takes_discard_that_extends_unique_coverage() {
+fn long_run_cpu_takes_missing_rank_in_nearly_complete_run() {
     let hand=vec![
         number(2201,2,0),number(2202,3,1),number(2203,4,2),
         number(2204,5,3),number(2205,6,0),number(2206,8,1),
-        number(2207,10,2),number(2208,12,3),skip(2209),number(2210,2,1),
+        number(2207,9,2),number(2208,12,3),skip(2209),number(2210,2,1),
     ];
     let top=number(2211,7,0);
     assert!(cpu_long_run_discard_improves(&hand,top,4));
@@ -514,12 +514,13 @@ fn long_run_cpu_takes_discard_that_extends_unique_coverage() {
 }
 
 #[test]
-fn long_run_cpu_does_not_count_duplicate_rank_as_progress() {
+fn long_run_cpu_rejects_weak_or_duplicate_window_override() {
     let hand=vec![
         number(2301,2,0),number(2302,3,1),number(2303,4,2),
-        number(2304,5,3),number(2305,6,0),number(2306,8,1),
-        number(2307,10,2),number(2308,12,3),skip(2309),number(2310,2,1),
+        number(2304,5,3),number(2305,6,0),number(2306,10,1),
+        number(2307,11,2),number(2308,12,3),skip(2309),number(2310,2,1),
     ];
-    assert!(!cpu_long_run_discard_improves(&hand,number(2311,5,2),4));
-    assert!(!cpu_long_run_discard_improves(&hand,skip(2312),4));
+    assert!(!cpu_long_run_discard_improves(&hand,number(2311,7,0),4));
+    assert!(!cpu_long_run_discard_improves(&hand,number(2312,5,2),4));
+    assert!(!cpu_long_run_discard_improves(&hand,skip(2313),4));
 }
