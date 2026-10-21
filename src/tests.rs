@@ -374,3 +374,36 @@ fn lower_difficulties_keep_original_skip_timing() {
         assert_eq!(cpu_skip_discard_adjustment(level,false,10),0);
     }
 }
+
+#[test]
+fn advanced_cpu_conserves_wild_when_natural_phase_exists() {
+    let hand=vec![
+        number(1,7,0),number(2,7,1),number(3,7,2),
+        number(4,8,0),number(5,8,1),wild(6),number(7,8,2),
+    ];
+    let normal=cpu_choose_phase(&hand,0,Difficulty::Normal).unwrap();
+    let hard=cpu_choose_phase(&hand,0,Difficulty::Hard).unwrap();
+    let expert=cpu_choose_phase(&hand,0,Difficulty::Expert).unwrap();
+    assert_eq!(normal.iter().flatten().filter(|c|c.kind==Kind::Wild).count(),1);
+    assert_eq!(hard.iter().flatten().filter(|c|c.kind==Kind::Wild).count(),0);
+    assert_eq!(expert.iter().flatten().filter(|c|c.kind==Kind::Wild).count(),0);
+}
+
+#[test]
+fn advanced_cpu_still_uses_wild_when_required() {
+    let hand=vec![
+        number(1,7,0),number(2,7,1),wild(3),
+        number(4,8,0),number(5,8,1),number(6,8,2),
+    ];
+    for level in [Difficulty::Hard,Difficulty::Expert] {
+        let groups=cpu_choose_phase(&hand,0,level).unwrap();
+        assert_eq!(groups.iter().flatten().filter(|c|c.kind==Kind::Wild).count(),1);
+    }
+}
+
+#[test]
+fn cpu_phase_search_rejects_invalid_and_incomplete_hands() {
+    let hand=vec![number(1,1,0),number(2,2,0),number(3,3,0)];
+    assert!(cpu_choose_phase(&hand,0,Difficulty::Expert).is_none());
+    assert!(cpu_choose_phase(&hand,10,Difficulty::Expert).is_none());
+}
