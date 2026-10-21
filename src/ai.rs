@@ -8,24 +8,34 @@ pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 
         Kind::Wild => -1000,
         Kind::Skip => 150,
         Kind::Number(n,color) => {
-            let mut partners=0;
+            // Match the current phase's actual group requirements instead
+            // of valuing sets, runs and colors equally on every phase.
+            let wants_set=matches!(phase,0|1|2|6|8|9);
+            let wants_run=matches!(phase,1|2|3|4|5);
+            let wants_color=phase==7;
+            let mut support=0;
             for (j,other) in hand.iter().enumerate() {
                 if j==index {continue;}
                 match other.kind {
                     Kind::Number(m,c) => {
-                        if n==m {partners+=3;}
-                        if (n as i32-m as i32).abs()<=2 {partners+=2;}
-                        if color==c {partners+=if phase==7 {4}else{1};}
+                        if wants_set && n==m {support+=5;}
+                        if wants_run {
+                            let distance=(n as i32-m as i32).abs();
+                            if distance==1 {support+=5;}
+                            else if distance==2 {support+=3;}
+                            else if distance==3 {support+=1;}
+                        }
+                        if wants_color && color==c {support+=6;}
                     }
-                    Kind::Wild => {partners+=3;}
+                    Kind::Wild => {support+=4;}
                     Kind::Skip => {}
                 }
             }
-            card_points(card) as i32*2-partners*8
+            card_points(card) as i32*2-support*8
         }
     }
 }
- 
+
 // Choose a visible discard only when it improves the CPU's hand.
 // Never take a Skip from the discard pile.
 pub(super) fn cpu_should_take_discard(hand:&[Card], top:Card, phase:usize, laid:bool, table:&[Vec<Card>])->bool {
