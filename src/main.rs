@@ -790,28 +790,43 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         if button("BACK TO MENU",730.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    if game_canvas_height()<1150.0 {
-        panel_decoration(620.0,155.0,680.0,795.0);
-    }else{
-        panel_decoration(620.0,190.0,680.0,880.0);
-    }
+    let compact=game_canvas_height()<1150.0;
+    let (panel_y,panel_h)=if compact {(155.0,795.0)}else{(190.0,880.0)};
+    panel_decoration(620.0,panel_y,680.0,panel_h);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    let title_y=match screen {MenuScreen::Home=>285.0,MenuScreen::Settings=>260.0,_=>310.0};
+    // Home layout follows the panel height instead of reusing the tall
+    // layout's button coordinates on a shorter 16:9 canvas.
+    let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0,_=>310.0};
     let w=menu_text_width(title,54);
     menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
-            if has_game && menu_button("RESUME GAME",345.0){return Some(MenuScreen::Playing);}
-            if menu_button("NEW GAME",435.0){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
-            if menu_button("HOW TO PLAY",525.0){return Some(MenuScreen::HowToPlay);}
-            if menu_button("GAME RULES",615.0){return Some(MenuScreen::Rules);}
-            if menu_button("SETTINGS",705.0){return Some(MenuScreen::Settings);}
-            if menu_button("QUIT",795.0){std::process::exit(0);}
-            if menu_button(&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),870.0){
+            // Keep the title-to-buttons gap and bottom padding balanced at
+            // both 16:9 and 16:10 without changing any resolution presets.
+            let first_y=panel_y+225.0;
+            let step=if compact {79.0}else{85.0};
+            let mut row=0.0;
+            if has_game {
+                if menu_button("RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
+                row+=1.0;
+            }
+            if menu_button("NEW GAME",first_y+step*row){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
+            row+=1.0;
+            if menu_button("HOW TO PLAY",first_y+step*row){return Some(MenuScreen::HowToPlay);}
+            row+=1.0;
+            if menu_button("GAME RULES",first_y+step*row){return Some(MenuScreen::Rules);}
+            row+=1.0;
+            if menu_button("SETTINGS",first_y+step*row){return Some(MenuScreen::Settings);}
+            row+=1.0;
+            if menu_button("QUIT",first_y+step*row){std::process::exit(0);}
+            row+=1.0;
+            if menu_button(&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),first_y+step*row){
                 *cpu_difficulty=cpu_difficulty.next();
                 save_cpu_difficulty(*cpu_difficulty);
             }
-            if has_game { menu_label("Difficulty applies to new games",794.0,964.0,18.0,MUTED); }
+            if has_game {
+                menu_label("Difficulty applies to new games",794.0,first_y+step*(row+1.0)+12.0,18.0,MUTED);
+            }
         }
         MenuScreen::Settings=>{
             menu_label("WINDOW",750.0,333.0,22.0,MUTED);
