@@ -247,7 +247,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
-    else {for i in 0..3 {neon_frame(16.0+i as f32*633.0,68.0,620.0,308.0,true);}}
+    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,68.0,620.0,308.0);}}
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,180.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,91.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
@@ -279,9 +279,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let gx=x+j as f32*if i==0 {403.0}else{312.0};
-                draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
-                draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
-                if active_theme()==Theme::Futuristic {neon_frame(gx,y,width,116.0,false);}
+                if !(active_theme()==Theme::Futuristic && i>0 && has_neon_cpu_panel()) {
+                    draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
+                    draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
+                }
+                if active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
                 menu_label(&desc,gx+8.0,y+22.0,17.0,Color::new(0.62,0.71,0.78,1.0));
                 menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -959,6 +961,7 @@ async fn main(){
     set_theme(read_theme());
     load_menu_fonts().await;
     load_neon_cards().await;
+    load_neon_ui().await;
     let mut game=Game::new();
     let mut show_debug=false;
     let (mut show_moves,mut fullscreen)=read_preferences();
