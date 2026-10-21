@@ -309,3 +309,28 @@ fn cpu_phase_aware_color_retention() {
     let hand=vec![number(1,2,0),number(2,9,0),number(3,11,2)];
     assert!(cpu_discard_priority(&hand,0,7)<cpu_discard_priority(&hand,2,7));
 }
+
+#[test]
+fn cpu_difficulty_changes_discard_decisions() {
+    let hand=vec![number(1,7,0),number(2,7,1),number(3,12,2)];
+    assert!(cpu_discard_priority_for_level(&hand,0,0,Difficulty::Easy)
+        <cpu_discard_priority_for_level(&hand,0,0,Difficulty::Novice));
+    assert!(cpu_discard_priority_for_level(&hand,0,0,Difficulty::Normal)
+        <cpu_discard_priority_for_level(&hand,0,0,Difficulty::Novice));
+}
+
+#[test]
+fn cpu_difficulty_controls_defense() {
+    assert_eq!(cpu_defense_weight(Difficulty::Novice),0);
+    assert_eq!(cpu_defense_weight(Difficulty::Easy),0);
+    assert!(cpu_defense_weight(Difficulty::Hard)>cpu_defense_weight(Difficulty::Normal));
+    assert!(cpu_defense_weight(Difficulty::Expert)>cpu_defense_weight(Difficulty::Hard));
+}
+
+#[test]
+fn novice_cpu_avoids_number_discard_pile_but_takes_wild() {
+    let hand=vec![number(1,7,0),number(2,7,1)];
+    assert!(!cpu_should_take_discard_for_level(&hand,number(3,7,2),0,false,&[],Difficulty::Novice));
+    assert!(cpu_should_take_discard_for_level(&hand,wild(4),0,false,&[],Difficulty::Novice));
+    assert!(!cpu_should_take_discard_for_level(&hand,skip(5),0,false,&[],Difficulty::Expert));
+}
