@@ -248,7 +248,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
     else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0);}}
-    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
+    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
+        let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
+        menu_label(&cpu_status,status_x,124.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=54.0;let card_h=70.0;
@@ -285,8 +287,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 }
                 if active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
-                menu_label(&desc,gx+if i>0 && has_neon_cpu_panel(){17.0}else{8.0},y+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
-                menu_label("NOT LAID",gx+if i>0 && has_neon_cpu_panel(){17.0}else{10.0},y+if i>0 && has_neon_cpu_panel(){70.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
+                menu_label(&desc,if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0},y+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                menu_label("NOT LAID",if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0},y+if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
         if !p.laid {continue;}
@@ -304,7 +306,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             }
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
-            menu_label(&desc,x+if i>0 && has_neon_cpu_panel(){17.0}else{8.0},yy+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            menu_label(&desc,if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0},yy+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
