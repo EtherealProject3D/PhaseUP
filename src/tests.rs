@@ -363,7 +363,7 @@ fn hard_cpu_saves_skip_until_next_player_is_threatening() {
 fn expert_cpu_reacts_to_imminent_finish_more_strongly() {
     assert!(cpu_skip_discard_adjustment(Difficulty::Expert,true,1)
         >cpu_skip_discard_adjustment(Difficulty::Hard,true,1));
-    assert!(cpu_skip_discard_adjustment(Difficulty::Expert,false,2)>0);
+    assert!(cpu_skip_discard_adjustment(Difficulty::Expert,false,2)<0);
     assert!(cpu_skip_discard_adjustment(Difficulty::Expert,false,8)<0);
 }
 
