@@ -32,7 +32,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
     let mut game_round=0u32;
     let mut game_index=0usize;
     // Rotate difficulty seats between completed games.
-    for round in 0..round_limit {
+    for _round in 0..round_limit {
         let mut deck=Vec::new();
         let mut id=0u32;
         for color in 0..4 {for n in 1..=12 {for _ in 0..2 {
