@@ -154,3 +154,5 @@ Suggested regression scenarios for future work:
 - **UI freeze remains in effect:** Do not change menus, sizing or resolution until CPU work is finished or the user explicitly requests UI changes.
 
 - **2026-10-20 full-game simulation extension (awaiting local test):** Headless simulator now carries phase progress and scores across rounds, records completed games and difficulty winners, and rotates seats between games. Two tests added (expected 47). This remains an approximation of production turn orchestration. Review 120-round test statistics before drawing conclusions about difficulty balance.
+
+- **2026-10-20 balancing diagnostics (awaiting local verification):** Simulation now reports stalled/exhausted rounds, longest round, and seat wins; rotates starting seat by game; resets incomplete game progress instead of mixing aborted rounds into full-game results. One new test (expected 48). Do not claim difficulty balance from small samples; inspect printed stats first.
