@@ -459,3 +459,19 @@ fn unlaid_opponents_do_not_trigger_small_hand_threat() {
         assert_eq!(cpu_opponent_threat_multiplier(level,false,10,false),1);
     }
 }
+
+#[test]
+fn advanced_cpu_takes_discard_that_completes_a_phase() {
+    // Phase 1 needs two sets of three; the discard completes the second set.
+    let hand=vec![
+        number(1001,3,0),number(1002,3,1),number(1003,3,2),
+        number(1004,7,0),number(1005,7,1),
+        number(1006,1,0),number(1007,5,1),number(1008,9,2),
+        number(1009,11,3),skip(1010),
+    ];
+    let top=number(1011,7,2);
+    for level in [Difficulty::Easy,Difficulty::Hard,Difficulty::Expert] {
+        assert!(cpu_should_take_discard_for_level(&hand,top,0,false,&[],level),
+            "{level:?} should take a discard completing its phase");
+    }
+}
