@@ -60,6 +60,40 @@ pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 
     }
 }
 
+// For long runs, measure whether a visible card improves the best legal
+// window after replacing one existing card. Ignore duplicate ranks and Skips.
+fn cpu_best_run_coverage(hand:&[Card],length:usize)->i32 {
+    if !(1..=12).contains(&length) {return 0;}
+    let mut best=0;
+    for start in 1..=(13-length) {
+        let end=start+length-1;
+        let mut seen=[false;13];
+        for card in hand {
+            if let Kind::Number(n,_) = card.kind {
+                let n=n as usize;
+                if n>=start && n<=end {seen[n]=true;}
+            }
+        }
+        best=best.max(seen[start..=end].iter().filter(|&&present|present).count() as i32);
+    }
+    best
+}
+
+fn cpu_long_run_discard_improves(hand:&[Card],top:Card,phase:usize)->bool {
+    if !matches!(phase,3|4|5) || !matches!(top.kind,Kind::Number(_,_)) {return false;}
+    let length=super::PHASES[phase][0];
+    let before=cpu_best_run_coverage(hand,length);
+    // Compare the best possible hand after taking and discarding one card,
+    // rather than treating a duplicate number as progress.
+    hand.iter().enumerate().any(|(i,card)| {
+        if card.kind==Kind::Wild {return false;}
+        let mut candidate=Vec::with_capacity(hand.len());
+        candidate.extend(hand.iter().enumerate().filter_map(|(j,&c)|if i==j {None}else{Some(c)}));
+        candidate.push(top);
+        cpu_best_run_coverage(&candidate,length)>before
+    })
+}
+
 // Choose a visible discard only when it improves the CPU's hand.
 // Never take a Skip from the discard pile.
 pub(super) fn cpu_should_take_discard(hand:&[Card], top:Card, phase:usize, laid:bool, table:&[Vec<Card>])->bool {
@@ -146,6 +180,7 @@ pub(super) fn cpu_should_take_discard_for_level(
     if top.kind==Kind::Wild {return true;}
     if laid {return cpu_should_take_discard(hand,top,phase,laid,table);}
     if level==super::Difficulty::Novice {return false;}
+    if cpu_long_run_discard_improves(hand,top,phase) {return true;}
     if matches!(level,super::Difficulty::Hard|super::Difficulty::Expert) {
         // A visible card that completes the phase is always worth taking.
         // Avoid comparing only heuristic card scores when the actual phase
