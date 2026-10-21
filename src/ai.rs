@@ -47,3 +47,23 @@ pub(super) fn cpu_should_take_discard(hand:&[Card], top:Card, phase:usize, laid:
         .max();
     weakest_existing.is_some_and(|weakest|top_priority<weakest)
 }
+
+/// Public-information risk of giving a discard to an opponent. A player who
+/// has already laid their phase can immediately use a hittable card; players
+/// with very few cards left are especially dangerous. No hidden hands read.
+pub(super) fn cpu_discard_opponent_risk(
+    card:Card, opponent_phase:usize, opponent_laid:bool,
+    opponent_table:&[Vec<Card>], opponent_hand_count:usize,
+    is_next_player:bool,
+)->i32 {
+    if card.kind==Kind::Skip || !opponent_laid {return 0;}
+    let hittable=opponent_table.iter().enumerate().any(|(group, cards)|
+        super::can_hit(cards,card,opponent_phase.min(9),group));
+    if !hittable {return 0;}
+    // The next player can take this discard immediately. A later player
+    // might never see it, so their penalty is deliberately smaller.
+    let mut risk=if is_next_player {500}else{150};
+    if opponent_hand_count<=2 {risk+=if is_next_player {450}else{100};}
+    else if opponent_hand_count<=4 {risk+=if is_next_player {200}else{50};}
+    risk
+}
