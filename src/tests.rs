@@ -264,3 +264,30 @@ fn player_cannot_lay_same_phase_twice() {
     assert_eq!(g.players[0].table.len(),table.len());
     assert!(g.players[0].laid);
 }
+
+#[test]
+fn cpu_draws_wild_but_never_skip_from_discard() {
+    let hand=vec![number(1,4,0),number(2,4,1)];
+    assert!(cpu_should_take_discard(&hand,wild(3),0,false,&[]));
+    assert!(!cpu_should_take_discard(&hand,skip(4),0,false,&[]));
+}
+
+#[test]
+fn cpu_prefers_number_that_supports_a_set() {
+    let hand=vec![number(1,7,0),number(2,7,1),number(3,2,0),number(4,11,2)];
+    assert!(cpu_should_take_discard(&hand,number(5,7,2),0,false,&[]));
+}
+
+#[test]
+fn cpu_rejects_unhelpful_number_when_hand_is_strong() {
+    let hand=vec![number(1,5,0),number(2,5,1),number(3,5,2),number(4,5,3)];
+    assert!(!cpu_should_take_discard(&hand,number(5,12,1),0,false,&[]));
+}
+
+#[test]
+fn cpu_with_laid_phase_takes_hittable_discard() {
+    let table=vec![set(10,8,3),set(20,3,3)];
+    let hand=vec![number(1,1,0)];
+    assert!(cpu_should_take_discard(&hand,number(2,8,0),0,true,&table));
+    assert!(!cpu_should_take_discard(&hand,number(3,9,0),0,true,&table));
+}
