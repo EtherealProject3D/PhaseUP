@@ -1,5 +1,25 @@
 use super::{Card, Kind, card_points};
 
+// Reward cards in the strongest achievable run window, not just nearby
+// numbers. Duplicate ranks cannot fill separate positions in a run.
+pub(super) fn cpu_run_window_support(hand:&[Card],index:usize,length:usize)->i32 {
+    let Kind::Number(n,_) = hand[index].kind else{return 0;};
+    let mut best=0;
+    for start in 1..=(13-length) {
+        let end=start+length-1;
+        if (n as usize)<start || (n as usize)>end {continue;}
+        let mut ranks=[false;13];
+        for card in hand {
+            if let Kind::Number(m,_) = card.kind {
+                if (m as usize)>=start && (m as usize)<=end {ranks[m as usize]=true;}
+            }
+        }
+        let coverage=ranks[start..=end].iter().filter(|&&v|v).count() as i32;
+        best=best.max(coverage);
+    }
+    best
+}
+
 // CPU discard priority: retain Wilds for completing phases; prefer shedding
 // isolated numbers and Skips instead of donating Wilds to the human player.
 pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 {
@@ -31,7 +51,11 @@ pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 
                     Kind::Skip => {}
                 }
             }
-            card_points(card) as i32*2-support*8
+            let run_bonus=if wants_run {
+                let length=if phase==1 {4}else if phase==2 {4}else {super::PHASES[phase][0]};
+                cpu_run_window_support(hand,index,length)*12
+            }else{0};
+            card_points(card) as i32*2-support*8-run_bonus
         }
     }
 }
@@ -90,8 +114,8 @@ pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usiz
             _ => card_points(card) as i32*2,
         },
         super::Difficulty::Easy => {
-            // Basic matching-number recognition, independent of phase.
-            let bonus=if let Kind::Number(n,_)=card.kind {
+            // Keep matching numbers only when the phase actually needs sets.
+            let bonus=if matches!(phase,0|1|2|6|8|9) && let Kind::Number(n,_)=card.kind {
                 hand.iter().enumerate().filter(|(j,c)|*j!=index && matches!(c.kind,Kind::Number(m,_) if m==n)).count() as i32*32
             }else{0};
             cpu_discard_priority_for_level(hand,index,phase,super::Difficulty::Novice)-bonus
