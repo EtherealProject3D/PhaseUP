@@ -827,7 +827,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            if menu_button(&window_text,365.0){
+            let preset_button_clicked=menu_button(&window_text,365.0);
+            if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
             if !*resolution_open && menu_button("TOGGLE FULLSCREEN",455.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
@@ -842,9 +843,12 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 if resolution_picker(834.0,426.0) {*resolution_open=false;}
-                if is_mouse_button_pressed(MouseButton::Left) {
+                // Do not interpret the click that opened the picker as an outside click.
+                if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    if !(mx>=834.0&&mx<=1086.0&&my>=365.0&&my<=752.0){*resolution_open=false;}
+                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=365.0&&my<=429.0;
+                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=426.0&&my<=752.0;
+                    if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
         }
