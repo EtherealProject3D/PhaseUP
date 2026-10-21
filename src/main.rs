@@ -231,8 +231,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
     label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
-    // Visible build/layout indicator to diagnose window and canvas selection.
-    let layout_label=if sh<1150.0 {"LAYOUT 16:9"}else{"LAYOUT 16:10"};
+    // The logical canvas stays 16:10 at every selected window resolution.
+    let layout_label="LAYOUT 16:10";
     menu_label(&format!("{}  ▼",layout_label),292.0,40.0,17.0,ACCENT);
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
@@ -271,8 +271,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {if sh<1150.0 {sh-522.0}else{sh-532.0}}else{table_y+if sh<1150.0 {29.0}else{47.0}};
-            if i==0 {menu_label("YOUR LAID PHASE",x,if sh<1150.0 {sh-534.0}else{sh-544.0},17.0,player_color(i));}
+            let y=if i==0 {sh-532.0}else{table_y+47.0};
+            if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
             for j in 0..group_count {
@@ -287,7 +287,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {if sh<1150.0 {sh-534.0}else{sh-544.0}}else{table_y+if sh<1150.0 {17.0}else{35.0}};
+        let y=if i==0 {sh-544.0}else{table_y+35.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
             let yy=y+12.0;
@@ -356,7 +356,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
     }
     // Larger, layered piles share a stable hitbox with drag/drop and animations.
-    let center=if sh<1150.0 {446.0}else{535.0};
+    let center=535.0;
     let pile_y=center-50.0;
     let pile_w=112.0;
     let pile_h=150.0;
@@ -403,7 +403,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     }
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
-    let log_x=1538.0;let log_y=if sh<1150.0 {420.0}else{480.0};
+    let log_x=1538.0;let log_y=480.0;
     draw_rectangle(log_x,log_y,374.0,300.0,active_theme().panel());
     draw_rectangle_lines(log_x,log_y,374.0,300.0,1.5,active_theme().accent());
     menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
@@ -543,14 +543,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
-    let guidance_y=if sh<1150.0 {
-        // Center the banner between the human phase panels and staging.
-        let phase_bottom=(sh-522.0)+116.0;
-        phase_bottom+(stage_y-phase_bottom-43.0)/2.0
-    }else{
-        let phase_bottom=(sh-532.0)+116.0;
-        phase_bottom+(stage_y-phase_bottom-43.0)/2.0
-    };
+    let phase_bottom=(sh-532.0)+116.0;
+    let guidance_y=phase_bottom+(stage_y-phase_bottom-43.0)/2.0;
     // When a phase is ready, the entire guidance banner becomes the
     // LAY PHASE button. Draw it later, after staging validation.
     let guidance_x=(sw-770.0)/2.0;
@@ -790,21 +784,18 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
         if button("BACK TO MENU",730.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    let compact=game_canvas_height()<1150.0;
-    let (panel_y,panel_h)=if compact {(155.0,795.0)}else{(190.0,880.0)};
+    let (panel_y,panel_h)=(190.0,880.0);
     panel_decoration(620.0,panel_y,680.0,panel_h);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    // Home layout follows the panel height instead of reusing the tall
-    // layout's button coordinates on a shorter 16:9 canvas.
+    // Home layout uses the same panel coordinates for every window preset.
     let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0,_=>310.0};
     let w=menu_text_width(title,54);
     menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
     match screen {
         MenuScreen::Home=>{
-            // Keep the title-to-buttons gap and bottom padding balanced at
-            // both 16:9 and 16:10 without changing any resolution presets.
+            // Keep title, buttons and bottom padding balanced on the fixed canvas.
             let first_y=panel_y+if has_game {195.0}else{225.0};
-            let step=if has_game {if compact {77.0}else{82.0}}else if compact {79.0}else{85.0};
+            let step=if has_game {82.0}else{85.0};
             let mut row=0.0;
             if has_game {
                 if menu_button("RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
@@ -1006,7 +997,7 @@ async fn main(){
         // Wait until resizing stops before writing, to avoid disk writes every frame.
         if size!=saved_size && get_time()-size_changed_at>1.0 && size.0>=640 && size.1>=480 {
             if !fullscreen {
-                // Preserve the chosen ratio; do not force 16:9 back to 16:10.
+                // Preserve the user's chosen window resolution and aspect ratio.
                 save_window_size(size.0,size.1);
                 windowed_size=size;
                 saved_size=size;
