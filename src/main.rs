@@ -248,7 +248,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
     else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0);}}
-    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){let fx=26.0+(i-1) as f32*632.0; for (inset,alpha,thick) in [(0.0,0.10,12.0),(1.0,0.20,7.0),(2.0,0.62,2.0)] {draw_rectangle_lines(fx+inset,101.0+inset,606.0-2.0*inset,338.0-2.0*inset,thick,Color::new(0.0,0.88,1.0,alpha));}}else{draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
+    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
         menu_label(&cpu_status,status_x,124.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
@@ -330,7 +330,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let available=(width-12.0-card_w).max(0.0);
             let step=if shown_len>1 {(available/(shown_len-1) as f32).min(56.0)} else {0.0};
             if let Some(slot)=preview {
-                let cx=x+if i>0 && has_neon_cpu_panel(){12.0}else{6.0}+slot as f32*step;
+                let cx=x+if i>0 && has_neon_cpu_panel(){if j==0 {12.0}else{4.0}}else{6.0}+slot as f32*step;
                 draw_rectangle_lines(cx,yy+26.0,card_w,card_h,2.5,YELLOW);
             }
             for (k,card) in group.iter().enumerate() {
@@ -338,7 +338,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if i!=0 && g.cpu_phase_flight.as_ref().is_some_and(|flight|flight.player==i && !flight.visible(j,k,get_time())) {continue;}
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
-                let cx=x+if i>0 && has_neon_cpu_panel(){12.0}else{6.0}+shown as f32*step;
+                let cx=x+if i>0 && has_neon_cpu_panel(){if j==0 {12.0}else{4.0}}else{6.0}+shown as f32*step;
                 let cy=yy+if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
