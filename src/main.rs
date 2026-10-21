@@ -826,7 +826,7 @@ fn debug_overlay(g:&Game) {
 }
 
 #[derive(Clone,Copy,PartialEq,Eq)]
-enum MenuScreen { Home, Settings, HowToPlay, Rules, ConfirmNew, Playing, Resume }
+enum MenuScreen { Home, Settings, DeveloperTools, UiWorkshop, HowToPlay, Rules, ConfirmNew, Playing, Resume }
 fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=730.0&&mx<=1190.0&&my>=y&&my<=y+64.0;
@@ -851,7 +851,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     }
     let (panel_y,panel_h)=(190.0,880.0);
     panel_decoration(620.0,panel_y,680.0,panel_h);
-    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
+    let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::DeveloperTools=>"DEVELOPER TOOLS",MenuScreen::UiWorkshop=>"UI WORKSHOP",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     // Home layout uses the same panel coordinates for every window preset.
     let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0,_=>310.0};
     let w=menu_text_width(title,54);
@@ -902,8 +902,9 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),745.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if !*resolution_open && menu_button("BACK",850.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",940.0){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("DEVELOPER TOOLS",835.0){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("BACK",915.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",995.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 if resolution_picker(834.0,426.0) {*resolution_open=false;}
@@ -915,6 +916,15 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
+        }
+        MenuScreen::DeveloperTools=>{
+            menu_label("Visual previews do not affect gameplay.",720.0,365.0,22.0,MUTED);
+            if menu_button("UI WORKSHOP",475.0){return Some(MenuScreen::UiWorkshop);}
+            if menu_button("BACK TO SETTINGS",575.0){return Some(MenuScreen::Settings);}
+        }
+        MenuScreen::UiWorkshop=>{
+            // Preview rendering happens in the main loop so it can use the workshop state.
+            if menu_button("BACK TO DEVELOPER TOOLS",950.0){return Some(MenuScreen::DeveloperTools);}
         }
         MenuScreen::ConfirmNew=>{
             label("Start over? Current game progress will be lost.",675.0,310.0,22.0,WHITEISH);
@@ -975,6 +985,7 @@ async fn main(){
     let mut cpu_difficulty=read_cpu_difficulty();
     let mut help_scroll=0.0f32;
     let mut resolution_open=false;
+    let mut workshop_cpu=0usize;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1007,7 +1018,7 @@ async fn main(){
             previous_fullscreen=fullscreen;
         }
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
-        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
+        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
         let (mx,my)=game_mouse();
@@ -1078,7 +1089,30 @@ async fn main(){
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1710.0&&mx<=1810.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
+            if menu==MenuScreen::UiWorkshop {
+                if is_key_pressed(KeyCode::R) {
+                    load_neon_cards().await;
+                    load_neon_ui().await;
+                }
+            }
             let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty);
+            if menu==MenuScreen::UiWorkshop {
+                // Same 1920x1200 logical coordinates and camera as the menus.
+                menu_label("CARD GALLERY",710.0,350.0,24.0,ACCENT);
+                for (i,kind) in [Kind::Number(1,0),Kind::Number(2,1),Kind::Number(3,2),Kind::Number(4,3),Kind::Wild,Kind::Skip].iter().enumerate() {
+                    card_ui(Card{id:i as u32,kind:*kind},704.0+i as f32*87.0,380.0,76.0,112.0,false);
+                }
+                cpu_card_back(704.0,520.0,76.0,112.0);
+                menu_label("CPU BACK",704.0,660.0,18.0,MUTED);
+                menu_label("CPU PANEL: CLICK TO CHANGE ACTIVE PLAYER",704.0,710.0,20.0,ACCENT);
+                for i in 0..3 {
+                    let x=700.0+i as f32*175.0;
+                    neon_cpu_panel(x,730.0,165.0,140.0,if i==workshop_cpu{1.0}else{0.0});
+                    menu_label(&format!("CPU {}",i+1),x+40.0,805.0,20.0,WHITEISH);
+                    if inside(x,730.0,165.0,140.0)&&is_mouse_button_pressed(MouseButton::Left){workshop_cpu=i;}
+                }
+                menu_label("PRESS R TO RELOAD ARTWORK FROM DISK",710.0,915.0,20.0,MUTED);
+            }
             if let Some(next)=action {
                 if matches!(next,MenuScreen::HowToPlay|MenuScreen::Rules) {help_scroll=0.0;}
                 if next==MenuScreen::Resume {menu=MenuScreen::Playing;}
