@@ -291,3 +291,21 @@ fn cpu_with_laid_phase_takes_hittable_discard() {
     assert!(cpu_should_take_discard(&hand,number(2,8,0),0,true,&table));
     assert!(!cpu_should_take_discard(&hand,number(3,9,0),0,true,&table));
 }
+
+#[test]
+fn cpu_phase_aware_set_retention() {
+    let hand=vec![number(1,7,0),number(2,7,1),number(3,11,2)];
+    assert!(cpu_discard_priority(&hand,0,0)<cpu_discard_priority(&hand,2,0));
+}
+
+#[test]
+fn cpu_phase_aware_run_retention() {
+    let hand=vec![number(1,4,0),number(2,5,1),number(3,12,2)];
+    assert!(cpu_discard_priority(&hand,0,3)<cpu_discard_priority(&hand,2,3));
+}
+
+#[test]
+fn cpu_phase_aware_color_retention() {
+    let hand=vec![number(1,2,0),number(2,9,0),number(3,11,2)];
+    assert!(cpu_discard_priority(&hand,0,7)<cpu_discard_priority(&hand,2,7));
+}
