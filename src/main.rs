@@ -247,8 +247,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
-    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,72.0,620.0,376.0);}}
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*633.0,72.0,620.0,376.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
+    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0);}}
+    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=54.0;let card_h=70.0;
@@ -271,7 +271,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // The human placeholder is separate from the interactive staging area.
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
-            let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+            let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
             let y=if i==0 {sh-532.0}else{table_y+22.0};
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
@@ -285,12 +285,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 }
                 if active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
-                menu_label(&desc,gx+8.0,y+22.0,17.0,Color::new(0.62,0.71,0.78,1.0));
-                menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
+                menu_label(&desc,gx+if i>0 && has_neon_cpu_panel(){17.0}else{8.0},y+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                menu_label("NOT LAID",gx+if i>0 && has_neon_cpu_panel(){17.0}else{10.0},y+if i>0 && has_neon_cpu_panel(){70.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
         if !p.laid {continue;}
-        let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
+        let x=if i==0 {sw/2.0-350.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
@@ -304,7 +304,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             }
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
-            menu_label(&desc,x+8.0,yy+22.0,17.0,WHITEISH);
+            menu_label(&desc,x+if i>0 && has_neon_cpu_panel(){17.0}else{8.0},yy+if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -337,7 +337,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=x+6.0+shown as f32*step;
-                let cy=yy+26.0;
+                let cy=yy+if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
                 } else {
