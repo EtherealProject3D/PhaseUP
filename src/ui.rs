@@ -22,6 +22,26 @@ pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
     });
 }
 use crate::*;
+thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;5]>=RefCell::new([None,None,None,None,None]);}
+pub(super) async fn load_neon_cards(){
+    for (i,name) in ["red","blue","yellow","green","back"].iter().enumerate(){
+        let path=format!("assets/neon_forge/{}.png",name);
+        if let Ok(texture)=load_texture(&path).await {
+            texture.set_filter(FilterMode::Linear);
+            NEON_CARDS.with(|cards|cards.borrow_mut()[i]=Some(texture));
+        }
+    }
+}
+fn neon_card_texture(index:usize,x:f32,y:f32,w:f32,h:f32)->bool {
+    NEON_CARDS.with(|cards|{
+        let cards=cards.borrow();
+        if let Some(tex)=cards.get(index).and_then(|v|v.as_ref()){
+            draw_texture_ex(tex,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    })
+}
+
 
 // One fixed 16:10 design canvas for all window presets.
 pub(super) fn game_canvas_height()->f32 {1200.0}
@@ -44,7 +64,16 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=if selected{y-15.}else{y};let c=color_for(card.kind);
-    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) {
+    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) && neon_card_texture(match card.kind {Kind::Number(_,color)=>color as usize,_=>0},x,yy,w,h) {
+        let t=card_text(card.kind);
+        let size=if w<45.0 {22_u16}else{35_u16};
+        let tw=menu_text_width(&t,size);
+        let tx=x+(w-tw)/2.0;
+        let ty=yy+h*0.63;
+        menu_label(&t,tx+1.5,ty+2.0,size as f32,BLACK);
+        menu_label(&t,tx,ty,size as f32,WHITEISH);
+        if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
+    } else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) {
         // Neon Forge / Dark Metallic: layered machined chassis and colored light core.
         // All detailing scales with the actual card dimensions.
         let sx=w/75.0;
@@ -105,6 +134,7 @@ pub(super) fn column_hand_width(count:usize,card_w:f32)->f32 {
     if count<=1 {0.0}else{(count-1) as f32*24.0_f32.min((450.0-card_w)/(count-1) as f32)}
 }
 pub(super) fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
+    if active_theme()==Theme::Futuristic && neon_card_texture(4,x,y,w,h){return;}
     draw_rectangle(x+2.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.28));
     draw_rectangle(x,y,w,h,WHITEISH);
     draw_rectangle(x+3.0,y+3.0,w-6.0,h-6.0,Color::new(0.12,0.39,0.48,1.0));
