@@ -477,3 +477,24 @@ fn advanced_cpu_takes_discard_that_completes_a_phase() {
             "{level:?} should take a discard completing its phase");
     }
 }
+
+#[test]
+fn run_window_support_rewards_unique_ranks_not_duplicates() {
+    let hand=vec![
+        number(2001,3,0),number(2002,4,0),number(2003,5,0),
+        number(2004,5,1),number(2005,6,2),number(2006,11,3),
+    ];
+    assert_eq!(cpu_run_window_support(&hand,0,7),4);
+    assert_eq!(cpu_run_window_support(&hand,3,7),4);
+    assert!(cpu_run_window_support(&hand,0,7)>cpu_run_window_support(&hand,5,7));
+}
+
+#[test]
+fn easy_run_phase_does_not_prioritize_unneeded_number_pairs() {
+    let hand=vec![
+        number(2101,2,0),number(2102,2,1),
+        number(2103,5,0),number(2104,6,1),number(2105,7,2),
+    ];
+    assert!(cpu_discard_priority_for_level(&hand,0,3,Difficulty::Easy)
+        >cpu_discard_priority_for_level(&hand,3,3,Difficulty::Easy));
+}
