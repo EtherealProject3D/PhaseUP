@@ -214,3 +214,24 @@ pub(super) fn cpu_should_take_visible_hit(
         groups.iter().enumerate().any(|(g,cards)|
             super::can_hit(cards,top,(*phase).min(9),g)))
 }
+
+
+/// Scale defensive attention using only public phase and hand-size information.
+/// An unlaid opponent still has a full hand under normal round rules.
+pub(super) fn cpu_opponent_threat_multiplier(
+    level:super::Difficulty,laid:bool,hand_count:usize,is_next:bool,
+)->i32 {
+    if !laid {return 1;}
+    match level {
+        super::Difficulty::Novice|super::Difficulty::Easy|super::Difficulty::Normal => 1,
+        super::Difficulty::Hard => {
+            if hand_count<=2 {if is_next {3}else{2}}
+            else if hand_count<=4 {2}else{1}
+        },
+        super::Difficulty::Expert => {
+            if hand_count<=2 {if is_next {5}else{3}}
+            else if hand_count<=4 {if is_next {3}else{2}}
+            else {1}
+        },
+    }
+}
