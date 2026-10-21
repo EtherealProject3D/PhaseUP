@@ -331,12 +331,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=x+6.0+shown as f32*step;
                 let cy=yy+26.0;
-                let color=color_for(card.kind);
-                draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
-                draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
-                draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
-                let value=card_text(card.kind);
-                label(&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                if active_theme()==Theme::Futuristic {
+                    let _=card_ui(*card,cx,cy,card_w,card_h,false);
+                } else {
+                    let color=color_for(card.kind);
+                    draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
+                    draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
+                    draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
+                    let value=card_text(card.kind);
+                    label(&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                }
             }
             if can_place {label("CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}
             if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,116.0) {
@@ -580,7 +584,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         hand.iter().enumerate().rev().find(|(i,c)| {
             !g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) && {
                 let x=start+*i as f32*spacing;
-                let selected_lift=if g.selected.contains(&c.id){15.0}else{0.0};
+                let selected_lift=if active_theme()!=Theme::Futuristic && g.selected.contains(&c.id){15.0}else{0.0};
                 hand_mx>=x&&hand_mx<=x+w&&hand_my>=card_y-selected_lift-18.0&&hand_my<=card_y+105.0
             }
         }).map(|(_,c)|c.id)
@@ -622,11 +626,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         } else {
             if card_ui(*c,x,lifted_y,w,105.0,selected){toggle=Some(c.id);}
             if g.drawn_card==Some(c.id){
-                let y=lifted_y-if selected{15.0}else{0.0};
+                let y=lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0};
                 draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);
             }
         }
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-if selected{15.0}else{0.0},w,105.0){
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0},w,105.0){
             g.drag=Some((c.id,game_mouse().0,game_mouse().1));
         }
     }
