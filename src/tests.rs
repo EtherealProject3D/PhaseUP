@@ -498,3 +498,28 @@ fn easy_run_phase_does_not_prioritize_unneeded_number_pairs() {
     assert!(cpu_discard_priority_for_level(&hand,0,3,Difficulty::Easy)
         >cpu_discard_priority_for_level(&hand,3,3,Difficulty::Easy));
 }
+
+#[test]
+fn long_run_cpu_takes_discard_that_extends_unique_coverage() {
+    let hand=vec![
+        number(2201,2,0),number(2202,3,1),number(2203,4,2),
+        number(2204,5,3),number(2205,6,0),number(2206,8,1),
+        number(2207,10,2),number(2208,12,3),skip(2209),number(2210,2,1),
+    ];
+    let top=number(2211,7,0);
+    assert!(cpu_long_run_discard_improves(&hand,top,4));
+    for level in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard] {
+        assert!(cpu_should_take_discard_for_level(&hand,top,4,false,&[],level));
+    }
+}
+
+#[test]
+fn long_run_cpu_does_not_count_duplicate_rank_as_progress() {
+    let hand=vec![
+        number(2301,2,0),number(2302,3,1),number(2303,4,2),
+        number(2304,5,3),number(2305,6,0),number(2306,8,1),
+        number(2307,10,2),number(2308,12,3),skip(2309),number(2310,2,1),
+    ];
+    assert!(!cpu_long_run_discard_improves(&hand,number(2311,5,2),4));
+    assert!(!cpu_long_run_discard_improves(&hand,skip(2312),4));
+}
