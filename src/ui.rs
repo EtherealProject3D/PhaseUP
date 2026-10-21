@@ -63,7 +63,7 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
     enabled&&hover&&is_mouse_button_pressed(MouseButton::Left)
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
-    let yy=if selected{y-15.}else{y};let c=color_for(card.kind);
+    let yy=if selected && active_theme()!=Theme::Futuristic{y-15.}else{y};let c=color_for(card.kind);
     if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){4}else{1},x,yy,w,h) {
         // Special cards share the Neon Forge texture family until dedicated art is available.
         let symbol=card_text(card.kind);
