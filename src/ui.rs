@@ -45,23 +45,54 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=if selected{y-15.}else{y};let c=color_for(card.kind);
     if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) {
-        // Dark chassis, inset color surface, and restrained neon edge detailing.
-        let edge=Color::new(0.13,0.31,0.40,1.0);
-        let chassis=Color::new(0.025,0.065,0.105,1.0);
-        draw_rectangle(x+3.0,yy+5.0,w,h,Color::new(0.0,0.0,0.0,0.38));
-        draw_rectangle(x,yy,w,h,chassis);
-        draw_rectangle_lines(x,yy,w,h,2.0,if selected{ACCENT}else{edge});
-        draw_rectangle(x+5.0,yy+5.0,w-10.0,h-10.0,c);
-        // Top sheen and bottom shadow give depth without obscuring card color.
-        draw_rectangle(x+5.0,yy+5.0,w-10.0,(h*0.18).max(5.0),Color::new(1.0,1.0,1.0,0.12));
-        draw_rectangle(x+5.0,yy+h-14.0,w-10.0,9.0,Color::new(0.0,0.0,0.0,0.16));
-        draw_line(x+7.0,yy+9.0,x+(w*0.38).max(10.0),yy+9.0,2.0,WHITEISH);
-        draw_line(x+w-(w*0.38).max(10.0),yy+h-9.0,x+w-7.0,yy+h-9.0,2.0,WHITEISH);
+        // Neon Forge / Dark Metallic: layered machined chassis and colored light core.
+        // All detailing scales with the actual card dimensions.
+        let sx=w/75.0;
+        let sy=h/105.0;
+        let px=|v:f32|x+v*sx;
+        let py=|v:f32|yy+v*sy;
+        let ink=Color::new(0.015,0.032,0.060,1.0);
+        let steel=Color::new(0.12,0.19,0.26,1.0);
+        let rim=Color::new(0.32,0.43,0.52,1.0);
+        let light=match card.kind {
+            Kind::Number(_,0)=>Color::new(1.0,0.23,0.27,1.0),
+            Kind::Number(_,1)=>Color::new(0.16,0.68,1.0,1.0),
+            Kind::Number(_,2)=>Color::new(0.25,1.0,0.54,1.0),
+            Kind::Number(_,3)=>Color::new(1.0,0.82,0.24,1.0),
+            _=>c,
+        };
+        draw_rectangle(x+4.0,yy+6.0,w,h,Color::new(0.0,0.0,0.0,0.42));
+        draw_rectangle(x,yy,w,h,ink);
+        draw_rectangle_lines(x,yy,w,h,2.0,steel);
+        draw_rectangle(px(3.0),py(3.0),69.0*sx,99.0*sy,Color::new(0.045,0.080,0.125,1.0));
+        draw_rectangle_lines(px(3.0),py(3.0),69.0*sx,99.0*sy,1.0,rim);
+        // Inset beveled plate and layered light channels.
+        draw_rectangle(px(8.0),py(12.0),59.0*sx,81.0*sy,Color::new(0.020,0.046,0.082,1.0));
+        draw_rectangle_lines(px(8.0),py(12.0),59.0*sx,81.0*sy,1.0,Color::new(light.r,light.g,light.b,0.48));
+        draw_rectangle(px(12.0),py(18.0),51.0*sx,69.0*sy,Color::new(light.r*0.09,light.g*0.09,light.b*0.09,1.0));
+        draw_rectangle_lines(px(12.0),py(18.0),51.0*sx,69.0*sy,1.4,light);
+        draw_rectangle(px(15.0),py(21.0),45.0*sx,63.0*sy,Color::new(0.015,0.035,0.065,1.0));
+        // Fine circuit traces, corner braces and subtle colored illumination.
+        let faint=Color::new(light.r,light.g,light.b,0.32);
+        draw_line(px(16.0),py(27.0),px(28.0),py(27.0),1.0,faint);
+        draw_line(px(47.0),py(78.0),px(59.0),py(78.0),1.0,faint);
+        for (cx,cy,dx,dy) in [(7.0,7.0,1.0,1.0),(68.0,7.0,-1.0,1.0),(7.0,98.0,1.0,-1.0),(68.0,98.0,-1.0,-1.0)] {
+            draw_line(px(cx),py(cy),px(cx+dx*10.0),py(cy),2.0,light);
+            draw_line(px(cx),py(cy),px(cx),py(cy+dy*10.0),2.0,light);
+        }
+        draw_rectangle(px(29.0),py(5.0),17.0*sx,2.0*sy,light);
+        draw_rectangle(px(29.0),py(98.0),17.0*sx,2.0*sy,light);
+        // Central glyph has a dark offset shadow and a crisp white foreground.
         let t=card_text(card.kind);
-        let size=if w<45.0{25_u16}else{38_u16};
+        let size=if w<45.0 {22_u16}else{35_u16};
         let tw=menu_text_width(&t,size);
-        let text_color=if matches!(card.kind,Kind::Number(_,2)){chassis}else{WHITEISH};
-        menu_label(&t,x+(w-tw)/2.0,yy+h/2.0+size as f32*0.35,size as f32,text_color);
+        let tx=x+(w-tw)/2.0;
+        let ty=yy+h*0.63;
+        menu_label(&t,tx+1.5,ty+2.0,size as f32,Color::new(0.0,0.0,0.0,0.95));
+        menu_label(&t,tx,ty,size as f32,WHITEISH);
+        if selected {
+            draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);
+        }
     } else {
         draw_rectangle(x+2.,yy+3.,w,h,Color::new(0.,0.,0.,0.3));draw_rectangle(x,yy,w,h,WHITEISH);
         draw_rectangle(x+5.,yy+5.,w-10.,h-10.,c);
