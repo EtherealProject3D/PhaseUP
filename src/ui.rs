@@ -71,7 +71,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let tw=menu_text_width(&symbol,size);
         let tx=x+(w-tw)/2.0;
         // Center the visible glyph vertically on the face instead of using the numbered-card baseline.
-        let ty=yy+h*0.56;
+        let ty=yy+h*0.63;
         menu_label(&symbol,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&symbol,tx,ty,size as f32,WHITEISH);
         if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
@@ -80,7 +80,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let size=if w<45.0 {22_u16}else{35_u16};
         let tw=menu_text_width(&t,size);
         let tx=x+(w-tw)/2.0;
-        let ty=yy+h*0.63;
+        let ty=yy+h*0.60;
         menu_label(&t,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&t,tx,ty,size as f32,WHITEISH);
         if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
