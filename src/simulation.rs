@@ -3,7 +3,7 @@
 use crate::*;
 
 #[derive(Default,Debug)]
-struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;5], games:u32, game_wins:[u32;5], game_rounds:u32, stalled_rounds:u32, exhausted_rounds:u32, max_round_turns:u32, seat_wins:[u32;4], round_entries:[u32;5], game_entries:[u32;5], longest_stall_phase:[usize;4] }
+struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;3], games:u32, game_wins:[u32;3], game_rounds:u32, stalled_rounds:u32, exhausted_rounds:u32, max_round_turns:u32, seat_wins:[u32;4], round_entries:[u32;3], game_entries:[u32;3], longest_stall_phase:[usize;4] }
 
 fn random(state:&mut u64)->u64 {
     *state=state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -50,7 +50,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
             difficulty[p]=levels[(game_index+p)%levels.len()];
             for _ in 0..10 {hands[p].push(deck.pop().unwrap());}
         }
-        for &level in &difficulty {stats.round_entries[level.level() as usize]+=1;}
+        for &level in &difficulty {stats.round_entries[(level.level()-1) as usize]+=1;}
         let mut discard=vec![deck.pop().unwrap()];
         let mut skipped=None;
         let mut winner=None;
@@ -127,7 +127,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         if let Some(p)=winner {
             stats.seat_wins[p]+=1;
             stats.completed+=1;
-            stats.wins[difficulty[p].level() as usize]+=1;
+            stats.wins[(difficulty[p].level()-1) as usize]+=1;
             for j in 0..4 {
                 scores[j]+=hands[j].iter().map(|&card|card_points(card)).sum::<u32>();
                 if laid[j] {progress[j]+=1;}
@@ -136,8 +136,8 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
             if progress.iter().any(|&v|v>=10) {
                 let champion=(0..4).filter(|&j|progress[j]>=10).min_by_key(|&j|(scores[j],j)).unwrap();
                 stats.games+=1;
-                for &level in &difficulty {stats.game_entries[level.level() as usize]+=1;}
-                stats.game_wins[difficulty[champion].level() as usize]+=1;
+                for &level in &difficulty {stats.game_entries[(level.level()-1) as usize]+=1;}
+                stats.game_wins[(difficulty[champion].level()-1) as usize]+=1;
                 stats.game_rounds+=game_round;
                 progress=[0;4];scores=[0;4];game_round=0;game_index+=1;
             }
@@ -200,7 +200,7 @@ fn simulation_reports_stalls_and_rotates_starting_seat() {
 fn print_balance(stats:&Stats) {
     println!("Balance summary: {} rounds, {} completed games, {} stalls ({} exhausted), max {} turns",
         stats.rounds,stats.games,stats.stalled_rounds,stats.exhausted_rounds,stats.max_round_turns);
-    for (i,name) in ["Novice (legacy)","Easy","Normal","Hard","Expert (legacy)"].iter().enumerate() {
+    for (i,name) in ["Easy","Normal","Hard"].iter().enumerate() {
         let round_rate=if stats.round_entries[i]>0 {100.0*stats.wins[i] as f64/stats.round_entries[i] as f64}else{0.0};
         let game_rate=if stats.game_entries[i]>0 {100.0*stats.game_wins[i] as f64/stats.game_entries[i] as f64}else{0.0};
         println!("{name:7}: rounds {:4}/{:4} ({round_rate:5.1}%), games {:3}/{:3} ({game_rate:5.1}%)",
