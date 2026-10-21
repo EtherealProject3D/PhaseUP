@@ -50,17 +50,19 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
         rows.push((false,"Open GAME RULES from the main menu for the ten phase requirements, special cards, scoring, and win conditions.".into()));
     }
 
+    // Use the same theme-specific menu font as the rest of PhaseUP.
+    // Larger type and wider line spacing make these pages easier to scan.
     let mut laid_out:Vec<(bool,String,f32)>=Vec::new();
     let mut height=0.0;
     for (is_heading,line) in rows {
-        let font=if is_heading {25.0}else{21.0};
-        let max_width=1060.0;
+        let font=if is_heading {25_u16}else{23_u16};
+        let max_width=1035.0;
         let mut current=String::new();
         for word in line.split_whitespace() {
             let candidate=if current.is_empty(){word.to_string()}else{format!("{} {}",current,word)};
-            if !current.is_empty() && measure_text(&candidate,None,font as u16,1.0).width>max_width {
+            if !current.is_empty() && menu_text_width(&candidate,font)>max_width {
                 laid_out.push((is_heading,current,height));
-                height+=if is_heading {37.0}else{31.0};
+                height+=if is_heading {39.0}else{36.0};
                 current=word.to_string();
             } else {current=candidate;}
         }
@@ -68,7 +70,7 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
             laid_out.push((is_heading,current,height));
             height+=if is_heading {37.0}else{31.0};
         }
-        height+=if is_heading {10.0}else{19.0};
+        height+=if is_heading {13.0}else{21.0};
     }
     let viewport_height=795.0;
     let max_scroll=(height-viewport_height+25.0).max(0.0);
@@ -79,10 +81,10 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     for (is_heading,line,y) in laid_out {
         let screen_y=222.0+y-*scroll;
         if screen_y>=210.0 && screen_y<=997.0 {
-            label(&line,255.0,screen_y,if is_heading {25.0}else{21.0},if is_heading {ACCENT}else{WHITEISH});
+            menu_label(&line,255.0,screen_y,if is_heading {25.0}else{23.0},if is_heading {ACCENT}else{WHITEISH});
         }
     }
-    label("Mouse wheel / Up-Down arrows to scroll",255.0,1030.0,17.0,MUTED);
+    menu_label("Mouse wheel / Up-Down arrows to scroll",255.0,1030.0,17.0,MUTED);
     if max_scroll>0.0 {
         let track_y=195.0;let track_h=790.0;
         let thumb_h=(viewport_height/(height+25.0)*track_h).clamp(50.0,track_h);
