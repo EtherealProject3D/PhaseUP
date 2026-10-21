@@ -2,6 +2,9 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Difficulty { Novice, Easy, Normal, Hard, Expert }
 impl Difficulty {
+    pub(super) fn next(self)->Self {match self {Self::Novice=>Self::Easy,Self::Easy=>Self::Normal,Self::Normal=>Self::Hard,Self::Hard=>Self::Expert,Self::Expert=>Self::Novice}}
+    pub(super) fn key(self)->&'static str {match self {Self::Novice=>"novice",Self::Easy=>"easy",Self::Normal=>"normal",Self::Hard=>"hard",Self::Expert=>"expert"}}
+    pub(super) fn from_key(s:&str)->Self {match s {"novice"=>Self::Novice,"easy"=>Self::Easy,"hard"=>Self::Hard,"expert"=>Self::Expert,_=>Self::Normal}}
     pub(super) fn level(self)->i32 {match self {Self::Novice=>0,Self::Easy=>1,Self::Normal=>2,Self::Hard=>3,Self::Expert=>4}}
     pub(super) fn name(self)->&'static str {match self {Self::Novice=>"Novice",Self::Easy=>"Easy",Self::Normal=>"Normal",Self::Hard=>"Hard",Self::Expert=>"Expert"}}
 }
