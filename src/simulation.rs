@@ -29,12 +29,18 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
     let mut stats=Stats::default();
     // Rotate the difficulty positions to reduce first-seat advantage.
     for round in 0..round_limit {
-        let mut deck=make_deck();
+        let mut deck=Vec::new();
+        let mut id=0u32;
+        for color in 0..4 {for n in 1..=12 {for _ in 0..2 {
+            deck.push(Card{id,kind:Kind::Number(n,color)});id+=1;
+        }}}
+        for _ in 0..8 {deck.push(Card{id,kind:Kind::Wild});id+=1;}
+        for _ in 0..4 {deck.push(Card{id,kind:Kind::Skip});id+=1;}
         shuffle(&mut deck,&mut state);
         let mut hands=vec![Vec::<Card>::new();4];
         let mut tables=vec![Vec::<Vec<Card>>::new();4];
         let mut laid=[false;4];
-        let mut phase=[0usize;4];
+        let phase=[0usize;4];
         let mut difficulty=[Difficulty::Normal;4];
         for p in 0..4 {
             difficulty[p]=levels[((round as usize)+p)%5];
