@@ -115,8 +115,10 @@ pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usiz
         },
         super::Difficulty::Easy => {
             // Keep matching numbers only when the phase actually needs sets.
-            let bonus=if matches!(phase,0|1|2|6|8|9) && let Kind::Number(n,_)=card.kind {
+            let bonus=if let Kind::Number(n,_)=card.kind {
+                if matches!(phase,0|1|2|6|8|9) {
                 hand.iter().enumerate().filter(|(j,c)|*j!=index && matches!(c.kind,Kind::Number(m,_) if m==n)).count() as i32*32
+                }else{0}
             }else{0};
             cpu_discard_priority_for_level(hand,index,phase,super::Difficulty::Novice)-bonus
                 -match card.kind {
