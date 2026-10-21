@@ -132,6 +132,10 @@ pub(super) fn cpu_should_take_discard_for_level(
     if level!=super::Difficulty::Easy {return cpu_should_take_discard(hand,top,phase,laid,table);}
     let mut combined=hand.to_vec();
     combined.push(top);
+    // Easy can recognize an immediately playable phase even when its
+    // simpler matching-card score would otherwise reject the discard.
+    if cpu_choose_phase(&combined,phase,level).is_some()
+        && cpu_choose_phase(hand,phase,level).is_none() {return true;}
     let top_idx=combined.len()-1;
     let top_score=cpu_discard_priority_for_level(&combined,top_idx,phase,level);
     (0..hand.len()).any(|i|top_score<cpu_discard_priority_for_level(&combined,i,phase,level))
