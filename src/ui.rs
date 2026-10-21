@@ -98,7 +98,14 @@ pub(super) fn neon_player_phase_panel(x:f32,y:f32,w:f32,h:f32,single:bool)->bool
     NEON_PLAYER_PHASE_FRAMES.with(|slots|{
         let slots=slots.borrow();
         if let Some(texture)=slots[if single{0}else{1}].as_ref(){
-            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            // The player artwork occupies the upper half of the shared CPU-sized
+            // Photoshop canvas; the lower half is transparent padding.
+            // Crop that padding before fitting the panel into its game area.
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{
+                source:Some(Rect::new(0.0,0.0,texture.width(),texture.height()*0.55)),
+                dest_size:Some(vec2(w,h)),
+                ..Default::default()
+            });
             true
         }else{false}
     })
