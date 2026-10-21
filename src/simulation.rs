@@ -3,7 +3,7 @@
 use crate::*;
 
 #[derive(Default,Debug)]
-struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;3], games:u32, game_wins:[u32;3], game_rounds:u32, stalled_rounds:u32, exhausted_rounds:u32, max_round_turns:u32, seat_wins:[u32;4], round_entries:[u32;3], game_entries:[u32;3], longest_stall_phase:[usize;4] }
+struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;3], games:u32, game_wins:[u32;3], game_rounds:u32, stalled_rounds:u32, exhausted_rounds:u32, max_round_turns:u32, seat_wins:[u32;4], round_entries:[u32;3], game_entries:[u32;3], longest_stall_phase:[usize;4], stall_phase_counts:[u32;10], stall_unlaid:[u32;3], stall_discard_draws:u32, stall_stock_draws:u32 }
 
 fn random(state:&mut u64)->u64 {
     *state=state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -56,6 +56,8 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         let mut winner=None;
         let mut exhausted=false;
         let mut round_turns=0u32;
+        let mut discard_draws=0u32;
+        let mut stock_draws=0u32;
         for turn in 0..turn_limit {
             let p=(turn as usize+game_index)%4;
             stats.turns+=1;
@@ -71,7 +73,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
                     cpu_should_take_discard_for_level(&hands[p],top,phase[p],false,&tables[p],difficulty[p])
                 }
             });
-            let drawn=if take {discard.pop()}else{deck.pop()};
+            let drawn=if take {discard_draws+=1;discard.pop()}else{stock_draws+=1;deck.pop()};
             if let Some(card)=drawn {hands[p].push(card);}else{exhausted=true;break;}
             if !laid[p] {
                 if let Some(mut groups)=cpu_choose_phase(&hands[p],phase[p],difficulty[p]) {
@@ -143,6 +145,12 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
             }
         } else {
             stats.stalled_rounds+=1;
+            stats.stall_discard_draws+=discard_draws;
+            stats.stall_stock_draws+=stock_draws;
+            for j in 0..4 {
+                if phase[j]<10 {stats.stall_phase_counts[phase[j]]+=1;}
+                if !laid[j] {stats.stall_unlaid[(difficulty[j].level()-1) as usize]+=1;}
+            }
             if round_turns>=stats.max_round_turns {stats.longest_stall_phase=progress;}
             if exhausted {stats.exhausted_rounds+=1;}
             // An unfinished round cannot advance phases or award points.
@@ -207,6 +215,7 @@ fn print_balance(stats:&Stats) {
             stats.wins[i],stats.round_entries[i],stats.game_wins[i],stats.game_entries[i]);
     }
     println!("Seat wins: {:?}; longest stall starting phases: {:?}",stats.seat_wins,stats.longest_stall_phase);
+    println!("Stall diagnostics: phases {:?}, unlaid Easy/Normal/Hard {:?}, discard draws {}, stock draws {}",stats.stall_phase_counts,stats.stall_unlaid,stats.stall_discard_draws,stats.stall_stock_draws);
 }
 
 #[test]
