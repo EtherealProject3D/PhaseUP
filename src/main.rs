@@ -21,7 +21,7 @@ enum SortMode { Runs, Colors, Sets }
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, cpu_phase_flight:Option<CpuPhaseFlight>, cpu_hit_flight:Option<CpuHitFlight>, human_draw_flight:Option<HumanDrawFlight>, human_phase_flight:Option<HumanPhaseFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight> }
+struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, cpu_phase_flight:Option<CpuPhaseFlight>, cpu_hit_flight:Option<CpuHitFlight>, human_draw_flight:Option<HumanDrawFlight>, human_phase_flight:Option<HumanPhaseFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight>, hover_lifts:Vec<(u32,f32,f32,f64)> }
 
 mod game_rules;
 mod phases;
@@ -55,7 +55,7 @@ impl Game {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let cpu_roster=select_opponents(read_cpu_difficulty());
         let cpu_names=cpu_roster.map(|cpu|cpu.name.to_string());
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None,hover_lifts:Vec::new()};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
@@ -577,6 +577,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }).map(|(_,c)|c.id)
     } else {None};
+    // Animate each card independently over 260ms with smoothstep easing.
+    // Retarget from its current visual height when the hover changes mid-flight.
+    let now=get_time();
+    let ease=|t:f32| t*t*(3.0-2.0*t);
+    g.hover_lifts.retain(|(id,_,_,_)|hand.iter().any(|c|c.id==*id));
+    for c in &hand {
+        let target=if hovered_hand_card==Some(c.id){18.0}else{0.0};
+        if let Some(state)=g.hover_lifts.iter_mut().find(|state|state.0==c.id) {
+            if (state.2-target).abs()>0.01 {
+                let t=((now-state.3)/0.26).clamp(0.0,1.0) as f32;
+                let current=state.1+(state.2-state.1)*ease(t);
+                *state=(c.id,current,target,now);
+            }
+        } else if target>0.0 {
+            g.hover_lifts.push((c.id,0.0,target,now));
+        }
+    }
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
@@ -586,7 +603,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
         let selected=g.selected.contains(&c.id);
-        let hover_lift=if hovered_hand_card==Some(c.id) {18.0}else{0.0};
+        let hover_lift=g.hover_lifts.iter().find(|state|state.0==c.id).map(|state|{
+            let t=((now-state.3)/0.26).clamp(0.0,1.0) as f32;
+            state.1+(state.2-state.1)*ease(t)
+        }).unwrap_or(0.0);
         let lifted_y=card_y-hover_lift;
         if is_dragging {
             draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
