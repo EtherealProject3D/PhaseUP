@@ -229,6 +229,41 @@ fn cpu_large_balance_sample() {
     }
 }
 
+// Separate opt-in endurance benchmark; the 1,500-round comparison stays unchanged.
+#[test]
+#[ignore = "10,000-round endurance benchmark; run explicitly in release mode"]
+fn cpu_ten_thousand_round_benchmark() {
+    let mut total=Stats::default();
+    for batch in 0..10u64 {
+        let s=run_seed(0xBADA5500+batch,1_000,350);
+        println!("Endurance batch {}:",batch);
+        print_balance(&s);
+        total.rounds+=s.rounds;
+        total.completed+=s.completed;
+        total.games+=s.games;
+        total.stalled_rounds+=s.stalled_rounds;
+        total.exhausted_rounds+=s.exhausted_rounds;
+        total.max_round_turns=total.max_round_turns.max(s.max_round_turns);
+        total.stall_discard_draws+=s.stall_discard_draws;
+        total.stall_stock_draws+=s.stall_stock_draws;
+        for i in 0..3 {
+            total.wins[i]+=s.wins[i];
+            total.game_wins[i]+=s.game_wins[i];
+            total.round_entries[i]+=s.round_entries[i];
+            total.game_entries[i]+=s.game_entries[i];
+            total.stall_unlaid[i]+=s.stall_unlaid[i];
+        }
+        for i in 0..4 {total.seat_wins[i]+=s.seat_wins[i];}
+        for i in 0..10 {total.stall_phase_counts[i]+=s.stall_phase_counts[i];}
+    }
+    println!("=== 10,000-ROUND ENDURANCE TOTAL ===");
+    print_balance(&total);
+    assert_eq!(total.rounds,10_000);
+    assert_eq!(total.completed+total.stalled_rounds,total.rounds);
+    assert_eq!(total.wins.iter().sum::<u32>(),total.completed);
+    assert_eq!(total.game_wins.iter().sum::<u32>(),total.games);
+}
+
 #[test]
 fn participation_counts_match_simulated_rounds() {
     let s=run_seed(0x12345678,16,300);
