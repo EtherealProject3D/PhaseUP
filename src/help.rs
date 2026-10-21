@@ -6,8 +6,12 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     // accent stripe at y=100 and above the help content panel.
     let tw=menu_text_width(heading,45);
     menu_label(heading,960.0-tw/2.0,153.0,45.0,ACCENT);
-    draw_rectangle(205.0,185.0,1190.0,860.0,PANEL);
-    draw_rectangle_lines(205.0,185.0,1190.0,860.0,2.0,ACCENT);
+    // Center the 1190px panel on the 1920px logical canvas.
+    let panel_x=(1920.0-1190.0)/2.0;
+    let content_x=panel_x+50.0;
+    let scrollbar_x=panel_x+1145.0;
+    draw_rectangle(panel_x,185.0,1190.0,860.0,PANEL);
+    draw_rectangle_lines(panel_x,185.0,1190.0,860.0,2.0,ACCENT);
 
     let mut rows:Vec<(bool,String)>=Vec::new();
     if rules {
@@ -81,15 +85,15 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     for (is_heading,line,y) in laid_out {
         let screen_y=222.0+y-*scroll;
         if screen_y>=210.0 && screen_y<=997.0 {
-            menu_label(&line,255.0,screen_y,if is_heading {25.0}else{23.0},if is_heading {ACCENT}else{WHITEISH});
+            menu_label(&line,content_x,screen_y,if is_heading {25.0}else{23.0},if is_heading {ACCENT}else{WHITEISH});
         }
     }
-    menu_label("Mouse wheel / Up-Down arrows to scroll",255.0,1030.0,17.0,MUTED);
+    menu_label("Mouse wheel / Up-Down arrows to scroll",content_x,1030.0,17.0,MUTED);
     if max_scroll>0.0 {
         let track_y=195.0;let track_h=790.0;
         let thumb_h=(viewport_height/(height+25.0)*track_h).clamp(50.0,track_h);
         let thumb_y=track_y+(*scroll/max_scroll)*(track_h-thumb_h);
-        draw_rectangle(1350.0,track_y,9.0,track_h,BG);
-        draw_rectangle(1350.0,thumb_y,9.0,thumb_h,ACCENT);
+        draw_rectangle(scrollbar_x,track_y,9.0,track_h,BG);
+        draw_rectangle(scrollbar_x,thumb_y,9.0,thumb_h,ACCENT);
     }
 }
