@@ -230,10 +230,13 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     expire_human_flights(g);
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
-    label("v0.3.2-dev",24.0+logo_width+22.0,40.,19.,MUTED);
-    // The logical canvas stays 16:10 at every selected window resolution.
+    let version="v0.3.2-dev";
+    let version_x=24.0+logo_width+22.0;
+    label(version,version_x,40.,19.,MUTED);
+    // Place the layout control after the measured version text.
     let layout_label="LAYOUT 16:10";
-    menu_label(&format!("{}  ▼",layout_label),292.0,40.0,17.0,ACCENT);
+    let layout_x=version_x+measure_text(version,None,19,1.0).width+28.0;
+    menu_label(&format!("{}  ▼",layout_label),layout_x,40.0,17.0,ACCENT);
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
     // Right-align before the MENU button, leaving a clear gutter for wider theme fonts.
@@ -768,8 +771,10 @@ fn menu_button(title:&str,y:f32)->bool {
     let (mx,my)=game_mouse();
     let hovered=mx>=730.0&&mx<=1190.0&&my>=y&&my<=y+64.0;
     themed_button(730.0,y,460.0,64.0,hovered);
-    let w=menu_text_width(title,28);
-    menu_label(title,960.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
+    // Long theme names must fit inside the standard-width menu buttons.
+    let size=if menu_text_width(title,28)>420.0 {23}else{28};
+    let w=menu_text_width(title,size);
+    menu_label(title,960.0-w/2.0,y+42.0,size as f32,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
@@ -820,7 +825,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,333.0,22.0,MUTED);
+            menu_label("WINDOW",750.0,323.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
@@ -829,15 +834,15 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button(&window_text,365.0){
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",445.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,540.0,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},560.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",750.0,650.0,22.0,MUTED);
-            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),670.0){
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",455.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",750.0,558.0,22.0,MUTED);
+            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},600.0){*show_moves=!*show_moves;}
+            menu_label("APPEARANCE",750.0,705.0,22.0,MUTED);
+            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),745.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if !*resolution_open && menu_button("BACK",785.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",861.0){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("BACK",850.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",940.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 if resolution_picker(708.0,426.0) {*resolution_open=false;}
