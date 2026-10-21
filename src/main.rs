@@ -577,7 +577,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             }
         }).map(|(_,c)|c.id)
     } else {None};
-    // Animate each card independently over 260ms with smoothstep easing.
+    // Animate each card independently over 100ms with smoothstep easing.
     // Retarget from its current visual height when the hover changes mid-flight.
     let now=get_time();
     let ease=|t:f32| t*t*(3.0-2.0*t);
@@ -586,7 +586,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         let target=if hovered_hand_card==Some(c.id){18.0}else{0.0};
         if let Some(state)=g.hover_lifts.iter_mut().find(|state|state.0==c.id) {
             if (state.2-target).abs()>0.01 {
-                let t=((now-state.3)/0.26).clamp(0.0,1.0) as f32;
+                let t=((now-state.3)/0.10).clamp(0.0,1.0) as f32;
                 let current=state.1+(state.2-state.1)*ease(t);
                 *state=(c.id,current,target,now);
             }
@@ -604,7 +604,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         });
         let selected=g.selected.contains(&c.id);
         let hover_lift=g.hover_lifts.iter().find(|state|state.0==c.id).map(|state|{
-            let t=((now-state.3)/0.26).clamp(0.0,1.0) as f32;
+            let t=((now-state.3)/0.10).clamp(0.0,1.0) as f32;
             state.1+(state.2-state.1)*ease(t)
         }).unwrap_or(0.0);
         let lifted_y=card_y-hover_lift;
