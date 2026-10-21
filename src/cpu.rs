@@ -36,22 +36,10 @@ impl Game {
             }
             1 => {
                 if !self.players[i].laid && self.players[i].phase<PHASES.len() {
-                    let needed:usize=PHASES[self.players[i].phase].iter().sum();
-                    if needed<=self.players[i].hand.len() {
-                        let hand=self.players[i].hand.clone();
-                        fn search(hand:&[Card],needed:usize,start:usize,idx:&mut Vec<usize>,phase:usize)->Option<Vec<Vec<Card>>>{
-                            if idx.len()==needed {
-                                let subset:Vec<Card>=idx.iter().map(|j|hand[*j]).collect();
-                                return partition_phase(&subset,phase);
-                            }
-                            for j in start..hand.len() {
-                                idx.push(j);
-                                if let Some(g)=search(hand,needed,j+1,idx,phase){return Some(g);}
-                                idx.pop();
-                            }
-                            None
-                        }
-                        if let Some(mut groups)=search(&hand,needed,0,&mut Vec::new(),self.players[i].phase) {
+                    let hand=self.players[i].hand.clone();
+                    if let Some(mut groups)=cpu_choose_phase(
+                        &hand,self.players[i].phase,self.cpu_roster[i-1].difficulty
+                    ) {
                             order_table_groups(&mut groups,self.players[i].phase);
                             let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();
                             Self::remove_ids(&mut self.players[i].hand,&ids);
@@ -62,7 +50,6 @@ impl Game {
                             }
                             self.players[i].table=groups;self.players[i].laid=true;
                             self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));
-                        }
                     }
                 }
                 self.cpu_step=2;
