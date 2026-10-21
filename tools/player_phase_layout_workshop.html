@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>PhaseUP – Player Phase Layout Workshop</title>
+<style>
+body{margin:0;background:#07101e;color:#d8eaff;font:15px system-ui;display:grid;grid-template-columns:minmax(650px,1fr) 315px;min-height:100vh}
+main{padding:22px}aside{background:#142438;border-left:1px solid #34536a;padding:18px}
+h2{color:#64dcff;margin:0 0 14px}h3{margin:16px 0 8px;color:#79d9f5}
+canvas{width:100%;max-width:1100px;background:#030d1e;border:1px solid #42647d;cursor:grab;touch-action:none}
+button,input,select,textarea{background:#0b1828;color:white;border:1px solid #53708c;border-radius:5px;padding:7px;font:inherit}
+button{cursor:pointer;margin:3px}button:hover{background:#235274}
+label{display:block;margin:10px 0 4px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:7px}.fields input{width:90%;box-sizing:border-box}
+textarea{width:100%;box-sizing:border-box;height:175px;font:12px monospace}
+small{color:#9ab4c7} .selected{color:#ffe280}
+</style>
+<main><h2>PhaseUP · Player Phase Layout Workshop</h2>
+<p>Drag artwork, labels or cards on the preview. Select an item to edit its exact coordinates. The board stays unobstructed in the game window.</p>
+<canvas id="board" width="1100" height="510"></canvas>
+<p><small>Preview uses 1920×1200 game coordinates, scaled to this editor. Arrow keys nudge the selected item; Shift+arrows move 10 px. Layout changes are preview-only until applied to Rust.</small></p>
+</main>
+<aside><h2>Layout controls</h2>
+<label>Requirement layout</label><select id="mode"><option value="double">Double requirement</option><option value="single">Single requirement</option></select>
+<label>Cards per group</label><div class="fields"><input id="count1" type="number" min="0" max="15" value="4"><input id="count2" type="number" min="0" max="15" value="4"></div>
+<label>Selected element</label><select id="item"><option value="art">Artwork</option><option value="label1">Requirement 1</option><option value="label2">Requirement 2</option><option value="cards1">Cards group 1</option><option value="cards2">Cards group 2</option></select>
+<div class="fields"><label>X<input id="x" type="number" step="1"></label><label>Y<input id="y" type="number" step="1"></label><label>Width<input id="w" type="number" step="1"></label><label>Height<input id="h" type="number" step="1"></label></div>
+<label>Artwork crop fraction (0–1)</label><input id="crop" type="number" min=".1" max="1" step=".01" value=".55">
+<div><button id="reset">Reset layout</button><button id="copy">Copy layout JSON</button></div>
+<h3>Export for ChatGPT</h3><textarea id="output" readonly></textarea>
+<small>Copy this JSON into our chat. The exported positions are logical game pixels. Images load from the existing assets folder; no image files are modified.</small>
+</aside>
+<script>
+const canvas=document.querySelector('#board'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id), scale=1100/1920;
+const defaults={art:{x:544,y:622,w:832,h:166},label1:{x:560,y:650,w:397,h:22},label2:{x:963,y:650,w:397,h:22},cards1:{x:566,y:696,w:55,h:84},cards2:{x:969,y:696,w:55,h:84}};
+let layout=structuredClone(defaults),selected='art',drag=null,mode='double';
+const images={};for(const key of ['single','double']){const img=new Image();img.src='../assets/neon_forge/ui/player_phase_'+key+'.png';img.onload=draw;images[key]=img}
+const cardImages={};for(const [i,color] of ['red','blue','yellow','green'].entries()){const img=new Image();img.src='../assets/neon_forge/cards/'+color+'.png';img.onload=draw;cardImages[i]=img}
+function count(g){return Math.max(0,Math.min(15,Number($(g===1?'count1':'count2').value)||0))}
+function rect(o){return {x:o.x*scale,y:(o.y-500)*scale,w:o.w*scale,h:o.h*scale}}
+function draw(){
+ ctx.clearRect(0,0,1100,510);ctx.fillStyle='#030d1e';ctx.fillRect(0,0,1100,510);
+ ctx.fillStyle='#66dfff';ctx.font='bold 18px system-ui';ctx.fillText('YOUR LAID PHASE',315,58);
+ ctx.strokeStyle='#28485b';ctx.strokeRect(0,0,1100,510);
+ const a=layout.art,r=rect(a),img=images[mode],crop=Math.max(.1,Math.min(1,Number($('crop').value)||.55));
+ if(img.complete&&img.naturalWidth)ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight*crop,r.x,r.y,r.w,r.h);
+ else{ctx.strokeStyle='#00dfff';ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#aac';ctx.fillText('Artwork not found: check local assets',r.x+20,r.y+40)}
+ for(let g=1;g<=(mode==='single'?1:2);g++){
+  const l=layout['label'+g],p=rect(l),c=count(g);
+  ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.fillStyle='#e5f0fa';
+  ctx.fillText((mode==='single'?'RUN':'SET')+' - '+c+' cards',p.x+p.w/2,p.y+18);
+  ctx.textAlign='left';
+  const o=layout['cards'+g];
+  for(let j=0;j<c;j++){const x=o.x+j*Math.min(56,Math.max(0,(mode==='single'?800:397)-67)/Math.max(1,c-1)),rr=rect({...o,x});
+   const ci=cardImages[j%4];if(ci.complete&&ci.naturalWidth)ctx.drawImage(ci,rr.x,rr.y,rr.w,rr.h);
+   else{ctx.fillStyle='#15619b';ctx.fillRect(rr.x,rr.y,rr.w,rr.h)}
+   ctx.fillStyle='white';ctx.font='bold 24px system-ui';ctx.textAlign='center';ctx.fillText(String(j%12+1),rr.x+rr.w/2,rr.y+rr.h/2+8);ctx.textAlign='left';
+  }
+ }
+ const sr=rect(layout[selected]);ctx.strokeStyle='#ffe16b';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.strokeRect(sr.x,sr.y,sr.w,sr.h);ctx.setLineDash([]);
+}
+function sync(){const o=layout[selected];$('item').value=selected;for(const k of ['x','y','w','h'])$(k).value=Math.round(o[k]);exportJSON();draw()}
+function exportJSON(){const data={editor:'PhaseUP player phase workshop v1',mode,crop:Number($('crop').value),logical_canvas:[1920,1200],elements:layout,card_counts:[count(1),mode==='single'?0:count(2)]};$('output').value=JSON.stringify(data,null,2)}
+$('item').onchange=()=>{selected=$('item').value;sync()};
+for(const k of ['x','y','w','h'])$(k).oninput=()=>{layout[selected][k]=Number($(k).value);exportJSON();draw()};
+for(const id of ['mode','count1','count2','crop'])$(id).oninput=()=>{mode=$('mode').value;exportJSON();draw()};
+$('reset').onclick=()=>{layout=structuredClone(defaults);sync()};
+$('copy').onclick=async()=>{exportJSON();$('output').select();try{await navigator.clipboard.writeText($('output').value);$('copy').textContent='Copied!'}catch(e){document.execCommand('copy');$('copy').textContent='Selected / copied'}};
+canvas.onpointerdown=e=>{const r=canvas.getBoundingClientRect(),px=(e.clientX-r.left)*1100/r.width,py=(e.clientY-r.top)*510/r.height;for(const key of ['cards2','cards1','label2','label1','art']){if(mode==='single'&&key.endsWith('2'))continue;const b=rect(layout[key]);if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){selected=key;drag={px,py,x:layout[key].x,y:layout[key].y};canvas.setPointerCapture(e.pointerId);sync();break}}};
+canvas.onpointermove=e=>{if(!drag)return;const r=canvas.getBoundingClientRect(),px=(e.clientX-r.left)*1100/r.width,py=(e.clientY-r.top)*510/r.height;layout[selected].x=Math.round(drag.x+(px-drag.px)/scale);layout[selected].y=Math.round(drag.y+(py-drag.py)/scale);sync()};
+canvas.onpointerup=()=>drag=null;
+document.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;e.preventDefault();const d=e.shiftKey?10:1;layout[selected].x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;layout[selected].y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;sync()});
+sync();
+</script></html>
