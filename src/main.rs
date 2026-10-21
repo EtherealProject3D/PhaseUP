@@ -51,7 +51,7 @@ fn phase_animation_start_time()->f64 {get_time()}
 impl Game {
     fn new()->Self {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
-        let cpu_roster=select_opponents(Difficulty::Normal);
+        let cpu_roster=select_opponents(read_cpu_difficulty());
         let cpu_names=cpu_roster.map(|cpu|cpu.name.to_string());
         let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None};g.deal();g
     }
@@ -776,7 +776,7 @@ fn menu_button(title:&str,y:f32)->bool {
     menu_label(title,960.0-w/2.0,y+42.0,28.0,if hovered {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
-fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool)->Option<MenuScreen> {
+fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
@@ -805,7 +805,11 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("GAME RULES",615.0){return Some(MenuScreen::Rules);}
             if menu_button("SETTINGS",705.0){return Some(MenuScreen::Settings);}
             if menu_button("QUIT",795.0){std::process::exit(0);}
-            if has_game { menu_label("ESC: resume game",850.0,925.0,20.0,MUTED); }
+            if menu_button(&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),870.0){
+                *cpu_difficulty=cpu_difficulty.next();
+                save_cpu_difficulty(*cpu_difficulty);
+            }
+            if has_game { menu_label("Difficulty applies to new games",794.0,964.0,18.0,MUTED); }
         }
         MenuScreen::Settings=>{
             menu_label("WINDOW",750.0,333.0,22.0,MUTED);
@@ -894,6 +898,7 @@ async fn main(){
     if fullscreen {set_fullscreen(true);}
     let mut saved_preferences=(show_moves,fullscreen);
     let mut menu=MenuScreen::Home;
+    let mut cpu_difficulty=read_cpu_difficulty();
     let mut help_scroll=0.0f32;
     let mut resolution_open=false;
     let mut game_resolution_open=false;
@@ -1017,7 +1022,7 @@ async fn main(){
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=1710.0&&mx<=1810.0&&my>=8.0&&my<=48.0 {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
-            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open);
+            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty);
             if let Some(next)=action {
                 if matches!(next,MenuScreen::HowToPlay|MenuScreen::Rules) {help_scroll=0.0;}
                 if next==MenuScreen::Resume {menu=MenuScreen::Playing;}
