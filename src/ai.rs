@@ -95,6 +95,18 @@ pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usiz
                 hand.iter().enumerate().filter(|(j,c)|*j!=index && matches!(c.kind,Kind::Number(m,_) if m==n)).count() as i32*32
             }else{0};
             cpu_discard_priority_for_level(hand,index,phase,super::Difficulty::Novice)-bonus
+                -match card.kind {
+                    Kind::Number(n,color) => hand.iter().enumerate().filter(|(j,other)| {
+                        if *j==index {return false;}
+                        match other.kind {
+                            Kind::Number(m,c) => (matches!(phase,1|2|3|4|5) && (n as i32-m as i32).abs()<=2)
+                                || (phase==7 && c==color),
+                            Kind::Wild => true,
+                            Kind::Skip => false,
+                        }
+                    }).count() as i32*18,
+                    _=>0,
+                }
         },
         _ => cpu_discard_priority(hand,index,phase),
     }
@@ -175,7 +187,7 @@ pub(super) fn cpu_choose_phase(
                 let points=subset.iter().map(|&c|card_points(c) as i32).sum::<i32>();
                 // Hard conserves Wilds; Expert conserves them even more strongly.
                 // Among equal Wild usage, shedding high-value cards reduces risk.
-                let weight=if level==super::Difficulty::Expert {65}else{55};
+                let weight=if level==super::Difficulty::Expert {65}else{35};
                 let score=points-wilds*weight;
                 if best.as_ref().is_none_or(|(current,_)|score>*current) {
                     *best=Some((score,groups));
@@ -243,7 +255,7 @@ pub(super) fn cpu_bounded_defense_penalty(raw_risk:i32,level:super::Difficulty)-
     if weight==0 {return 0;}
     let cap=match level {
         super::Difficulty::Expert=>170,
-        super::Difficulty::Hard=>130,
+        super::Difficulty::Hard=>90,
         _=>90,
     };
     (raw_risk/12*weight).min(cap)
