@@ -142,7 +142,6 @@ pub(super) fn cpu_skip_discard_adjustment(
         super::Difficulty::Expert => {
             if next_laid && next_hand_count<=2 {750}
             else if next_laid && next_hand_count<=4 {300}
-            else if next_hand_count<=2 {200}
             else {-280}
         },
     }
