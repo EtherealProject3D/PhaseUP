@@ -89,7 +89,7 @@ pub(super) fn read_theme()->crate::theme::Theme {
             }
         }
     }
-    crate::theme::Theme::Modern
+    crate::theme::Theme::Futuristic
 }
 pub(super) fn save_theme(theme:crate::theme::Theme){
     let path=preferences_path();
