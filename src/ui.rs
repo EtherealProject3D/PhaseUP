@@ -25,7 +25,7 @@ use crate::*;
 thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;7]>=RefCell::new([None,None,None,None,None,None,None]);}
 pub(super) async fn load_neon_cards(){
     for (i,name) in ["red","blue","yellow","green","back","wild","skip"].iter().enumerate(){
-        let path=format!("assets/neon_forge/{}.png",name);
+        let path=format!("assets/neon_forge/cards/{}.png",name);
         if let Ok(texture)=load_texture(&path).await {
             texture.set_filter(FilterMode::Linear);
             NEON_CARDS.with(|cards|cards.borrow_mut()[i]=Some(texture));
