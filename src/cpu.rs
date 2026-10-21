@@ -16,9 +16,10 @@ impl Game {
         }
         match self.cpu_step {
             0 => {
-                let use_discard=self.discard.last().is_some_and(|&top|cpu_should_take_discard(
+                let use_discard=self.discard.last().is_some_and(|&top|cpu_should_take_discard_for_level(
                     &self.players[i].hand,top,self.players[i].phase,
-                    self.players[i].laid,&self.players[i].table));
+                    self.players[i].laid,&self.players[i].table,
+                    self.cpu_roster[i-1].difficulty));
                 let card=if use_discard {self.discard.pop()}else{self.draw_deck()};
                 if let Some(c)=card {
                     self.players[i].hand.push(c);
@@ -102,6 +103,7 @@ impl Game {
                 if self.players[i].hand.is_empty(){self.end_round(i);return;}
                 // Prefer discards that cannot be added to an opponent's laid phase.
                 // Retain the existing hand-building heuristic as the tie-breaker.
+                let difficulty=self.cpu_roster[i-1].difficulty;
                 let idx=(0..self.players[i].hand.len()).max_by_key(|&j| {
                     let card=self.players[i].hand[j];
                     let mut penalty=0;
@@ -112,7 +114,8 @@ impl Game {
                             card,opponent.phase,opponent.laid,&opponent.table,
                             opponent.hand.len(),target==(i+1)%self.players.len());
                     }
-                    cpu_discard_priority(&self.players[i].hand,j,self.players[i].phase)-penalty
+                    cpu_discard_priority_for_level(&self.players[i].hand,j,self.players[i].phase,difficulty)
+                        -penalty*cpu_defense_weight(difficulty)
                 }).unwrap();
                 let count_before=self.players[i].hand.len();
                 let card=self.players[i].hand.remove(idx);
