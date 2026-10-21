@@ -407,3 +407,31 @@ fn cpu_phase_search_rejects_invalid_and_incomplete_hands() {
     assert!(cpu_choose_phase(&hand,0,Difficulty::Expert).is_none());
     assert!(cpu_choose_phase(&hand,10,Difficulty::Expert).is_none());
 }
+
+#[test]
+fn advanced_cpu_takes_discard_hittable_on_opponent_table() {
+    let own=vec![set(100,7,3),set(110,8,3)];
+    let other=vec![set(200,4,3),set(210,5,3)];
+    let visible=vec![(0,own.clone()),(0,other)];
+    let top=number(300,4,2);
+    assert!(!cpu_should_take_visible_hit(top,0,&own,&visible,Difficulty::Easy));
+    for level in [Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        assert!(cpu_should_take_visible_hit(top,0,&own,&visible,level));
+    }
+}
+
+#[test]
+fn cpu_rejects_discard_that_hits_no_visible_phase() {
+    let own=vec![set(100,7,3),set(110,8,3)];
+    let visible=vec![(0,own.clone())];
+    for level in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        assert!(!cpu_should_take_visible_hit(number(300,12,2),0,&own,&visible,level));
+        assert!(!cpu_should_take_visible_hit(skip(301),0,&own,&visible,level));
+    }
+}
+
+#[test]
+fn cpu_takes_wild_for_completed_phase() {
+    let own=vec![set(100,7,3),set(110,8,3)];
+    assert!(cpu_should_take_visible_hit(wild(300),0,&own,&[],Difficulty::Expert));
+}
