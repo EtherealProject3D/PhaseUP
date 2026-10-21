@@ -5,7 +5,7 @@ use std::cell::Cell;
 pub(super) enum Theme { Modern, Futuristic, Playful }
 impl Theme {
     pub(super) fn next(self)->Self {match self {Self::Modern=>Self::Futuristic,Self::Futuristic=>Self::Playful,Self::Playful=>Self::Modern}}
-    pub(super) fn name(self)->&'static str {match self {Self::Modern=>"MODERN & CLEAN",Self::Futuristic=>"BOLD & FUTURISTIC",Self::Playful=>"COLORFUL & PLAYFUL"}}
+    pub(super) fn name(self)->&'static str {match self {Self::Modern=>"MODERN & CLEAN",Self::Futuristic=>"NEON FORGE",Self::Playful=>"COLORFUL & PLAYFUL"}}
     pub(super) fn key(self)->&'static str {match self {Self::Modern=>"modern",Self::Futuristic=>"futuristic",Self::Playful=>"playful"}}
     pub(super) fn from_key(s:&str)->Self {match s {"futuristic"=>Self::Futuristic,"playful"=>Self::Playful,_=>Self::Modern}}
     pub(super) fn accent(self)->Color {match self {Self::Modern=>Color::new(0.25,0.81,0.72,1.),Self::Futuristic=>Color::new(0.0,0.88,1.0,1.),Self::Playful=>Color::new(1.0,0.75,0.30,1.)}}
