@@ -435,3 +435,27 @@ fn cpu_takes_wild_for_completed_phase() {
     let own=vec![set(100,7,3),set(110,8,3)];
     assert!(cpu_should_take_visible_hit(wild(300),0,&own,&[],Difficulty::Expert));
 }
+
+#[test]
+fn expert_prioritizes_immediate_next_player_threat() {
+    let next=cpu_opponent_threat_multiplier(Difficulty::Expert,true,1,true);
+    let later=cpu_opponent_threat_multiplier(Difficulty::Expert,true,1,false);
+    assert!(next>later);
+    assert!(later>cpu_opponent_threat_multiplier(Difficulty::Expert,true,8,false));
+}
+
+#[test]
+fn difficulty_scales_defensive_opponent_awareness() {
+    let normal=cpu_opponent_threat_multiplier(Difficulty::Normal,true,2,true);
+    let hard=cpu_opponent_threat_multiplier(Difficulty::Hard,true,2,true);
+    let expert=cpu_opponent_threat_multiplier(Difficulty::Expert,true,2,true);
+    assert!(normal<hard && hard<expert);
+}
+
+#[test]
+fn unlaid_opponents_do_not_trigger_small_hand_threat() {
+    for level in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        assert_eq!(cpu_opponent_threat_multiplier(level,false,1,true),1);
+        assert_eq!(cpu_opponent_threat_multiplier(level,false,10,false),1);
+    }
+}
