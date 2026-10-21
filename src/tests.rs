@@ -148,7 +148,7 @@ fn dealing_starts_with_ten_cards_per_player_and_one_discard() {
 
 #[test]
 fn cpu_matchmaking_uses_unique_names_and_nearby_levels() {
-    for target in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+    for target in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard] {
         for _ in 0..20 {
             let opponents=select_opponents(target);
             let names:HashSet<&str>=opponents.iter().map(|p|p.name).collect();
@@ -336,9 +336,9 @@ fn novice_cpu_avoids_number_discard_pile_but_takes_wild() {
 }
 
 #[test]
-fn cpu_difficulty_selector_cycles_all_five_levels() {
-    let mut level=Difficulty::Novice;
-    for expected in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert,Difficulty::Novice] {
+fn cpu_difficulty_selector_cycles_three_levels() {
+    let mut level=Difficulty::Easy;
+    for expected in [Difficulty::Normal,Difficulty::Hard,Difficulty::Easy] {
         level=level.next();
         assert_eq!(level,expected);
     }
@@ -346,10 +346,12 @@ fn cpu_difficulty_selector_cycles_all_five_levels() {
 
 #[test]
 fn cpu_difficulty_storage_keys_round_trip() {
-    for level in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+    for level in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard] {
         assert_eq!(Difficulty::from_key(level.key()),level);
     }
     assert_eq!(Difficulty::from_key("unknown"),Difficulty::Normal);
+    assert_eq!(Difficulty::from_key("novice"),Difficulty::Easy);
+    assert_eq!(Difficulty::from_key("expert"),Difficulty::Hard);
 }
 
 #[test]
