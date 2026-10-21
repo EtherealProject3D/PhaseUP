@@ -43,15 +43,22 @@ fn neon_card_texture(index:usize,x:f32,y:f32,w:f32,h:f32)->bool {
 }
 
 
-// Optional artwork-driven CPU frame; keep procedural rendering as a fallback.
-thread_local! {static NEON_CPU_FRAME:RefCell<Option<Texture2D>>=RefCell::new(None);}
+// Matching normal/active CPU artwork. Active art is optional until supplied.
+thread_local! {
+    static NEON_CPU_FRAME:RefCell<Option<Texture2D>>=RefCell::new(None);
+    static NEON_CPU_ACTIVE_FRAME:RefCell<Option<Texture2D>>=RefCell::new(None);
+}
 pub(super) async fn load_neon_ui(){
     if let Ok(texture)=load_texture("assets/neon_forge/ui/cpu_panel.png").await {
         texture.set_filter(FilterMode::Linear);
         NEON_CPU_FRAME.with(|slot|*slot.borrow_mut()=Some(texture));
     }
+    if let Ok(texture)=load_texture("assets/neon_forge/ui/cpu_panel_active.png").await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_CPU_ACTIVE_FRAME.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
 }
-pub(super) fn neon_cpu_panel(x:f32,y:f32,w:f32,h:f32){
+pub(super) fn neon_cpu_panel(x:f32,y:f32,w:f32,h:f32,active_alpha:f32){
     let painted=NEON_CPU_FRAME.with(|slot|{
         let slot=slot.borrow();
         if let Some(texture)=slot.as_ref(){
@@ -62,6 +69,15 @@ pub(super) fn neon_cpu_panel(x:f32,y:f32,w:f32,h:f32){
         }else{false}
     });
     if !painted {neon_frame(x,y,w,h,true);}
+    if active_alpha>0.0 {
+        NEON_CPU_ACTIVE_FRAME.with(|slot|{
+            if let Some(texture)=slot.borrow().as_ref(){
+                draw_texture_ex(texture,x,y,Color::new(1.0,1.0,1.0,active_alpha.clamp(0.0,1.0)),DrawTextureParams{
+                    dest_size:Some(vec2(w,h)),..Default::default()
+                });
+            }
+        });
+    }
 }
 pub(super) fn has_neon_cpu_panel()->bool {
     NEON_CPU_FRAME.with(|slot|slot.borrow().is_some())
