@@ -1113,7 +1113,27 @@ async fn main(){
                     load_neon_cards().await;
                     load_neon_ui().await;
                 }
-                menu_label("UI WORKSHOP - MOCK BOARD",900.0,1155.0,22.0,ACCENT);
+                // Workshop controls only mutate the separate preview game.
+                // Use CPU 1 for laid/unlaid and hand-size stress tests.
+                if button(if workshop_preview.players[1].laid {"CPU 1: LAID"} else {"CPU 1: NOT LAID"},24.0,1054.0,235.0,50.0,true) {
+                    workshop_preview.players[1].laid=!workshop_preview.players[1].laid;
+                }
+                if button("HAND -",275.0,1054.0,155.0,50.0,true) {
+                    if !workshop_preview.players[1].hand.is_empty(){workshop_preview.players[1].hand.pop();}
+                }
+                if button("HAND +",445.0,1054.0,155.0,50.0,true) {
+                    if workshop_preview.players[1].hand.len()<20 {
+                        let n=workshop_preview.players[1].hand.len() as u32;
+                        workshop_preview.players[1].hand.push(Card{id:8000+n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});
+                    }
+                }
+                if button("NEXT PHASE",615.0,1054.0,215.0,50.0,true) {
+                    workshop_preview.players[1].phase=(workshop_preview.players[1].phase+1)%PHASES.len();
+                    // Sample cards are only for the first phase; hide them in other phases.
+                    workshop_preview.players[1].laid=false;
+                }
+                menu_label(&format!("CPU 1: PHASE {} | {} CARDS",workshop_preview.players[1].phase+1,workshop_preview.players[1].hand.len()),850.0,1088.0,20.0,ACCENT);
+                menu_label("UI WORKSHOP - MOCK BOARD (PREVIEW ONLY)",900.0,1155.0,22.0,ACCENT);
                 None
             } else {
                 draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)
