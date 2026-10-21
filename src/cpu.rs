@@ -16,7 +16,9 @@ impl Game {
         }
         match self.cpu_step {
             0 => {
-                let use_discard=self.discard.last().is_some_and(|c|c.kind!=Kind::Skip && matches!(c.kind,Kind::Wild));
+                let use_discard=self.discard.last().is_some_and(|&top|cpu_should_take_discard(
+                    &self.players[i].hand,top,self.players[i].phase,
+                    self.players[i].laid,&self.players[i].table));
                 let card=if use_discard {self.discard.pop()}else{self.draw_deck()};
                 if let Some(c)=card {
                     self.players[i].hand.push(c);
