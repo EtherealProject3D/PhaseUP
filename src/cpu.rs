@@ -106,14 +106,11 @@ impl Game {
                     let card=self.players[i].hand[j];
                     let mut penalty=0;
                     for target in 0..self.players.len() {
-                        if target==i || !self.players[target].laid {continue;}
-                        let hittable=self.players[target].table.iter().enumerate().any(|(group_idx,group)| {
-                            can_hit(group,card,self.players[target].phase.min(9),group_idx)
-                        });
-                        if hittable {
-                            // The human player gets the largest defensive priority.
-                            penalty+=if target==0 {400}else{250};
-                        }
+                        if target==i {continue;}
+                        let opponent=&self.players[target];
+                        penalty+=cpu_discard_opponent_risk(
+                            card,opponent.phase,opponent.laid,&opponent.table,
+                            opponent.hand.len(),target==(i+1)%self.players.len());
                     }
                     cpu_discard_priority(&self.players[i].hand,j,self.players[i].phase)-penalty
                 }).unwrap();
