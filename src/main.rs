@@ -247,23 +247,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
-    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,72.0,620.0,314.0);}}
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*633.0,72.0,620.0,314.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
+    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,72.0,620.0,376.0);}}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*633.0,72.0,620.0,376.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=54.0;let card_h=70.0;
         let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
-            cpu_card_back(x+10.0+k as f32*step,136.0,card_w,card_h);
+            cpu_card_back(x+10.0+k as f32*step,162.0,card_w,card_h);
         }
         // Identify the player directly beneath their face-down hand.
         let name=g.cpu_name(i);
-        menu_label(&name,x+280.0,119.,18.,player_color(i));
+        menu_label(&name,x+12.0,146.,18.,player_color(i));
         let name_width=menu_text_width(&name,18);
-        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+280.0+name_width,119.,18.,WHITEISH);
+        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+12.0+name_width,146.,18.,WHITEISH);
     }
-    let table_y=209.;
+    let table_y=241.;
     let mut hit_click=None;
     for i in 0..4 {
         let p=&g.players[i];
