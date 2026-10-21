@@ -248,9 +248,24 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
     else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0);}}
+    // Pulse small accents on the existing frame rather than drawing a second outline.
+    if active_theme()==Theme::Futuristic && has_neon_cpu_panel() {
+        let pulse=0.58+0.25*(get_time() as f32*2.4).sin();
+        let active_cpu=if g.stage==Stage::Cpu && (1..=3).contains(&g.turn) {Some(g.turn)} else {None};
+        if let Some(i)=active_cpu {
+            let fx=16.0+(i-1) as f32*632.0;
+            let glow=Color::new(0.0,0.90,1.0,pulse);
+            draw_line(fx+44.0,99.0,fx+102.0,99.0,4.0,glow);
+            draw_line(fx+25.0,116.0,fx+25.0,155.0,3.0,glow);
+            draw_line(fx+522.0,99.0,fx+582.0,99.0,4.0,glow);
+        }
+    }
     for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
-        menu_label(&cpu_status,status_x,124.,16.,MUTED);
+        menu_label(&cpu_status,status_x,124.,16.,MUTED); 
+        if active_theme()==Theme::Futuristic && has_neon_cpu_panel() && g.stage==Stage::Cpu && g.turn==i {
+            menu_label("▶ TURN",x+340.0,146.0,17.0,Color::new(0.0,0.92,1.0,1.0));
+        }
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){72.6}else{54.0};let card_h=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){90.2}else{70.0};
