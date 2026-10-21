@@ -160,3 +160,19 @@ pub(super) mod window_placement {
         let _=std::fs::write(p,format!("{x} {y}\n"));
     }
 }
+
+ 
+// CPU difficulty is stored independently of display settings.
+pub(super) fn cpu_difficulty_path()->std::path::PathBuf {
+    window_size_path().with_file_name("cpu_difficulty.txt")
+}
+pub(super) fn read_cpu_difficulty()->crate::Difficulty {
+    std::fs::read_to_string(cpu_difficulty_path())
+        .map(|s|crate::Difficulty::from_key(s.trim()))
+        .unwrap_or(crate::Difficulty::Normal)
+}
+pub(super) fn save_cpu_difficulty(level:crate::Difficulty) {
+    let path=cpu_difficulty_path();
+    if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
+    let _=std::fs::write(path,level.key());
+}
