@@ -986,6 +986,13 @@ async fn main(){
     let mut help_scroll=0.0f32;
     let mut resolution_open=false;
     let mut workshop_cpu=0usize;
+    let mut workshop_board=false;
+    let mut workshop_preview=Game::new();
+    workshop_preview.stage=Stage::Cpu;
+    workshop_preview.turn=1;
+    workshop_preview.turn_count=4;
+    workshop_preview.players[1].laid=true;
+    workshop_preview.players[1].table=vec![vec![Card{id:9001,kind:Kind::Number(5,0)},Card{id:9002,kind:Kind::Number(5,1)},Card{id:9003,kind:Kind::Number(5,2)}],vec![Card{id:9004,kind:Kind::Number(8,3)},Card{id:9005,kind:Kind::Number(8,0)},Card{id:9006,kind:Kind::Wild}]];
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1090,13 +1097,28 @@ async fn main(){
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
             if menu==MenuScreen::UiWorkshop {
+                if is_key_pressed(KeyCode::Tab) {workshop_board=!workshop_board;}
                 if is_key_pressed(KeyCode::R) {
                     load_neon_cards().await;
                     load_neon_ui().await;
                 }
             }
-            let action=draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty);
-            if menu==MenuScreen::UiWorkshop {
+            let action=if menu==MenuScreen::UiWorkshop && workshop_board {
+                draw_game(&mut workshop_preview,false,false);
+                if button("BACK TO GALLERY",24.0,1120.0,240.0,54.0,true){workshop_board=false;}
+                if button("NEXT ACTIVE CPU",285.0,1120.0,260.0,54.0,true){
+                    workshop_preview.turn=workshop_preview.turn%3+1;
+                }
+                if button("RELOAD ARTWORK (R)",565.0,1120.0,270.0,54.0,true){
+                    load_neon_cards().await;
+                    load_neon_ui().await;
+                }
+                menu_label("UI WORKSHOP - MOCK BOARD",900.0,1155.0,22.0,ACCENT);
+                None
+            } else {
+                draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)
+            };
+            if menu==MenuScreen::UiWorkshop && !workshop_board {
                 // Same 1920x1200 logical coordinates and camera as the menus.
                 menu_label("CARD GALLERY",710.0,350.0,24.0,ACCENT);
                 for (i,kind) in [Kind::Number(1,0),Kind::Number(2,1),Kind::Number(3,2),Kind::Number(4,3),Kind::Wild,Kind::Skip].iter().enumerate() {
@@ -1111,7 +1133,8 @@ async fn main(){
                     menu_label(&format!("CPU {}",i+1),x+40.0,805.0,20.0,WHITEISH);
                     if inside(x,730.0,165.0,140.0)&&is_mouse_button_pressed(MouseButton::Left){workshop_cpu=i;}
                 }
-                menu_label("PRESS R TO RELOAD ARTWORK FROM DISK",710.0,915.0,20.0,MUTED);
+                menu_label("PRESS R TO RELOAD ARTWORK FROM DISK",710.0,900.0,20.0,MUTED);
+                if button("FULL BOARD PREVIEW",710.0,915.0,500.0,55.0,true){workshop_board=true;}
             }
             if let Some(next)=action {
                 if matches!(next,MenuScreen::HowToPlay|MenuScreen::Rules) {help_scroll=0.0;}
