@@ -152,3 +152,5 @@ Suggested regression scenarios for future work:
 - The initial harness exercises Phase 1 rounds, rotating five difficulty levels through four seats, and reports round completions, turns, phases laid, Wilds laid, Skips and difficulty wins. It is **not** a full ten-phase game simulation or a reliable difficulty ranking yet.
 - **Next:** Validate harness on Windows with `cargo test -- --nocapture`; then extend to complete games, collect larger samples, and tune difficulty based on measured outcomes.
 - **UI freeze remains in effect:** Do not change menus, sizing or resolution until CPU work is finished or the user explicitly requests UI changes.
+
+- **2026-10-20 full-game simulation extension (awaiting local test):** Headless simulator now carries phase progress and scores across rounds, records completed games and difficulty winners, and rotates seats between games. Two tests added (expected 47). This remains an approximation of production turn orchestration. Review 120-round test statistics before drawing conclusions about difficulty balance.
