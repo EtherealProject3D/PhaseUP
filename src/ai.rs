@@ -79,7 +79,7 @@ fn cpu_best_run_coverage(hand:&[Card],length:usize)->i32 {
     best
 }
 
-fn cpu_long_run_discard_improves(hand:&[Card],top:Card,phase:usize)->bool {
+pub(super) fn cpu_long_run_discard_improves(hand:&[Card],top:Card,phase:usize)->bool {
     if !matches!(phase,3|4|5) || !matches!(top.kind,Kind::Number(_,_)) {return false;}
     let length=super::PHASES[phase][0];
     let before=cpu_best_run_coverage(hand,length);
