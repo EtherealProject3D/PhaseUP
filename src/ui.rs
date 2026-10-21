@@ -48,6 +48,7 @@ thread_local! {
     static NEON_CPU_FRAMES:RefCell<[[Option<Texture2D>;2];2]>=RefCell::new([[None,None],[None,None]]);
 }
 pub(super) async fn load_neon_ui(){
+    load_neon_player_phase().await;
     for (layout,names) in [
         ["cpu_panel_single.png","cpu_panel_single_active.png"],
         ["cpu_panel_double.png","cpu_panel_double_active.png"],
@@ -80,6 +81,27 @@ pub(super) fn neon_cpu_panel(x:f32,y:f32,w:f32,h:f32,active_alpha:f32,single:boo
             }
         });
     }
+}
+thread_local! {
+    static NEON_PLAYER_PHASE_FRAMES:RefCell<[Option<Texture2D>;2]>=RefCell::new([None,None]);
+}
+pub(super) async fn load_neon_player_phase(){
+    for (i,name) in ["player_phase_single.png","player_phase_double.png"].iter().enumerate(){
+        let path=format!("assets/neon_forge/ui/{}",name);
+        if let Ok(texture)=load_texture(&path).await {
+            texture.set_filter(FilterMode::Linear);
+            NEON_PLAYER_PHASE_FRAMES.with(|slots|slots.borrow_mut()[i]=Some(texture));
+        }
+    }
+}
+pub(super) fn neon_player_phase_panel(x:f32,y:f32,w:f32,h:f32,single:bool)->bool {
+    NEON_PLAYER_PHASE_FRAMES.with(|slots|{
+        let slots=slots.borrow();
+        if let Some(texture)=slots[if single{0}else{1}].as_ref(){
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    })
 }
 pub(super) fn has_neon_cpu_panel()->bool {
     NEON_CPU_FRAMES.with(|slots|slots.borrow()[1][0].is_some())
