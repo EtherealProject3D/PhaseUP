@@ -71,7 +71,6 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let tw=menu_text_width(&symbol,size);
         let tx=x+(w-tw)/2.0;
         let ty=yy+h*0.63;
-        draw_rectangle(x+w*0.26,yy+h*0.38,w*0.48,h*0.30,Color::new(0.015,0.035,0.065,0.90));
         menu_label(&symbol,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&symbol,tx,ty,size as f32,WHITEISH);
         if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
