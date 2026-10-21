@@ -247,21 +247,21 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
-    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,68.0,620.0,308.0);}}
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,180.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,91.,16.,MUTED);
+    else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,72.0,620.0,314.0);}}
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,180.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=65.0;let card_h=87.0;
         let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
-            cpu_card_back(x+k as f32*step,119.0,card_w,card_h);
+            cpu_card_back(x+10.0+k as f32*step,134.0,card_w,card_h);
         }
         // Identify the player directly beneath their face-down hand.
         let name=g.cpu_name(i);
-        menu_label(&name,x,227.,20.,player_color(i));
+        menu_label(&name,x+10.0,249.,20.,player_color(i));
         let name_width=menu_text_width(&name,20);
-        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+name_width,227.,20.,WHITEISH);
+        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+10.0+name_width,249.,20.,WHITEISH);
     }
     let table_y=209.;
     let mut hit_click=None;
@@ -272,7 +272,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {sh-532.0}else{table_y+47.0};
+            let y=if i==0 {sh-532.0}else{table_y+69.0};
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
