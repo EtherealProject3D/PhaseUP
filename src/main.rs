@@ -254,7 +254,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){66.0}else{54.0};let card_h=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){82.0}else{70.0};
-        let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
+        let step=if count>1 {if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){26.0}else{column_hand_width(count,card_w)/(count-1) as f32}}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
             cpu_card_back(x+10.0+k as f32*step,if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){153.0}else{162.0},card_w,card_h);
