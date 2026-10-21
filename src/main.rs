@@ -1144,6 +1144,58 @@ async fn main(){
                     // Sample cards are only for the first phase; hide them in other phases.
                     workshop_preview.players[1].laid=false;
                 }
+                // Human-player layout stress tests: independent of actual gameplay.
+                if button("PLAYER NEXT PHASE",24.0,990.0,265.0,48.0,true){
+                    let p=&mut workshop_preview.players[0];
+                    p.phase=(p.phase+1)%PHASES.len();
+                    p.laid=false;
+                    p.table.clear();
+                    workshop_preview.staged=[vec![],vec![]];
+                }
+                if button("PLAYER LAID / UNLAID",305.0,990.0,290.0,48.0,true){
+                    let p=&mut workshop_preview.players[0];
+                    p.laid=!p.laid;
+                    if p.laid && p.table.is_empty(){
+                        p.table=PHASES[p.phase.min(PHASES.len()-1)].iter().map(|_|Vec::new()).collect();
+                    }
+                }
+                if button("PHASE CARD +",610.0,990.0,215.0,48.0,true){
+                    let p=&mut workshop_preview.players[0];
+                    if !p.laid {p.laid=true;}
+                    if p.table.is_empty(){
+                        p.table=PHASES[p.phase.min(PHASES.len()-1)].iter().map(|_|Vec::new()).collect();
+                    }
+                    let group=p.table.iter().enumerate().min_by_key(|(_,cards)|cards.len()).map(|(i,_)|i).unwrap_or(0);
+                    let n=p.table.iter().map(|cards|cards.len()).sum::<usize>() as u32;
+                    if n<24 {
+                        p.table[group].push(Card{id:20000+n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});
+                    }
+                }
+                if button("PHASE CARD -",840.0,990.0,215.0,48.0,true){
+                    let p=&mut workshop_preview.players[0];
+                    if let Some(group)=p.table.iter_mut().max_by_key(|cards|cards.len()){
+                        group.pop();
+                    }
+                }
+                if button("STAGE CARD +",1070.0,990.0,215.0,48.0,true){
+                    let p=&mut workshop_preview.players[0];
+                    let n=p.hand.iter().filter(|c|c.id>=30000 && c.id<31000).count() as u32;
+                    if n<20 {
+                        let id=30000+n;
+                        if !p.hand.iter().any(|c|c.id==id){
+                            p.hand.push(Card{id,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});
+                            let group=if PHASES[p.phase.min(PHASES.len()-1)].len()>1 && workshop_preview.staged[0].len()>workshop_preview.staged[1].len(){1}else{0};
+                            workshop_preview.staged[group].push(id);
+                        }
+                    }
+                }
+                if button("STAGE CARD -",1300.0,990.0,215.0,48.0,true){
+                    let group=if workshop_preview.staged[1].len()>workshop_preview.staged[0].len(){1}else{0};
+                    if let Some(id)=workshop_preview.staged[group].pop(){
+                        workshop_preview.players[0].hand.retain(|c|c.id!=id);
+                    }
+                }
+                menu_label(&format!("PLAYER PHASE {} | {}",workshop_preview.players[0].phase+1,if workshop_preview.players[0].laid{"LAID"}else{"NOT LAID"}),1530.0,1020.0,18.0,ACCENT);
                 menu_label(&format!("CPU 1: PHASE {} | {} CARDS",workshop_preview.players[1].phase+1,workshop_preview.players[1].hand.len()),850.0,1088.0,20.0,ACCENT);
                 menu_label("UI WORKSHOP - MOCK BOARD (PREVIEW ONLY)",900.0,1155.0,22.0,ACCENT);
                 None
