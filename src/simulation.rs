@@ -3,7 +3,7 @@
 use crate::*;
 
 #[derive(Default,Debug)]
-struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;5], games:u32, game_wins:[u32;5], game_rounds:u32 }
+struct Stats { rounds:u32,completed:u32,turns:u32,phases:u32,wilds_laid:u32,skips:u32,wins:[u32;5], games:u32, game_wins:[u32;5], game_rounds:u32, stalled_rounds:u32, exhausted_rounds:u32, max_round_turns:u32, seat_wins:[u32;4] }
 
 fn random(state:&mut u64)->u64 {
     *state=state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -53,9 +53,12 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         let mut discard=vec![deck.pop().unwrap()];
         let mut skipped=None;
         let mut winner=None;
+        let mut exhausted=false;
+        let mut round_turns=0u32;
         for turn in 0..turn_limit {
-            let p=(turn as usize)%4;
+            let p=(turn as usize+game_index)%4;
             stats.turns+=1;
+            round_turns+=1;
             if skipped==Some(p) {skipped=None;continue;}
             refill(&mut deck,&mut discard,&mut state);
             let visible:Vec<(usize,Vec<Vec<Card>>)>=(0..4).filter(|&j|laid[j])
@@ -68,7 +71,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
                 }
             });
             let drawn=if take {discard.pop()}else{deck.pop()};
-            if let Some(card)=drawn {hands[p].push(card);}else{break;}
+            if let Some(card)=drawn {hands[p].push(card);}else{exhausted=true;break;}
             if !laid[p] {
                 if let Some(mut groups)=cpu_choose_phase(&hands[p],phase[p],difficulty[p]) {
                     order_table_groups(&mut groups,phase[p]);
@@ -119,7 +122,9 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
             if hands[p].is_empty() {winner=Some(p);break;}
         }
         stats.rounds+=1;
+        stats.max_round_turns=stats.max_round_turns.max(round_turns);
         if let Some(p)=winner {
+            stats.seat_wins[p]+=1;
             stats.completed+=1;
             stats.wins[difficulty[p].level() as usize]+=1;
             for j in 0..4 {
@@ -134,6 +139,13 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
                 stats.game_rounds+=game_round;
                 progress=[0;4];scores=[0;4];game_round=0;game_index+=1;
             }
+        } else {
+            stats.stalled_rounds+=1;
+            if exhausted {stats.exhausted_rounds+=1;}
+            // An unfinished round cannot advance phases or award points.
+            // Reset the partial game so its next round does not masquerade
+            // as a valid continuation.
+            progress=[0;4];scores=[0;4];game_round=0;game_index+=1;
         }
     }
     stats
@@ -169,4 +181,14 @@ fn ten_phase_game_results_are_reproducible() {
     let a=run_seed(0xDEADBEEF,100,350);
     let b=run_seed(0xDEADBEEF,100,350);
     assert_eq!(format!("{a:?}"),format!("{b:?}"));
+}
+
+#[test]
+fn simulation_reports_stalls_and_rotates_starting_seat() {
+    let stats=run_seed(0xABCD1234,30,300);
+    assert_eq!(stats.completed+stats.stalled_rounds,stats.rounds);
+    assert!(stats.exhausted_rounds<=stats.stalled_rounds);
+    assert_eq!(stats.seat_wins.iter().sum::<u32>(),stats.completed);
+    assert!(stats.max_round_turns<=300);
+    println!("CPU diagnostics: {stats:?}");
 }
