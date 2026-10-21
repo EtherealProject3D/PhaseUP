@@ -121,7 +121,7 @@ impl Game {
                         cpu_skip_discard_adjustment(difficulty,next.laid,next.hand.len())
                     }else{0};
                     cpu_discard_priority_for_level(&self.players[i].hand,j,self.players[i].phase,difficulty)
-                        -penalty*cpu_defense_weight(difficulty)+skip_adjustment
+                        -cpu_bounded_defense_penalty(penalty,difficulty)+skip_adjustment
                 }).unwrap();
                 let count_before=self.players[i].hand.len();
                 let card=self.players[i].hand.remove(idx);
