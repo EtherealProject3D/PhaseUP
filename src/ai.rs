@@ -77,3 +77,50 @@ pub(super) fn cpu_discard_opponent_risk(
     else if opponent_hand_count<=4 {risk+=if is_next_player {200}else{50};}
     risk
 }
+
+ 
+// Difficulty affects decisions, not rule legality. Novice makes simple
+// choices, Easy notices basic combinations, and Normal+ use phase strategy.
+pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usize,level:super::Difficulty)->i32 {
+    let card=hand[index];
+    match level {
+        super::Difficulty::Novice => match card.kind {
+            Kind::Wild => -1000,
+            Kind::Skip => 150,
+            _ => card_points(card) as i32*2,
+        },
+        super::Difficulty::Easy => {
+            // Basic matching-number recognition, independent of phase.
+            let bonus=if let Kind::Number(n,_)=card.kind {
+                hand.iter().enumerate().filter(|(j,c)|*j!=index && matches!(c.kind,Kind::Number(m,_) if m==n)).count() as i32*32
+            }else{0};
+            cpu_discard_priority_for_level(hand,index,phase,super::Difficulty::Novice)-bonus
+        },
+        _ => cpu_discard_priority(hand,index,phase),
+    }
+}
+
+pub(super) fn cpu_should_take_discard_for_level(
+    hand:&[Card],top:Card,phase:usize,laid:bool,table:&[Vec<Card>],
+    level:super::Difficulty,
+)->bool {
+    if top.kind==Kind::Skip {return false;}
+    if top.kind==Kind::Wild {return true;}
+    if laid {return cpu_should_take_discard(hand,top,phase,laid,table);}
+    if level==super::Difficulty::Novice {return false;}
+    if level!=super::Difficulty::Easy {return cpu_should_take_discard(hand,top,phase,laid,table);}
+    let mut combined=hand.to_vec();
+    combined.push(top);
+    let top_idx=combined.len()-1;
+    let top_score=cpu_discard_priority_for_level(&combined,top_idx,phase,level);
+    (0..hand.len()).any(|i|top_score<cpu_discard_priority_for_level(&combined,i,phase,level))
+}
+
+pub(super) fn cpu_defense_weight(level:super::Difficulty)->i32 {
+    match level {
+        super::Difficulty::Novice|super::Difficulty::Easy => 0,
+        super::Difficulty::Normal => 1,
+        super::Difficulty::Hard => 2,
+        super::Difficulty::Expert => 3,
+    }
+}
