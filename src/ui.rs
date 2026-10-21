@@ -23,10 +23,8 @@ pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
 }
 use crate::*;
 
-pub(super) fn game_canvas_height()->f32 {
-    let (w,h)=(screen_width(),screen_height());
-    if w>0.0 && h>0.0 && w/h>=1.68 {1080.0}else{1200.0}
-}
+// One fixed 16:10 design canvas for all window presets.
+pub(super) fn game_canvas_height()->f32 {1200.0}
 pub(super) fn game_mouse()->(f32,f32) {
     let (pw,ph)=(screen_width(),screen_height());
     let sh=game_canvas_height();
