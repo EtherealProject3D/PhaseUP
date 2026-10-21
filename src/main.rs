@@ -278,7 +278,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
-            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y-12.0,800.0,132.0,group_count==1);
+            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x-16.0,y-46.0,832.0,166.0,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let gx=x+j as f32*if i==0 {403.0}else{312.0};
@@ -293,17 +293,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
                 let label_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
-                menu_label(&desc,label_x,y+if player_art {38.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                menu_label(&desc,label_x,y+if player_art {-15.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width("NOT LAID",17))/2.0}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
-                menu_label("NOT LAID",not_laid_x,y+if player_art {85.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
+                menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
-        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x,y,800.0,132.0,p.table.len()==1);
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x-16.0,y-34.0,832.0,166.0,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
@@ -318,10 +318,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
-            // In the player's panel, keep the requirement clear of laid cards.
-            // The cards occupy the left side; the label uses the remaining space.
-            let desc_x=if player_art {
-                let card_w=55.0;
+            // Place the requirement at the top of the frame, above laid cards.
+            let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
+            menu_label(&desc,desc_x,yy+if player_art {-3.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            let card_w=55.0;
                 let available=(width-12.0-card_w).max(0.0);
                 let step=if group.len()>1 {(available/(group.len()-1) as f32).min(56.0)}else{0.0};
                 let cards_end=x+6.0+if group.is_empty(){0.0}else{(group.len()-1) as f32*step+card_w};
@@ -392,7 +392,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
     }
     // Larger, layered piles share a stable hitbox with drag/drop and animations.
-    let center=535.0;
+    let center=if active_theme()==Theme::Futuristic {510.0}else{535.0};
     let pile_y=center-50.0;
     let pile_w=112.0;
     let pile_h=150.0;
