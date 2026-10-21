@@ -942,6 +942,7 @@ async fn main(){
     macroquad::rand::srand(seed);
     set_theme(read_theme());
     load_menu_fonts().await;
+    load_neon_cards().await;
     let mut game=Game::new();
     let mut show_debug=false;
     let (mut show_moves,mut fullscreen)=read_preferences();
