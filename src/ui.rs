@@ -22,9 +22,9 @@ pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
     });
 }
 use crate::*;
-thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;5]>=RefCell::new([None,None,None,None,None]);}
+thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;7]>=RefCell::new([None,None,None,None,None,None,None]);}
 pub(super) async fn load_neon_cards(){
-    for (i,name) in ["red","blue","yellow","green","back"].iter().enumerate(){
+    for (i,name) in ["red","blue","yellow","green","back","wild","skip"].iter().enumerate(){
         let path=format!("assets/neon_forge/{}.png",name);
         if let Ok(texture)=load_texture(&path).await {
             texture.set_filter(FilterMode::Linear);
@@ -64,7 +64,7 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=if selected && active_theme()!=Theme::Futuristic{y-15.}else{y};let c=color_for(card.kind);
-    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(1,x,yy,w,h) {
+    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){5}else{6},x,yy,w,h) {
         // Special cards share the Neon Forge texture family until dedicated art is available.
         let symbol=card_text(card.kind);
         let size=if w<45.0 {22_u16}else{35_u16};
