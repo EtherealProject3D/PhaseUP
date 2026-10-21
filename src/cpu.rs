@@ -109,9 +109,12 @@ impl Game {
                     for target in 0..self.players.len() {
                         if target==i {continue;}
                         let opponent=&self.players[target];
+                        let is_next=target==(i+1)%self.players.len();
                         penalty+=cpu_discard_opponent_risk(
                             card,opponent.phase,opponent.laid,&opponent.table,
-                            opponent.hand.len(),target==(i+1)%self.players.len());
+                            opponent.hand.len(),is_next)
+                            *cpu_opponent_threat_multiplier(
+                                difficulty,opponent.laid,opponent.hand.len(),is_next);
                     }
                     let skip_adjustment=if card.kind==Kind::Skip {
                         let next=&self.players[(i+1)%self.players.len()];
