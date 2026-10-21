@@ -228,6 +228,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     set_camera(&camera);
     expire_human_flights(g);
+    if active_theme()==Theme::Futuristic { neon_frame(12.0,8.0,sw-24.0,48.0,true); }
     menu_label("PHASEUP",24.,42.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
     let version="v0.3.2-dev";
@@ -245,7 +246,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
-    draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());
+    if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
+    else {for i in 0..3 {neon_frame(16.0+i as f32*633.0,68.0,620.0,308.0,true);}}
     for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,180.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x,91.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
@@ -279,6 +281,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let gx=x+j as f32*if i==0 {403.0}else{312.0};
                 draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                 draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
+                if active_theme()==Theme::Futuristic {neon_frame(gx,y,width,116.0,false);}
                 let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
                 menu_label(&desc,gx+8.0,y+22.0,17.0,Color::new(0.62,0.71,0.78,1.0));
                 menu_label("NOT LAID",gx+10.0,y+62.0,17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -552,6 +555,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=menu_text_width(t,24);menu_label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
     let py=sh-157.0;
     draw_rectangle(12.0,py-72.0,sw-24.0,217.0,active_theme().panel());
+    if active_theme()==Theme::Futuristic {neon_frame(12.0,py-72.0,sw-24.0,217.0,true);}
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
     let phase_bottom=(sh-532.0)+116.0;
