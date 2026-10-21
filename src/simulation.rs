@@ -24,7 +24,7 @@ fn refill(deck:&mut Vec<Card>,discard:&mut Vec<Card>,state:&mut u64) {
     }
 }
 fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
-    let levels=[Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert];
+    let levels=[Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Hard];
     let mut state=seed;
     let mut stats=Stats::default();
     let mut progress=[0usize;4];
@@ -47,7 +47,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
         let phase=progress;
         let mut difficulty=[Difficulty::Normal;4];
         for p in 0..4 {
-            difficulty[p]=levels[(game_index+p)%5];
+            difficulty[p]=levels[(game_index+p)%levels.len()];
             for _ in 0..10 {hands[p].push(deck.pop().unwrap());}
         }
         for &level in &difficulty {stats.round_entries[level.level() as usize]+=1;}
@@ -115,7 +115,7 @@ fn run_seed(seed:u64,round_limit:u32,turn_limit:u32)->Stats {
                     cpu_skip_discard_adjustment(difficulty[p],laid[next],hands[next].len())
                 }else{0};
                 cpu_discard_priority_for_level(&hands[p],j,phase[p],difficulty[p])
-                    -penalty*cpu_defense_weight(difficulty[p])+skip
+                    -cpu_bounded_defense_penalty(penalty,difficulty[p])+skip
             }).unwrap();
             let card=hands[p].remove(index);
             discard.push(card);
@@ -200,7 +200,7 @@ fn simulation_reports_stalls_and_rotates_starting_seat() {
 fn print_balance(stats:&Stats) {
     println!("Balance summary: {} rounds, {} completed games, {} stalls ({} exhausted), max {} turns",
         stats.rounds,stats.games,stats.stalled_rounds,stats.exhausted_rounds,stats.max_round_turns);
-    for (i,name) in ["Novice","Easy","Normal","Hard","Expert"].iter().enumerate() {
+    for (i,name) in ["Novice (legacy)","Easy","Normal","Hard","Expert (legacy)"].iter().enumerate() {
         let round_rate=if stats.round_entries[i]>0 {100.0*stats.wins[i] as f64/stats.round_entries[i] as f64}else{0.0};
         let game_rate=if stats.game_entries[i]>0 {100.0*stats.game_wins[i] as f64/stats.game_entries[i] as f64}else{0.0};
         println!("{name:7}: rounds {:4}/{:4} ({round_rate:5.1}%), games {:3}/{:3} ({game_rate:5.1}%)",
