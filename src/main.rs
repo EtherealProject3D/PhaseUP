@@ -44,6 +44,8 @@ use help::*;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod simulation;
+#[cfg(test)]
 fn phase_animation_start_time()->f64 {0.0}
 #[cfg(not(test))]
 fn phase_animation_start_time()->f64 {get_time()}
