@@ -595,7 +595,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let ease=|t:f32| t*t*(3.0-2.0*t);
     g.hover_lifts.retain(|(id,_,_,_)|hand.iter().any(|c|c.id==*id));
     for c in &hand {
-        let target=if hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && g.selected.contains(&c.id)){18.0}else{0.0};
+        let target=if hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && (g.selected.contains(&c.id) || g.drag.is_some_and(|(id,_,_)|id==c.id && is_mouse_button_down(MouseButton::Left)))){18.0}else{0.0};
         if let Some(state)=g.hover_lifts.iter_mut().find(|state|state.0==c.id) {
             if (state.2-target).abs()>0.01 {
                 let t=((now-state.3)/0.10).clamp(0.0,1.0) as f32;
