@@ -566,6 +566,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
     let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
     let card_y=py-9.0;
+    // Hover lifts a card without changing its selection or gameplay state.
+    let (hand_mx,hand_my)=game_mouse();
+    let hovered_hand_card=if g.drag.is_none() {
+        hand.iter().enumerate().rev().find(|(i,c)| {
+            !g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) && {
+                let x=start+*i as f32*spacing;
+                let selected_lift=if g.selected.contains(&c.id){15.0}else{0.0};
+                hand_mx>=x&&hand_mx<=x+w&&hand_my>=card_y-selected_lift-18.0&&hand_my<=card_y+105.0
+            }
+        }).map(|(_,c)|c.id)
+    } else {None};
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
         let x=start+i as f32*spacing;
@@ -574,11 +585,22 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let (mx,my)=game_mouse();
             id==c.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
+        let selected=g.selected.contains(&c.id);
+        let hover_lift=if hovered_hand_card==Some(c.id) {18.0}else{0.0};
+        let lifted_y=card_y-hover_lift;
         if is_dragging {
             draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
             draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);
-        } else {if card_ui(*c,x,card_y,w,105.0,g.selected.contains(&c.id)){toggle=Some(c.id);}if g.drawn_card==Some(c.id){let y=if g.selected.contains(&c.id){card_y-15.0}else{card_y};draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);}}
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,if g.selected.contains(&c.id){card_y-15.0}else{card_y},w,105.0){g.drag=Some((c.id,game_mouse().0,game_mouse().1));}
+        } else {
+            if card_ui(*c,x,lifted_y,w,105.0,selected){toggle=Some(c.id);}
+            if g.drawn_card==Some(c.id){
+                let y=lifted_y-if selected{15.0}else{0.0};
+                draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);
+            }
+        }
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-if selected{15.0}else{0.0},w,105.0){
+            g.drag=Some((c.id,game_mouse().0,game_mouse().1));
+        }
     }
     // Clicking a hand card toggles only that card; phase staging still supports multiple cards.
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.clear();}else{g.selected=vec![id];}}
