@@ -2,10 +2,12 @@ use crate::*;
 
 pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     let heading=if rules {"GAME RULES"}else{"HOW TO PLAY"};
-    let tw=measure_text(heading,None,45,1.0).width;
-    label(heading,800.0-tw/2.0,120.0,45.0,ACCENT);
-    draw_rectangle(205.0,157.0,1190.0,888.0,PANEL);
-    draw_rectangle_lines(205.0,157.0,1190.0,888.0,2.0,ACCENT);
+    // Center the heading on the 1920-wide canvas, below the background
+    // accent stripe at y=100 and above the help content panel.
+    let tw=menu_text_width(heading,45);
+    menu_label(heading,960.0-tw/2.0,153.0,45.0,ACCENT);
+    draw_rectangle(205.0,185.0,1190.0,860.0,PANEL);
+    draw_rectangle_lines(205.0,185.0,1190.0,860.0,2.0,ACCENT);
 
     let mut rows:Vec<(bool,String)>=Vec::new();
     if rules {
@@ -75,8 +77,8 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     if is_key_down(KeyCode::Down){*scroll=(*scroll+7.0).min(max_scroll);}
     if is_key_down(KeyCode::Up){*scroll=(*scroll-7.0).max(0.0);}
     for (is_heading,line,y) in laid_out {
-        let screen_y=200.0+y-*scroll;
-        if screen_y>=187.0 && screen_y<=997.0 {
+        let screen_y=222.0+y-*scroll;
+        if screen_y>=210.0 && screen_y<=997.0 {
             label(&line,255.0,screen_y,if is_heading {25.0}else{21.0},if is_heading {ACCENT}else{WHITEISH});
         }
     }
