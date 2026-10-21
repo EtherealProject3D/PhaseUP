@@ -65,23 +65,34 @@ pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
 
 pub(super) fn neon_frame(x:f32,y:f32,w:f32,h:f32,bright:bool){
     if active_theme()!=Theme::Futuristic{return;}
-    let glow=Color::new(0.0,0.72,0.95,if bright{0.28}else{0.13});
-    let edge=Color::new(0.02,0.72,0.95,if bright{0.95}else{0.62});
-    let metal=Color::new(0.13,0.30,0.39,1.0);
     let cut=12.0_f32.min(w*0.12).min(h*0.22);
-    draw_rectangle(x+3.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.38));
-    draw_rectangle(x,y,w,h,Color::new(0.018,0.055,0.092,0.96));
-    draw_rectangle(x+4.0,y+4.0,w-8.0,h-8.0,Color::new(0.025,0.085,0.13,0.45));
-    draw_rectangle_lines(x-1.0,y-1.0,w+2.0,h+2.0,3.0,glow);
-    draw_rectangle_lines(x,y,w,h,1.5,metal);
-    draw_line(x+cut,y+2.0,x+w-cut,y+2.0,1.5,edge);
-    draw_line(x+cut,y+h-2.0,x+w-cut,y+h-2.0,1.5,edge);
-    draw_line(x+2.0,y+cut,x+2.0,y+h-cut,1.5,edge);
-    draw_line(x+w-2.0,y+cut,x+w-2.0,y+h-cut,1.5,edge);
-    for &(sx,sy,dx,dy) in &[(x,y,1.0,1.0),(x+w,y,-1.0,1.0),(x,y+h,1.0,-1.0),(x+w,y+h,-1.0,-1.0)]{
-        draw_line(sx+dx*2.0,sy+dy*cut,sx+dx*cut,sy+dy*2.0,2.0,edge);
+    let metal=Color::new(0.19,0.34,0.43,1.0);
+    let cyan=Color::new(0.12,0.92,1.0,1.0);
+    draw_rectangle(x+4.0,y+5.0,w,h,Color::new(0.0,0.0,0.0,0.45));
+    draw_rectangle(x,y,w,h,Color::new(0.012,0.045,0.075,0.97));
+    draw_rectangle(x+5.0,y+5.0,w-10.0,h-10.0,Color::new(0.035,0.09,0.13,0.50));
+    // Broad transparent halos simulate bloom without requiring a postprocessing shader.
+    for (offset,alpha,thickness) in [(6.0,0.045,9.0),(3.5,0.10,5.0),(1.0,0.22,2.5)] {
+        let strength=if bright{1.0}else{0.65};
+        let color=Color::new(0.0,0.79,1.0,alpha*strength);
+        draw_rectangle_lines(x+offset,y+offset,w-2.0*offset,h-2.0*offset,thickness,color);
     }
-    draw_line(x+cut+12.0,y+5.0,x+(w*0.31).max(cut+12.0),y+5.0,2.0,Color::new(0.1,0.90,1.0,0.6));
+    draw_rectangle_lines(x,y,w,h,2.0,metal);
+    let edge=Color::new(0.0,0.80,1.0,if bright{0.95}else{0.78});
+    for &(sx,sy,dx,dy) in &[(x,y,1.0,1.0),(x+w,y,-1.0,1.0),(x,y+h,1.0,-1.0),(x+w,y+h,-1.0,-1.0)]{
+        draw_line(sx+dx*2.0,sy+dy*cut,sx+dx*cut,sy+dy*2.0,3.0,edge);
+        draw_line(sx+dx*4.0,sy+dy*(cut+4.0),sx+dx*(cut+4.0),sy+dy*4.0,1.2,cyan);
+    }
+    draw_line(x+cut,y+2.0,x+w-cut,y+2.0,2.0,edge);
+    draw_line(x+cut,y+h-2.0,x+w-cut,y+h-2.0,2.0,edge);
+    draw_line(x+2.0,y+cut,x+2.0,y+h-cut,2.0,edge);
+    draw_line(x+w-2.0,y+cut,x+w-2.0,y+h-cut,2.0,edge);
+    // Bright edge segments imitate illuminated strips on the concept-art chassis.
+    let strip=(w*0.16).min(120.0).max(12.0);
+    for (sy,sx) in [(y+3.0,x+cut+12.0),(y+h-3.0,x+w-cut-12.0-strip)] {
+        draw_line(sx,sy,sx+strip,sy,8.0,Color::new(0.0,0.84,1.0,if bright{0.17}else{0.10}));
+        draw_line(sx,sy,sx+strip,sy,2.5,cyan);
+    }
 }
 
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
