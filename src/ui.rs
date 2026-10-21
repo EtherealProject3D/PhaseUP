@@ -57,8 +57,8 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let light=match card.kind {
             Kind::Number(_,0)=>Color::new(1.0,0.23,0.27,1.0),
             Kind::Number(_,1)=>Color::new(0.16,0.68,1.0,1.0),
-            Kind::Number(_,2)=>Color::new(0.25,1.0,0.54,1.0),
-            Kind::Number(_,3)=>Color::new(1.0,0.82,0.24,1.0),
+            Kind::Number(_,2)=>Color::new(1.0,0.82,0.24,1.0),
+            Kind::Number(_,3)=>Color::new(0.25,1.0,0.54,1.0),
             _=>c,
         };
         draw_rectangle(x+4.0,yy+6.0,w,h,Color::new(0.0,0.0,0.0,0.42));
