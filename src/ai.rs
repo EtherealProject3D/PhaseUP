@@ -137,12 +137,12 @@ pub(super) fn cpu_skip_discard_adjustment(
         super::Difficulty::Hard => {
             if next_laid && next_hand_count<=2 {450}
             else if next_laid && next_hand_count<=4 {180}
-            else {-180}
+            else {-35}
         },
         super::Difficulty::Expert => {
             if next_laid && next_hand_count<=2 {750}
             else if next_laid && next_hand_count<=4 {300}
-            else {-280}
+            else {-55}
         },
     }
 }
@@ -175,7 +175,7 @@ pub(super) fn cpu_choose_phase(
                 let points=subset.iter().map(|&c|card_points(c) as i32).sum::<i32>();
                 // Hard conserves Wilds; Expert conserves them even more strongly.
                 // Among equal Wild usage, shedding high-value cards reduces risk.
-                let weight=if level==super::Difficulty::Expert {200}else{100};
+                let weight=if level==super::Difficulty::Expert {65}else{55};
                 let score=points-wilds*weight;
                 if best.as_ref().is_none_or(|(current,_)|score>*current) {
                     *best=Some((score,groups));
@@ -234,4 +234,17 @@ pub(super) fn cpu_opponent_threat_multiplier(
             else {1}
         },
     }
+}
+
+/// Keep defensive risk proportional to hand-building value. Unbounded
+/// multipliers previously overwhelmed all phase-aware discard priorities.
+pub(super) fn cpu_bounded_defense_penalty(raw_risk:i32,level:super::Difficulty)->i32 {
+    let weight=cpu_defense_weight(level);
+    if weight==0 {return 0;}
+    let cap=match level {
+        super::Difficulty::Expert=>170,
+        super::Difficulty::Hard=>130,
+        _=>90,
+    };
+    (raw_risk/12*weight).min(cap)
 }
