@@ -248,20 +248,20 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     };
     if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
     else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*633.0,72.0,620.0,314.0);}}
-    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(x-5.0,53.0,470.0,180.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
+    for i in 1..4 {let x=28.+(i-1) as f32*(sw-50.)/3.;let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i {draw_rectangle_lines(16.0+(i-1) as f32*633.0,72.0,620.0,314.0,3.0,YELLOW);}menu_label(&format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name()),x+12.0,112.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
-        let card_w=65.0;let card_h=87.0;
+        let card_w=54.0;let card_h=70.0;
         let step=if count>1 {column_hand_width(count,card_w)/(count-1) as f32}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
-            cpu_card_back(x+10.0+k as f32*step,134.0,card_w,card_h);
+            cpu_card_back(x+10.0+k as f32*step,136.0,card_w,card_h);
         }
         // Identify the player directly beneath their face-down hand.
         let name=g.cpu_name(i);
-        menu_label(&name,x+10.0,249.,20.,player_color(i));
-        let name_width=menu_text_width(&name,20);
-        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+10.0+name_width,249.,20.,WHITEISH);
+        menu_label(&name,x+280.0,119.,18.,player_color(i));
+        let name_width=menu_text_width(&name,18);
+        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+280.0+name_width,119.,18.,WHITEISH);
     }
     let table_y=209.;
     let mut hit_click=None;
@@ -272,7 +272,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         // These placeholders are decorative, not valid hit targets.
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-            let y=if i==0 {sh-532.0}else{table_y+69.0};
+            let y=if i==0 {sh-532.0}else{table_y+22.0};
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
@@ -291,16 +291,18 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-350.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
-        let y=if i==0 {sh-544.0}else{table_y+35.0};
+        let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
         for (j,group) in p.table.iter().enumerate() {
-            let yy=y+12.0;
+            let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
             let x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
-            draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
-            draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
+            if !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
+                draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
+                draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
+            }
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             menu_label(&desc,x+8.0,yy+22.0,17.0,WHITEISH);
             let card_w=55.0;
