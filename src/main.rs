@@ -1152,14 +1152,14 @@ async fn main(){
                     if inside(x,730.0,165.0,140.0)&&is_mouse_button_pressed(MouseButton::Left){workshop_cpu=i;}
                 }
                 // Dedicated card-test controls on the tools screen, not over the board.
-                menu_label("CPU PHASE STACK TESTING",710.0,90.0,25.0,ACCENT);
-                if button(&format!("TARGET: CPU {}",workshop_cpu+1),710.0,115.0,330.0,48.0,true){
+                menu_label("CPU PHASE STACK TESTING",1300.0,90.0,25.0,ACCENT);
+                if button(&format!("TARGET: CPU {}",workshop_cpu+1),1300.0,115.0,330.0,48.0,true){
                     workshop_cpu=(workshop_cpu+1)%3;
                 }
                 let target=workshop_cpu+1;
                 for group_index in 0..2 {
                     let y=180.0+group_index as f32*68.0;
-                    if button(&format!("GROUP {} + CARD",group_index+1),710.0,y,245.0,54.0,true){
+                    if button(&format!("GROUP {} + CARD",group_index+1),1300.0,y,245.0,54.0,true){
                         let p=&mut workshop_preview.players[target];
                         p.laid=true;
                         while p.table.len()<=group_index {p.table.push(Vec::new());}
@@ -1168,13 +1168,13 @@ async fn main(){
                             p.table[group_index].push(Card{id:n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});
                         }
                     }
-                    if button(&format!("GROUP {} - CARD",group_index+1),975.0,y,245.0,54.0,true){
+                    if button(&format!("GROUP {} - CARD",group_index+1),1570.0,y,245.0,54.0,true){
                         if let Some(group)=workshop_preview.players[target].table.get_mut(group_index){group.pop();}
                     }
                 }
                 let p=&workshop_preview.players[target];
-                menu_label(&format!("CPU {} | GROUP 1: {} | GROUP 2: {}",target,p.table.first().map_or(0,Vec::len),p.table.get(1).map_or(0,Vec::len)),710.0,348.0,20.0,WHITEISH);
-                menu_label("Changes appear in FULL BOARD PREVIEW.",710.0,380.0,18.0,MUTED);
+                menu_label(&format!("CPU {} | GROUP 1: {} | GROUP 2: {}",target,p.table.first().map_or(0,Vec::len),p.table.get(1).map_or(0,Vec::len)),1300.0,348.0,20.0,WHITEISH);
+                menu_label("Changes appear in FULL BOARD PREVIEW.",1300.0,380.0,18.0,MUTED);
                 menu_label("PRESS R TO RELOAD ARTWORK FROM DISK",710.0,900.0,20.0,MUTED);
                 if button("FULL BOARD PREVIEW",710.0,915.0,500.0,55.0,true){workshop_board=true;}
             }
