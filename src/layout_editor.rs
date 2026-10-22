@@ -1,7 +1,8 @@
 use crate::*;
 use std::cell::Cell;
-thread_local! {static ZOOM:Cell<f32>=Cell::new(1.0);}
+thread_local! {static ZOOM:Cell<f32>=Cell::new(1.0); static PAN:Cell<(f32,f32)>=Cell::new((0.0,0.0));}
 pub(super) fn zoom()->f32{ZOOM.with(|z|z.get())}
+pub(super) fn pan()->(f32,f32){PAN.with(|p|p.get())}
 
 
 pub(super) struct Editor {pub enabled:bool, selected:usize, drag:Option<(bool,f32,f32,layout::Rect)>, status:String}
@@ -14,13 +15,21 @@ impl Editor {
             Err(e)=>format!("SAVE FAILED: {e}"),
         };
     }
-    pub fn close(&mut self){self.enabled=false;self.drag=None;ZOOM.with(|z|z.set(1.0));}
+    pub fn close(&mut self){self.enabled=false;self.drag=None;ZOOM.with(|z|z.set(1.0));PAN.with(|p|p.set((0.0,0.0)));}
     pub fn draw(&mut self){
         if is_key_pressed(KeyCode::E) {self.enabled=!self.enabled;self.drag=None;}
         if !self.enabled {ZOOM.with(|z|z.set(1.0));return;}
         let wheel=mouse_wheel().1;
         if wheel!=0.0 && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {ZOOM.with(|z|z.set((z.get()+wheel.signum()*0.25).clamp(1.0,3.0)));}
         if is_key_pressed(KeyCode::Key0) {ZOOM.with(|z|z.set(1.0));}
+        if is_mouse_button_down(MouseButton::Middle) && zoom()>1.0 {
+            let (dx,dy)=mouse_delta_position();
+            let scale=(screen_width()/1920.0).min(screen_height()/game_canvas_height());
+            PAN.with(|p|{
+                let (x,y)=p.get();
+                p.set((x-dx/zoom()/scale,y-dy/zoom()/scale));
+            });
+        }
         const ITEMS:[(&str,layout::Rect);2]=[
             ("game_logo",layout::Rect{x:24.,y:10.,w:230.,h:42.}),
             ("turn_banner",layout::Rect{x:16.,y:55.,w:1888.,h:62.}),
@@ -67,6 +76,6 @@ impl Editor {
             menu_label(name,r.x,r.y-5.,17.,color);
         }
         draw_rectangle(550.,123.,1050.,56.,Color::new(0.,0.,0.,0.9));
-        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel, 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
+        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel zoom | Middle-drag pan | 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
     }
 }
