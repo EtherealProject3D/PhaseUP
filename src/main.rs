@@ -225,7 +225,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
         target:vec2(sw/2.0,sh/2.0),
-        zoom:vec2(2.0*scale/pw,2.0*scale/ph),
+        zoom:vec2(2.0*scale/pw,2.0*scale/ph)*layout_editor::zoom(),
         ..Default::default()
     };
     set_camera(&camera);
@@ -1138,6 +1138,26 @@ async fn main(){
                 // Use CPU 1 for laid/unlaid and hand-size stress tests.
                 if button(if workshop_preview.players[1].laid {"CPU 1: LAID"} else {"CPU 1: NOT LAID"},24.0,1054.0,235.0,50.0,true) {
                     workshop_preview.players[1].laid=!workshop_preview.players[1].laid;
+                }
+                if button("CPU GROUP 1 +",850.0,1054.0,215.0,50.0,true){
+                    let p=&mut workshop_preview.players[workshop_preview.turn];
+                    p.laid=true;
+                    if p.table.is_empty(){p.table.push(Vec::new());}
+                    let n=p.table.iter().flatten().map(|c|c.id).max().unwrap_or(40000)+1;
+                    if p.table[0].len()<32 {p.table[0].push(Card{id:n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});}
+                }
+                if button("CPU GROUP 1 -",1080.0,1054.0,215.0,50.0,true){
+                    if let Some(group)=workshop_preview.players[workshop_preview.turn].table.get_mut(0){group.pop();}
+                }
+                if button("CPU GROUP 2 +",850.0,1118.0,215.0,50.0,true){
+                    let p=&mut workshop_preview.players[workshop_preview.turn];
+                    p.laid=true;
+                    while p.table.len()<2 {p.table.push(Vec::new());}
+                    let n=p.table.iter().flatten().map(|c|c.id).max().unwrap_or(50000)+1;
+                    if p.table[1].len()<32 {p.table[1].push(Card{id:n,kind:Kind::Number((n%12+1) as u8,(n%4) as u8)});}
+                }
+                if button("CPU GROUP 2 -",1080.0,1118.0,215.0,50.0,true){
+                    if let Some(group)=workshop_preview.players[workshop_preview.turn].table.get_mut(1){group.pop();}
                 }
                 if button("HAND -",275.0,1054.0,155.0,50.0,true) {
                     if !workshop_preview.players[1].hand.is_empty(){workshop_preview.players[1].hand.pop();}
