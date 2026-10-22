@@ -224,7 +224,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
-        target:vec2(sw/2.0,sh/2.0),
+        target:vec2(sw/2.0+layout_editor::pan().0,sh/2.0+layout_editor::pan().1),
         zoom:vec2(2.0*scale/pw,2.0*scale/ph)*layout_editor::zoom(),
         ..Default::default()
     };
