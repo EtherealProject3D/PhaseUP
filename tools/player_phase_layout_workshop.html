@@ -21,7 +21,7 @@ small{color:#9ab4c7} .selected{color:#ffe280}
 <label>Cards per group</label><div class="fields"><input id="count1" type="number" min="0" max="15" value="4"><input id="count2" type="number" min="0" max="15" value="4"></div>
 <label>Selected element</label><select id="item"><option value="art">Artwork</option><option value="label1">Requirement 1</option><option value="label2">Requirement 2</option><option value="cards1">Cards group 1</option><option value="cards2">Cards group 2</option></select>
 <div class="fields"><label>X<input id="x" type="number" step="1"></label><label>Y<input id="y" type="number" step="1"></label><label>Width<input id="w" type="number" step="1"></label><label>Height<input id="h" type="number" step="1"></label></div>
-<label>Artwork crop fraction (0–1)</label><input id="crop" type="number" min=".1" max="1" step=".01" value=".55">
+
 <div><button id="reset">Reset layout</button><button id="copy">Copy layout JSON</button></div>
 <h3>Export for ChatGPT</h3><textarea id="output" readonly></textarea>
 <small>Copy this JSON into our chat. The exported positions are logical game pixels. Images load from the existing assets folder; no image files are modified.</small>
@@ -39,8 +39,8 @@ function draw(){
  ctx.clearRect(0,0,1100,510);ctx.fillStyle='#030d1e';ctx.fillRect(0,0,1100,510);
  ctx.fillStyle='#66dfff';ctx.font='bold 18px system-ui';ctx.fillText('YOUR LAID PHASE',315,58);
  ctx.strokeStyle='#28485b';ctx.strokeRect(0,0,1100,510);
- const a=layout.art,r=rect(a),img=images[mode],crop=Math.max(.1,Math.min(1,Number($('crop').value)||.55));
- if(img.complete&&img.naturalWidth)ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight*crop,r.x,r.y,r.w,r.h);
+ const a=layout.art,r=rect(a),img=images[mode];
+ if(img.complete&&img.naturalWidth)ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,r.x,r.y,r.w,r.h);
  else{ctx.strokeStyle='#00dfff';ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#aac';ctx.fillText('Artwork not found: check local assets',r.x+20,r.y+40)}
  for(let g=1;g<=(mode==='single'?1:2);g++){
   const l=layout['label'+g],p=rect(l),c=count(g);
@@ -57,10 +57,10 @@ function draw(){
  const sr=rect(layout[selected]);ctx.strokeStyle='#ffe16b';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.strokeRect(sr.x,sr.y,sr.w,sr.h);ctx.setLineDash([]);
 }
 function sync(){const o=layout[selected];$('item').value=selected;for(const k of ['x','y','w','h'])$(k).value=Math.round(o[k]);exportJSON();draw()}
-function exportJSON(){const data={editor:'PhaseUP player phase workshop v1',mode,crop:Number($('crop').value),logical_canvas:[1920,1200],elements:layout,card_counts:[count(1),mode==='single'?0:count(2)]};$('output').value=JSON.stringify(data,null,2)}
+function exportJSON(){const data={editor:'PhaseUP player phase workshop v1',mode,logical_canvas:[1920,1200],elements:layout,card_counts:[count(1),mode==='single'?0:count(2)]};$('output').value=JSON.stringify(data,null,2)}
 $('item').onchange=()=>{selected=$('item').value;sync()};
 for(const k of ['x','y','w','h'])$(k).oninput=()=>{layout[selected][k]=Number($(k).value);exportJSON();draw()};
-for(const id of ['mode','count1','count2','crop'])$(id).oninput=()=>{mode=$('mode').value;exportJSON();draw()};
+for(const id of ['mode','count1','count2'])$(id).oninput=()=>{mode=$('mode').value;exportJSON();draw()};
 $('reset').onclick=()=>{layout=structuredClone(defaults);sync()};
 $('copy').onclick=async()=>{exportJSON();$('output').select();try{await navigator.clipboard.writeText($('output').value);$('copy').textContent='Copied!'}catch(e){document.execCommand('copy');$('copy').textContent='Selected / copied'}};
 canvas.onpointerdown=e=>{const r=canvas.getBoundingClientRect(),px=(e.clientX-r.left)*1100/r.width,py=(e.clientY-r.top)*510/r.height;for(const key of ['cards2','cards1','label2','label1','art']){if(mode==='single'&&key.endsWith('2'))continue;const b=rect(layout[key]);if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){selected=key;drag={px,py,x:layout[key].x,y:layout[key].y};canvas.setPointerCapture(e.pointerId);sync();break}}};
