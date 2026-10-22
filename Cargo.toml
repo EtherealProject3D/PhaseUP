@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 macroquad = "0.4.16"
+serde_json = "1"
 
 # Android sideload build; bundled artwork works offline.
 [package.metadata.android]
