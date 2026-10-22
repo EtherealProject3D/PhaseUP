@@ -23,7 +23,7 @@ pub(super) fn save()->Result<(),String>{
         root["elements"][name]=serde_json::json!({"x":r.x,"y":r.y,"width":r.w,"height":r.h});
     });
     std::fs::create_dir_all("assets/layouts").map_err(|e|e.to_string())?;
-    std::fs::write(path,serde_json::to_string_pretty(&root).map_err(|e|e.to_string())?+"\\n").map_err(|e|e.to_string())
+    std::fs::write(path,serde_json::to_string_pretty(&root).map_err(|e|e.to_string())?+"\n").map_err(|e|e.to_string())
 }
 
 pub(super) fn reload(){
