@@ -13,7 +13,7 @@ textarea{width:100%;box-sizing:border-box;height:175px;font:12px monospace}
 small{color:#9ab4c7} .selected{color:#ffe280}
 </style>
 <main><h2>PhaseUP · Full Board Layout Workshop</h2>
-<p>Edit the full 1920×1200 board. Drag any element, resize using the numeric fields, scroll to zoom, and Shift+drag empty space to pan. This is a visual mockup, not a live game connection; fonts and some other UI elements remain approximations.</p>
+<p>Edit the full 1920×1200 board. Drag elements; Ctrl+click to select multiple and drag or nudge them together. Scroll to zoom, Shift+drag to pan. This is a visual mockup, not a live game connection; fonts and some other UI elements remain approximations.</p>
 <div class="zoom-bar"><button id="zoomOut" type="button">−</button><span id="zoomLevel">100%</span><button id="zoomIn" type="button">+</button><button id="zoomReset" type="button">Reset view</button></div>
 <canvas id="board" width="1920" height="1200"></canvas>
 <p><small>Full board uses 1920×1200 logical coordinates. Mouse wheel zooms toward the pointer (25%–500%); arrow keys nudge the selected item; Shift+arrows move 10 px. Layout changes are preview-only until applied to Rust.</small></p>
@@ -21,7 +21,7 @@ small{color:#9ab4c7} .selected{color:#ffe280}
 <aside><h2>Layout controls</h2>
 <label>Requirement layout</label><select id="mode"><option value="double">Double requirement</option><option value="single">Single requirement</option></select>
 <label>Cards per group</label><div class="fields"><input id="count1" type="number" min="0" max="15" value="4"><input id="count2" type="number" min="0" max="15" value="4"></div>
-<label>Selected element</label><select id="item"><option value="art">Artwork</option><option value="label1">Requirement 1</option><option value="label2">Requirement 2</option><option value="cards1">Cards group 1</option><option value="cards2">Cards group 2</option></select>
+<label>Selected element <small id="selectionCount">1 selected</small></label><select id="item"><option value="art">Artwork</option><option value="label1">Requirement 1</option><option value="label2">Requirement 2</option><option value="cards1">Cards group 1</option><option value="cards2">Cards group 2</option></select>
 <div class="fields"><label>X<input id="x" type="number" step="1"></label><label>Y<input id="y" type="number" step="1"></label><label>Width<input id="w" type="number" step="1"></label><label>Height<input id="h" type="number" step="1"></label></div>
 
 <label><input id="laid" type="checkbox" checked> Show laid player cards</label>
@@ -47,7 +47,7 @@ const extraDefaults={
  menuButton:{x:1740,y:12,w:160,h:38}
 };
 const defaults={...extraDefaults,art:{x:544,y:622,w:832,h:166},label1:{x:560,y:650,w:397,h:22},label2:{x:963,y:650,w:397,h:22},cards1:{x:566,y:696,w:55,h:84},cards2:{x:969,y:696,w:55,h:84}};
-let layout=structuredClone(defaults),selected='art',drag=null,mode='double';
+let layout=structuredClone(defaults),selected='art',selection=new Set(['art']),drag=null,mode='double';
 const names={header:'Header / round status',cpu1:'CPU 1 panel',cpu2:'CPU 2 panel',cpu3:'CPU 3 panel',cpuName1:'CPU 1 name / status',cpuName2:'CPU 2 name / status',cpuName3:'CPU 3 name / status',cpuHand1:'CPU 1 hand',cpuHand2:'CPU 2 hand',cpuHand3:'CPU 3 hand',cpuPhase1:'CPU 1 phase area',cpuPhase2:'CPU 2 phase area',cpuPhase3:'CPU 3 phase area',drawPile:'Draw pile',discardPile:'Discard pile',phaseTitle:'Player phase heading',guidance:'Turn instructions / lay button',stage1:'Staging group 1',stage2:'Staging group 2',handPanel:'Human hand panel',handCards:'Human hand cards',sortButtons:'Sort buttons',menuButton:'Menu button'};
 for(const [key,name] of Object.entries(names)){$('item').add(new Option(name,key))}
 
@@ -108,18 +108,45 @@ function draw(){
 
   }
  }
- const sr=rect(layout[selected]);ctx.strokeStyle='#ffe16b';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.strokeRect(sr.x,sr.y,sr.w,sr.h);ctx.setLineDash([]);ctx.restore();
+ for(const key of selection){const sr=rect(layout[key]);ctx.strokeStyle=key===selected?'#ffe16b':'#6cf5cc';ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.strokeRect(sr.x,sr.y,sr.w,sr.h)}ctx.setLineDash([]);ctx.restore();
 }
-function sync(){const o=layout[selected];$('item').value=selected;for(const k of ['x','y','w','h'])$(k).value=Math.round(o[k]);exportJSON();draw()}
+function sync(){const o=layout[selected];$('selectionCount').textContent=selection.size+' selected';$('item').value=selected;for(const k of ['x','y','w','h'])$(k).value=Math.round(o[k]);exportJSON();draw()}
 function exportJSON(){const data={editor:'PhaseUP full board workshop v2',mode,logical_canvas:[1920,1200],elements:layout,card_counts:[count(1),mode==='single'?0:count(2)]};$('output').value=JSON.stringify(data,null,2)}
-$('item').onchange=()=>{selected=$('item').value;sync()};
-for(const k of ['x','y','w','h'])$(k).oninput=()=>{layout[selected][k]=Number($(k).value);exportJSON();draw()};
+$('item').onchange=()=>{selected=$('item').value;selection=new Set([selected]);sync()};
+for(const k of ['x','y','w','h'])$(k).oninput=()=>{const value=Number($(k).value),delta=value-layout[selected][k];for(const key of selection)layout[key][k]+=delta;exportJSON();draw()};
 for(const id of ['mode','count1','count2','laid'])$(id).oninput=()=>{mode=$('mode').value;exportJSON();draw()};
-$('reset').onclick=()=>{layout=structuredClone(defaults);sync()};
+$('reset').onclick=()=>{layout=structuredClone(defaults);selected='art';selection=new Set([selected]);sync()};
 $('copy').onclick=async()=>{exportJSON();$('output').select();try{await navigator.clipboard.writeText($('output').value);$('copy').textContent='Copied!'}catch(e){document.execCommand('copy');$('copy').textContent='Selected / copied'}};
-canvas.onpointerdown=e=>{const {px,py}=worldPoint(e);if(e.shiftKey){drag={pan:true,px,py,panX,panY};canvas.setPointerCapture(e.pointerId);return;}for(const key of ['cards2','cards1','label2','label1','art',...Object.keys(extraDefaults).reverse()]){if(mode==='single'&&['cards2','label2','stage2'].includes(key))continue;const b=rect(layout[key]);if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){selected=key;drag={px,py,x:layout[key].x,y:layout[key].y};canvas.setPointerCapture(e.pointerId);sync();break}}};
-canvas.onpointermove=e=>{if(!drag)return;if(drag.pan){const p=canvasPoint(e);panX=drag.panX+(p.x-(drag.px*zoom+drag.panX));panY=drag.panY+(p.y-(drag.py*zoom+drag.panY));draw();return;}const {px,py}=worldPoint(e);layout[selected].x=Math.round(drag.x+(px-drag.px)/scale);layout[selected].y=Math.round(drag.y+(py-drag.py)/scale);sync()};
+const hitOrder=['cards2','cards1','label2','label1','art',...Object.keys(extraDefaults).reverse()];
+canvas.onpointerdown=e=>{
+ const {px,py}=worldPoint(e);
+ if(e.shiftKey){drag={pan:true,px,py,panX,panY};canvas.setPointerCapture(e.pointerId);return}
+ const hit=hitOrder.find(key=>{
+  if(mode==='single'&&['cards2','label2','stage2'].includes(key))return false;
+  const b=rect(layout[key]);return px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h
+ });
+ if(e.ctrlKey||e.metaKey){
+  if(hit){if(selection.has(hit)){selection.delete(hit);if(selected===hit)selected=selection.values().next().value||hit}else{selection.add(hit);selected=hit}}
+  if(!selection.size&&hit)selection.add(hit);
+  if(selection.size)selected=selection.has(selected)?selected:selection.values().next().value;
+  sync();return;
+ }
+ if(hit){
+  if(!selection.has(hit))selection=new Set([hit]);
+  selected=hit;
+  drag={px,py,positions:Object.fromEntries([...selection].map(key=>[key,{x:layout[key].x,y:layout[key].y}]))};
+  canvas.setPointerCapture(e.pointerId);sync()
+ }else{selection.clear();drag=null;$('selectionCount').textContent='0 selected';draw()}
+};
+canvas.onpointermove=e=>{
+ if(!drag)return;
+ if(drag.pan){const p=canvasPoint(e);panX=drag.panX+(p.x-(drag.px*zoom+drag.panX));panY=drag.panY+(p.y-(drag.py*zoom+drag.panY));draw();return}
+ const {px,py}=worldPoint(e),dx=Math.round((px-drag.px)/scale),dy=Math.round((py-drag.py)/scale);
+ for(const [key,start] of Object.entries(drag.positions)){layout[key].x=start.x+dx;layout[key].y=start.y+dy}
+ sync()
+};
 canvas.onpointerup=()=>drag=null;
-document.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;e.preventDefault();const d=e.shiftKey?10:1;layout[selected].x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;layout[selected].y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;sync()});
+canvas.onpointercancel=()=>drag=null;
+document.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;e.preventDefault();const d=e.shiftKey?10:1;for(const key of selection){layout[key].x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;layout[key].y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0}sync()});
 sync();
 </script></html>
