@@ -14,6 +14,7 @@ impl Editor {
             Err(e)=>format!("SAVE FAILED: {e}"),
         };
     }
+    pub fn close(&mut self){self.enabled=false;self.drag=None;ZOOM.with(|z|z.set(1.0));}
     pub fn draw(&mut self){
         if is_key_pressed(KeyCode::E) {self.enabled=!self.enabled;self.drag=None;}
         if !self.enabled {ZOOM.with(|z|z.set(1.0));return;}
@@ -65,7 +66,7 @@ impl Editor {
             draw_rectangle(r.x+r.w-16.,r.y+r.h-16.,14.,14.,color);
             menu_label(name,r.x,r.y-5.,17.,color);
         }
-        draw_rectangle(550.,1130.,1050.,56.,Color::new(0.,0.,0.,0.9));
-        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel, 0 reset)",self.status,zoom())),566.,1164.,20.,WHITEISH);
+        draw_rectangle(550.,123.,1050.,56.,Color::new(0.,0.,0.,0.9));
+        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel, 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
     }
 }
