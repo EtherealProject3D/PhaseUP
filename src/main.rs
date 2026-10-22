@@ -38,6 +38,7 @@ use animations::*;
 mod ui;
 use ui::*;
 mod layout;
+mod layout_editor;
 mod theme;
 use theme::*;
 mod help;
@@ -248,7 +249,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         Stage::RoundOver=>("ROUND COMPLETE",MUTED),
         Stage::GameOver=>("GAME COMPLETE",MUTED),
     };
-    if active_theme()!=Theme::Futuristic {draw_rectangle(16.,55.,sw-32.,62.,active_theme().panel());}
+    let banner=layout::rect("turn_banner",layout::Rect{x:16.,y:55.,w:sw-32.,h:62.});
+    if active_theme()!=Theme::Futuristic {draw_rectangle(banner.x,banner.y,banner.w,banner.h,active_theme().panel());}
     else {for i in 0..3 {neon_cpu_panel(16.0+i as f32*632.0,72.0,626.0,376.0,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}}
     for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
@@ -1003,6 +1005,7 @@ async fn main(){
     let mut help_scroll=0.0f32;
     let mut resolution_open=false;
     let mut workshop_cpu=0usize;
+    let mut layout_editor=layout_editor::Editor::new();
     let mut workshop_board=false;
     let mut workshop_preview=Game::new();
     workshop_preview.stage=Stage::Cpu;
@@ -1235,6 +1238,7 @@ async fn main(){
                 menu_label(&format!("PLAYER PHASE {} | {}",workshop_preview.players[0].phase+1,if workshop_preview.players[0].laid{"LAID"}else{"NOT LAID"}),1530.0,1020.0,18.0,ACCENT);
                 menu_label(&format!("CPU 1: PHASE {} | {} CARDS",workshop_preview.players[1].phase+1,workshop_preview.players[1].hand.len()),850.0,1088.0,20.0,ACCENT);
                 menu_label("UI WORKSHOP - MOCK BOARD (PREVIEW ONLY)",900.0,1155.0,22.0,ACCENT);
+                layout_editor.draw();
                 None
             } else {
                 draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)
