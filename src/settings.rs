@@ -31,7 +31,7 @@ pub(super) fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){
     ((w as f32*scale).round() as i32,(h as f32*scale).round() as i32)
 }
 #[cfg(not(target_os="windows"))]
-fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){(w,h)}
+pub(super) fn fit_window_to_desktop(w:i32,h:i32)->(i32,i32){(w,h)}
 pub(super) fn save_window_size(w:i32,h:i32) {
     let path=window_size_path();
     if let Some(parent)=path.parent() {
