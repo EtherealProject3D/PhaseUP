@@ -121,7 +121,7 @@ pub(super) fn game_mouse()->(f32,f32) {
     let scale=(pw/1920.0).min(ph/sh);
     let (mx,my)=mouse_position();
     let zoom=crate::layout_editor::zoom();
-    (960.0+((mx-pw/2.0)/scale)/zoom,sh/2.0+((my-ph/2.0)/scale)/zoom)
+    (960.0+crate::layout_editor::pan().0+((mx-pw/2.0)/scale)/zoom,sh/2.0+crate::layout_editor::pan().1+((my-ph/2.0)/scale)/zoom)
 }
 pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,crate::theme::themed_color(color));}
 pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
