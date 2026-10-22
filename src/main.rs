@@ -37,6 +37,7 @@ mod animations;
 use animations::*;
 mod ui;
 use ui::*;
+mod layout;
 mod theme;
 use theme::*;
 mod help;
@@ -229,10 +230,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
     set_camera(&camera);
     expire_human_flights(g);
     if active_theme()==Theme::Futuristic { neon_frame(12.0,8.0,sw-24.0,48.0,true); }
-    menu_label("PHASEUP",24.,42.,32.,ACCENT);
+    let logo=layout::rect("game_logo",layout::Rect{x:24.,y:10.,w:230.,h:42.});
+    menu_label("PHASEUP",logo.x,logo.y+logo.h-10.,32.,ACCENT);
     let logo_width=menu_text_width("PHASEUP",32);
     let version="v0.3.2-dev";
-    let version_x=24.0+logo_width+22.0;
+    let version_x=logo.x+logo_width+22.0;
     label(version,version_x,40.,19.,MUTED);
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
@@ -987,6 +989,7 @@ async fn main(){
         .unwrap_or(0x50484153455550);
     macroquad::rand::srand(seed);
     set_theme(read_theme());
+    layout::reload();
     load_menu_fonts().await;
     load_neon_cards().await;
     load_neon_ui().await;
@@ -1038,6 +1041,7 @@ async fn main(){
             }
             previous_fullscreen=fullscreen;
         }
+        if is_key_pressed(KeyCode::F5) {layout::reload();}
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
