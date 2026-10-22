@@ -1046,7 +1046,7 @@ async fn main(){
         }
         if is_key_pressed(KeyCode::F5) {layout::reload();}
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
-        if is_key_pressed(KeyCode::Escape){menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
+        if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
         let (mx,my)=game_mouse();
@@ -1126,7 +1126,7 @@ async fn main(){
             }
             let action=if menu==MenuScreen::UiWorkshop && workshop_board {
                 draw_game(&mut workshop_preview,false,false);
-                if button("BACK TO GALLERY",24.0,1120.0,240.0,54.0,true){workshop_board=false;}
+                if button("BACK TO GALLERY",24.0,1120.0,240.0,54.0,true){workshop_board=false;layout_editor.close();}
                 if button("NEXT ACTIVE CPU",285.0,1120.0,260.0,54.0,true){
                     workshop_preview.turn=workshop_preview.turn%3+1;
                 }
