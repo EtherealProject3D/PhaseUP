@@ -20,16 +20,25 @@ impl Editor {
         if is_key_pressed(KeyCode::E) {self.enabled=!self.enabled;self.drag=None;}
         if !self.enabled {ZOOM.with(|z|z.set(1.0));return;}
         let wheel=mouse_wheel().1;
-        if wheel!=0.0 && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {ZOOM.with(|z|z.set((z.get()+wheel.signum()*0.25).clamp(1.0,3.0)));}
-        if is_key_pressed(KeyCode::Key0) {ZOOM.with(|z|z.set(1.0));}
-        if is_mouse_button_down(MouseButton::Middle) && zoom()>1.0 {
-            let delta=mouse_delta_position();
-            let (dx,dy)=(delta.x,delta.y);
-            let scale=(screen_width()/1920.0).min(screen_height()/game_canvas_height());
+        if wheel!=0.0 && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {
+            // Keep the world-space point under the cursor stationary as zoom changes.
+            let (pw,ph)=(screen_width(),screen_height());
+            let scale=(pw/1920.0).min(ph/game_canvas_height());
+            let (mx,my)=mouse_position();
+            let cursor_x=(mx-pw*0.5)/scale;
+            let cursor_y=(my-ph*0.5)/scale;
+            let old_zoom=zoom();
+            let new_zoom=(old_zoom+wheel.signum()*0.25).clamp(1.0,3.0);
             PAN.with(|p|{
                 let (x,y)=p.get();
-                p.set((x-dx/zoom()/scale,y-dy/zoom()/scale));
+                p.set((x+cursor_x*(1.0/old_zoom-1.0/new_zoom),
+                       y+cursor_y*(1.0/old_zoom-1.0/new_zoom)));
             });
+            ZOOM.with(|z|z.set(new_zoom));
+        }
+        if is_key_pressed(KeyCode::Key0) {
+            ZOOM.with(|z|z.set(1.0));
+            PAN.with(|p|p.set((0.0,0.0)));
         }
         const ITEMS:[(&str,layout::Rect);2]=[
             ("game_logo",layout::Rect{x:24.,y:10.,w:230.,h:42.}),
@@ -77,6 +86,6 @@ impl Editor {
             menu_label(name,r.x,r.y-5.,17.,color);
         }
         draw_rectangle(550.,123.,1050.,56.,Color::new(0.,0.,0.,0.9));
-        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel zoom | Middle-drag pan | 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
+        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel zoom to cursor | 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
     }
 }
