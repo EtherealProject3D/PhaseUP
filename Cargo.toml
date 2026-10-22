@@ -5,3 +5,17 @@ edition = "2021"
 
 [dependencies]
 macroquad = "0.4.16"
+
+# Android sideload build; bundled artwork works offline.
+[package.metadata.android]
+package_name = "com.etherealproject3d.phaseup"
+label = "PhaseUP"
+assets = "assets/"
+android_version = 35
+target_sdk_version = 28
+min_sdk_version = 26
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.activity_attributes]
+"android:exported" = "true"
+"android:screenOrientation" = "landscape"
