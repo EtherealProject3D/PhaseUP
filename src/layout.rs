@@ -10,6 +10,22 @@ pub(super) fn rect(name:&str, default:Rect)->Rect {
     OVERRIDES.with(|m|m.borrow().get(name).copied().unwrap_or(default))
 }
 
+pub(super) fn set(name:&str,value:Rect){OVERRIDES.with(|m|{m.borrow_mut().insert(name.to_owned(),value);});}
+
+#[cfg(not(target_os="android"))]
+pub(super) fn save()->Result<(),String>{
+    let path="assets/layouts/game_16_10.json";
+    let mut root=std::fs::read_to_string(path).ok()
+        .and_then(|s|serde_json::from_str::<serde_json::Value>(&s).ok())
+        .unwrap_or_else(||serde_json::json!({"schema_version":1,"canvas":{"width":1920,"height":1200},"elements":{}}));
+    if !root.get("elements").is_some_and(|v|v.is_object()) {root["elements"]=serde_json::json!({});}
+    OVERRIDES.with(|m|for (name,r) in m.borrow().iter(){
+        root["elements"][name]=serde_json::json!({"x":r.x,"y":r.y,"width":r.w,"height":r.h});
+    });
+    std::fs::create_dir_all("assets/layouts").map_err(|e|e.to_string())?;
+    std::fs::write(path,serde_json::to_string_pretty(&root).map_err(|e|e.to_string())?+"\\n").map_err(|e|e.to_string())
+}
+
 pub(super) fn reload(){
     let mut values=HashMap::new();
     #[cfg(not(target_os="android"))]
