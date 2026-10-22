@@ -1,3 +1,5 @@
+// Android assets are packaged at the APK asset root; desktop assets live under assets/.
+fn asset_prefix()->&'static str {if cfg!(target_os="android"){""}else{"assets/"}}
 use std::cell::RefCell;
 thread_local! {static MENU_FONTS:RefCell<[Option<Font>;3]>=RefCell::new([None,None,None]);}
 pub(super) async fn load_menu_fonts(){
@@ -25,7 +27,7 @@ use crate::*;
 thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;7]>=RefCell::new([None,None,None,None,None,None,None]);}
 pub(super) async fn load_neon_cards(){
     for (i,name) in ["red","blue","yellow","green","back","wild","skip"].iter().enumerate(){
-        let path=format!("assets/neon_forge/cards/{}.png",name);
+        let path=format!("{}neon_forge/cards/{}.png",asset_prefix(),name);
         if let Ok(texture)=load_texture(&path).await {
             texture.set_filter(FilterMode::Linear);
             NEON_CARDS.with(|cards|cards.borrow_mut()[i]=Some(texture));
@@ -54,7 +56,7 @@ pub(super) async fn load_neon_ui(){
         ["cpu_panel_double.png","cpu_panel_double_active.png"],
     ].iter().enumerate(){
         for (state,name) in names.iter().enumerate(){
-            let path=format!("assets/neon_forge/ui/{}",name);
+            let path=format!("{}neon_forge/ui/{}",asset_prefix(),name);
             if let Ok(texture)=load_texture(&path).await {
                 texture.set_filter(FilterMode::Linear);
                 NEON_CPU_FRAMES.with(|slots|slots.borrow_mut()[layout][state]=Some(texture));
@@ -87,7 +89,7 @@ thread_local! {
 }
 pub(super) async fn load_neon_player_phase(){
     for (i,name) in ["player_phase_single.png","player_phase_double.png"].iter().enumerate(){
-        let path=format!("assets/neon_forge/ui/{}",name);
+        let path=format!("{}neon_forge/ui/{}",asset_prefix(),name);
         if let Ok(texture)=load_texture(&path).await {
             texture.set_filter(FilterMode::Linear);
             NEON_PLAYER_PHASE_FRAMES.with(|slots|slots.borrow_mut()[i]=Some(texture));
