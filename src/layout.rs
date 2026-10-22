@@ -40,7 +40,7 @@ pub(super) fn reload(){
     let mut values=HashMap::new();
     #[cfg(not(target_os="android"))]
     if let Ok(data)=std::fs::read_to_string("assets/layouts/game_16_10.json") {
-        if let Ok(json)=parse_layout(&data) {
+        if let Some(json)=parse_layout(&data) {
             if let Some(elements)=json.get("elements").and_then(|v|v.as_object()) {
                 for (name,element) in elements {
                     let read=|field:&str| element.get(field).and_then(|v|v.as_f64()).map(|n|n as f32);
