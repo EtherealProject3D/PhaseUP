@@ -23,7 +23,8 @@ impl Editor {
         if wheel!=0.0 && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {ZOOM.with(|z|z.set((z.get()+wheel.signum()*0.25).clamp(1.0,3.0)));}
         if is_key_pressed(KeyCode::Key0) {ZOOM.with(|z|z.set(1.0));}
         if is_mouse_button_down(MouseButton::Middle) && zoom()>1.0 {
-            let (dx,dy)=mouse_delta_position();
+            let delta=mouse_delta_position();
+            let (dx,dy)=(delta.x,delta.y);
             let scale=(screen_width()/1920.0).min(screen_height()/game_canvas_height());
             PAN.with(|p|{
                 let (x,y)=p.get();
