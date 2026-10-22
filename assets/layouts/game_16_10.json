@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "canvas": {
+    "width": 1920,
+    "height": 1200
+  },
+  "elements": {
+    "game_logo": {
+      "x": 24,
+      "y": 10,
+      "width": 230,
+      "height": 42
+    }
+  }
+}
