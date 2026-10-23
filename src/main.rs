@@ -1272,38 +1272,22 @@ async fn main(){
                 if !wireframe {
                     draw_rectangle(16.0,470.0,440.0,174.0,Color::new(0.01,0.025,0.045,0.94));
                     let target=if align_labels {"LABELS"}else{"CARDS"};
-                    let (ox,oy)=layout::cpu_content_offset(align_labels);
-                    menu_label(&format!("ALIGN CPU {}  X:{:.0} Y:{:.0}",target,ox,oy),28.0,497.0,20.0,WHITEISH);
+                    let (ox,oy)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
+                    menu_label(&format!("ALIGN {} {} X:{:.0} Y:{:.0}",if align_human {"HUMAN"}else{"CPU"},target,ox,oy),28.0,497.0,20.0,WHITEISH);
                     if button("SWITCH LABELS / CARDS",28.0,507.0,405.0,32.0,true) {align_labels=!align_labels;}
                     let mut dx=0.0;let mut dy=0.0;
                     if button("LEFT",28.0,548.0,96.0,36.0,true) {dx-=1.0;}
                     if button("RIGHT",132.0,548.0,96.0,36.0,true) {dx+=1.0;}
                     if button("UP",236.0,548.0,96.0,36.0,true) {dy-=1.0;}
                     if button("DOWN",340.0,548.0,96.0,36.0,true) {dy+=1.0;}
-                    if dx!=0.0 || dy!=0.0 {layout::nudge_cpu_content(align_labels,dx,dy);}
+                    if dx!=0.0 || dy!=0.0 {if align_human {layout::nudge_human_content(align_labels,dx,dy);}else{layout::nudge_cpu_content(align_labels,dx,dy);}}
                     if button("SAVE OFFSETS",28.0,594.0,196.0,36.0,true) {
                         #[cfg(not(target_os="android"))]
                         if let Err(error)=layout::save(){eprintln!("Failed to save CPU offsets: {error}");}
                     }
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
-                        let (x,y)=layout::cpu_content_offset(align_labels);
-                        layout::nudge_cpu_content(align_labels,-x,-y);
-                    }
-                }
-                if !wireframe {
-                    if button(if align_human {"TARGET: HUMAN"}else{"TARGET: CPU"},28.0,654.0,405.0,38.0,true) {
-                        align_human=!align_human;
-                    }
-                    if align_human {
-                        let target=if align_labels {"LABELS"}else{"CARDS"};
-                        let (ox,oy)=layout::human_content_offset(align_labels);
-                        menu_label(&format!("HUMAN {}  X:{:.0} Y:{:.0}",target,ox,oy),28.0,721.0,20.0,WHITEISH);
-                        if button("LEFT",28.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,-1.0,0.0);}
-                        if button("RIGHT",132.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,1.0,0.0);}
-                        if button("UP",236.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,0.0,-1.0);}
-                        if button("DOWN",340.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,0.0,1.0);}
-                    }
-                    if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
+                        let (x,y)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
+                        if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
                         if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
                             workshop_preview.players[0].phase=phase;
                             workshop_preview.players[0].laid=true;
