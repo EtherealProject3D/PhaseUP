@@ -184,14 +184,14 @@ impl eframe::App for Designer{
    let painter=ui.painter_at(viewport);
    painter.rect_filled(viewport,0.,Color32::from_rgb(20,25,34));
    painter.rect_filled(board,0.,Color32::from_rgb(12,23,38));
-   painter.rect_stroke(board,0.,Stroke::new(2.,Color32::from_rgb(80,170,225)),egui::StrokeKind::Outside);
+   painter.rect_stroke(board,0.,Stroke::new(2.,Color32::from_rgb(80,170,225)));
    let center=board.center();
    painter.line_segment([Pos2::new(center.x,board.top()),Pos2::new(center.x,board.bottom())],Stroke::new(1.,Color32::from_rgb(36,90,95)));
    painter.line_segment([Pos2::new(board.left(),center.y),Pos2::new(board.right(),center.y)],Stroke::new(1.,Color32::from_rgb(36,90,95)));
    for (name,b) in &self.elements{
     let r=Rect::from_min_size(board.min+b.rect().min.to_vec2()*self.zoom,b.rect().size()*self.zoom);
     let chosen=self.selected.contains(name);
-    painter.rect_stroke(r,2.,Stroke::new(if chosen{2.5}else{1.},if chosen{Color32::YELLOW}else{Color32::from_rgb(70,145,190)}),egui::StrokeKind::Outside);
+    painter.rect_stroke(r,2.,Stroke::new(if chosen{2.5}else{1.},if chosen{Color32::YELLOW}else{Color32::from_rgb(70,145,190)}));
     if r.width()>55. && r.height()>20.{painter.text(r.min+Vec2::new(4.,3.),egui::Align2::LEFT_TOP,name,egui::FontId::proportional(11.),Color32::LIGHT_GRAY);}
    }
    let pointer=ctx.input(|i|i.pointer.interact_pos());
@@ -235,7 +235,7 @@ impl eframe::App for Designer{
     }
    }
    if let (Some(start),Some(pos))=(self.marquee,pointer){
-    painter.rect_stroke(Rect::from_two_pos(start,pos),0.,Stroke::new(1.,Color32::YELLOW),egui::StrokeKind::Outside);
+    painter.rect_stroke(Rect::from_two_pos(start,pos),0.,Stroke::new(1.,Color32::YELLOW));
    }
    if response.clicked_by(egui::PointerButton::Primary){
     if let Some(pos)=pointer{
