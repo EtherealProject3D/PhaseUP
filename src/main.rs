@@ -867,7 +867,17 @@ fn draw_cpu_bounds(g:&Game) {
         draw_text(&format!("CPU {} PANEL ({:.0},{:.0}) {:.0}x{:.0}",i,panel.x,panel.y,panel.w,panel.h),
             panel.x+8.0,panel.y+16.0,14.0,red);
         let group_count=if p.laid {p.table.len()}else{PHASES[p.phase.min(PHASES.len()-1)].len()};
-        for j in 0..group_count.min(2) {
+        // Draw both logical slots, regardless of whether cards are laid.
+        let left=layout::cpu_group(i,0,2,0.0);
+        let right=layout::cpu_group(i,1,2,0.0);
+        let aligned=(left.y-right.y).abs()<0.01 && (left.w-right.w).abs()<0.01
+            && (left.h-right.h).abs()<0.01;
+        draw_text(&format!("BOXES {} | L {:.0}x{:.0} y{:.0} | R {:.0}x{:.0} y{:.0}",
+            if aligned {"MATCH"}else{"MISMATCH"},
+            left.w,left.h,left.y,right.w,right.h,right.y),
+            panel.x+10.0,panel.y+panel.h-8.0,14.0,
+            if aligned {green}else{red});
+        for j in 0..2 {
             let y=if p.laid {260.0}else{263.0};
             let group=layout::cpu_group(i,j,group_count,y);
             draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
