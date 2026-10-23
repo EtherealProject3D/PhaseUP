@@ -35,6 +35,23 @@ pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
 }
 // Match the logical hit/layout region to the two lower bays of the
 // rendered neon CPU panel, rather than an unrelated fixed 632px grid.
+// Canonical human laid-phase artwork and hit regions. These do not depend
+// on saved editor overrides or whether the phase is already laid.
+pub(super) fn human_phase_panel()->Rect {
+    Rect{x:544.0,y:622.0,w:832.0,h:181.0}
+}
+pub(super) fn human_phase_group(group:usize,count:usize)->Rect {
+    let panel=human_phase_panel();
+    let inset=16.0;
+    let gap=6.0;
+    let width=if count==1 {panel.w-2.0*inset}
+        else {(panel.w-2.0*inset-gap)/2.0};
+    Rect{x:panel.x+inset+group as f32*(width+gap),
+        y:panel.y+46.0,w:width,h:116.0}
+}
+pub(super) fn human_card_area(group:Rect)->Rect {
+    Rect{x:group.x+16.0,y:group.y+6.0,w:group.w-32.0,h:84.0}
+}
 pub(super) fn cpu_panel(player:usize)->Rect {
     let index=player.saturating_sub(1).min(2);
     // Fixed shared geometry: per-player saved overrides must not introduce
