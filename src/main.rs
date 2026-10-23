@@ -352,7 +352,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // Place the requirement at the top of the frame, above laid cards.
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
             let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
-            let (hx,hy)=if i==0 {layout::human_content_offset(true)}else{(0.0,0.0)};
+            let (hx,hy)=if i==0 {layout::human_content_offset(true,p.table.len())}else{(0.0,0.0)};
             menu_label(&desc,desc_x+ox+hx,yy+if player_art {if p.table.len()==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
@@ -1297,7 +1297,7 @@ async fn main(){
                         if let Err(error)=layout::save(){eprintln!("Failed to save CPU offsets: {error}");}
                     }
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
-                        let (x,y)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
+                        let (x,y)=if align_human {layout::human_content_offset(align_labels,workshop_preview.players[0].table.len())}else{layout::cpu_content_offset(align_labels)};
                         if align_human {layout::nudge_human_content(align_labels,workshop_preview.players[0].table.len(),-x,-y);}else{layout::nudge_cpu_content(align_labels,-x,-y);}
                     }
                     if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
