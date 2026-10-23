@@ -363,8 +363,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let step=if shown_len>1 {
                 (available/(shown_len-1) as f32).min(card_w+1.0)
             }else{0.0};
+            // Center the complete overlapping stack, not just its first card.
+            let stack_w=card_w+shown_len.saturating_sub(1) as f32*step;
+            let stack_x=x+(width-stack_w).max(0.0)/2.0;
             if let Some(slot)=preview {
-                let cx=x+inset+slot as f32*step;
+                let cx=stack_x+slot as f32*step;
                 let cy=yy+if i==0 && player_art {6.0}else if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 draw_rectangle_lines(cx,cy,card_w,card_h,2.5,YELLOW);
             }
@@ -373,7 +376,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 if i!=0 && g.cpu_phase_flight.as_ref().is_some_and(|flight|flight.player==i && !flight.visible(j,k,get_time())) {continue;}
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
-                let cx=x+inset+shown as f32*step;
+                let cx=stack_x+shown as f32*step;
                 let cy=yy+if i==0 && player_art {6.0}else if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
                 let card_pos=layout::rect(&format!("laid_card_{}",card.id),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
                 let (cx,cy)=(card_pos.x,card_pos.y);
