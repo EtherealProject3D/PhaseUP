@@ -34,6 +34,36 @@ pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
 pub(super) fn cpu_group_key(player:usize,group:usize)->&'static str{
     match (player,group){(1,0)=>"cpu_1_group_1",(1,1)=>"cpu_1_group_2",(2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",(3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2"}
 }
+pub(super) fn editor_items_for(g:&crate::Game)->Vec<(String,Rect)>{
+    let mut items:Vec<(String,Rect)>=editor_items().into_iter().map(|(n,r)|(n.to_owned(),r)).collect();
+    let sh=crate::game_canvas_height();
+    let groups=crate::PHASES[g.players[0].phase.min(crate::PHASES.len()-1)];
+    let stage_w=if groups.len()==1 {800.0}else{680.0};
+    let stage_left=(1920.0-(groups.len() as f32*stage_w+(groups.len().saturating_sub(1)) as f32*6.0))/2.0;
+    for group in 0..groups.len().min(2){
+        let base=rect(if group==0 {"stage_1"}else{"stage_2"},Rect{x:stage_left+group as f32*(stage_w+6.0),y:sh-347.0,w:stage_w,h:117.0});
+        for (index,id) in g.staged[group].iter().enumerate(){
+            items.push((format!("stage_card_{id}"),Rect{x:base.x+10.0+index as f32*57.0,y:base.y+29.0,w:50.0,h:76.0}));
+        }
+    }
+    for player in 0..4 {
+        let p=&g.players[player];
+        for (group_index,group) in p.table.iter().enumerate(){
+            if group_index>1 {continue;}
+            let default=if player==0 {
+                Rect{x:560.0+group_index as f32*403.0,y:sh-532.0+12.0,w:if p.table.len()==1 {800.0}else{397.0},h:116.0}
+            }else{
+                Rect{x:32.0+(player-1) as f32*632.0+group_index as f32*312.0,y:260.0,w:if p.table.len()==1 {615.0}else{305.0},h:116.0}
+            };
+            let base=rect(if player==0 {"player_phase"}else{cpu_group_key(player,group_index)},default);
+            let step=if group.len()>1 {((base.w-67.0).max(0.0)/(group.len()-1) as f32).min(56.0)}else{0.0};
+            for (index,card) in group.iter().enumerate(){
+                items.push((format!("laid_card_{}",card.id),Rect{x:base.x+if player==0 {16.0}else{if group_index==0 {12.0}else{4.0}}+index as f32*step,y:base.y+if player==0 {6.0}else{36.0},w:55.0,h:84.0}));
+            }
+        }
+    }
+    items
+}
 pub(super) fn default_rect(name:&str)->Option<Rect>{
     editor_items().into_iter().find(|(key,_)|*key==name).map(|(_,r)|r)
 }
