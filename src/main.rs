@@ -318,7 +318,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
                 let label_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
-                menu_label(&desc,label_x,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){18.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                menu_label(&desc,label_x,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){24.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
                 menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -349,7 +349,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
             // Place the requirement at the top of the frame, above laid cards.
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
-            menu_label(&desc,desc_x,yy+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){18.0}else{22.0},17.0,WHITEISH);
+            menu_label(&desc,desc_x,yy+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){24.0}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
