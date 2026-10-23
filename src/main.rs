@@ -394,7 +394,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // the card-safe rectangle (which may have a saved offset).
             // Preserve the user's shared CPU horizontal nudge exactly once.
             let stack_x=if i>0 && has_neon_cpu_panel() {
-                group_rect.x+(group_rect.w-stack_w)/2.0+layout::cpu_content_offset(false).0
+                group_rect.x+(group_rect.w-stack_w)/2.0+layout::cpu_content_offset(false).0+layout::cpu_group_visual_x(j,true)
             } else {
                 card_area.x+(card_area.w-stack_w)/2.0
             };
@@ -946,7 +946,7 @@ fn draw_cpu_bounds(g:&Game) {
                     let available=(safe.w-card_w).max(0.0);
                     let step=if count>1 {(available/(count-1) as f32).min(card_w+1.0)}else{0.0};
                     let stack_w=card_w+count.saturating_sub(1) as f32*step;
-                    let stack_x=safe.x+(safe.w-stack_w)/2.0;
+                    let stack_x=group.x+(group.w-stack_w)/2.0+layout::cpu_content_offset(false).0+layout::cpu_group_visual_x(j,has_neon_cpu_panel());
                     let cy=safe.y;
                     if count>0 {
                         draw_rectangle_lines(stack_x,cy,stack_w,84.0,2.0,orange);
