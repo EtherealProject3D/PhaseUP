@@ -235,7 +235,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         clear_background(Color::new(0.025,0.035,0.055,1.0));
         draw_cpu_bounds(g);
         draw_text("WIREFRAME MODE - F7 to return to artwork",24.0,48.0,25.0,WHITE);
-        set_default_camera();
         return;
     }
 
@@ -1248,16 +1247,12 @@ async fn main(){
                     workshop_board=false;
                     layout_editor.close();
                 }
-                if wireframe {
-                    // Do not draw editor selection overlays over the isolated geometry.
-                    if button("EXIT WIREFRAME (F7)",1450.0,1120.0,390.0,54.0,true) {
-                        wireframe=false;
-                    }
-                } else {
-                    if button("WIREFRAME (F7)",1450.0,1120.0,390.0,54.0,true) {
-                        wireframe=true;
-                    }
-                    layout_editor.draw(&workshop_preview);
+                // Editor first; toolbar last so it cannot obscure the controls.
+                if !wireframe {layout_editor.draw(&workshop_preview);}
+                draw_rectangle(1400.0,12.0,490.0,74.0,Color::new(0.02,0.04,0.07,0.96));
+                let caption=if wireframe {"EXIT WIREFRAME (F7)"}else{"SHOW WIREFRAME (F7)"};
+                if button(caption,1420.0,22.0,450.0,52.0,true) {
+                    wireframe=!wireframe;
                 }
                 None
             } else {
