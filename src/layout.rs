@@ -99,6 +99,11 @@ pub(super) fn nudge_cpu_content(label:bool,dx:f32,dy:f32) {
     r.y=(r.y+dy).clamp(-40.0,40.0);
     set(key,r);
 }
+// Optical correction for the asymmetric neon frame: the outer rails are
+// heavier than the shared center rail. Keep logical boxes untouched.
+pub(super) fn cpu_group_visual_x(group:usize,neon:bool)->f32 {
+    if !neon {0.0} else if group==0 {4.0} else {-4.0}
+}
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
     let inset=if neon {12.0}else{16.0};
     Rect {
