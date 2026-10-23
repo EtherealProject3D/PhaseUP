@@ -286,7 +286,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool){
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let base_x=x+j as f32*if i==0 {403.0}else{312.0};
-                let group_rect=layout::rect(if i==0 {"player_phase"}else{layout::cpu_group_key(i,j)},layout::Rect{x:base_x,y,w:width,h:116.});
+                let group_rect=if i==0 {layout::rect("player_phase",layout::Rect{x:base_x,y,w:width,h:116.})}else{layout::cpu_group(i,j,group_count,y)};
                 let gx=group_rect.x;
                 let y=group_rect.y;
                 let width=group_rect.w;
@@ -316,7 +316,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool){
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
             let base_x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
-            let group_rect=layout::rect(if i==0 {"player_phase"}else{layout::cpu_group_key(i,j)},layout::Rect{x:base_x,y:yy,w:width,h:116.});
+            let group_rect=if i==0 {layout::rect("player_phase",layout::Rect{x:base_x,y:yy,w:width,h:116.})}else{layout::cpu_group(i,j,p.table.len(),yy)};
             let x=group_rect.x;
             let yy=group_rect.y;
             let width=group_rect.w;
@@ -862,17 +862,14 @@ fn draw_cpu_bounds(g:&Game) {
     let cyan=Color::new(0.3,0.85,1.0,1.0);
     for i in 1..4 {
         let p=&g.players[i];
-        let panel=layout::rect(match i {1=>"cpu_1_panel",2=>"cpu_2_panel",_=>"cpu_3_panel"},
-            layout::Rect{x:8.0+(i-1) as f32*636.0,y:72.0,w:632.0,h:376.0});
+        let panel=layout::cpu_panel(i);
         draw_rectangle_lines(panel.x,panel.y,panel.w,panel.h,2.5,red);
         draw_text(&format!("CPU {} PANEL ({:.0},{:.0}) {:.0}x{:.0}",i,panel.x,panel.y,panel.w,panel.h),
             panel.x+8.0,panel.y+16.0,14.0,red);
         let group_count=if p.laid {p.table.len()}else{PHASES[p.phase.min(PHASES.len()-1)].len()};
         for j in 0..group_count.min(2) {
-            let x=32.0+(i-1) as f32*632.0+j as f32*312.0;
-            let y=if p.laid {241.0+10.0+9.0}else{241.0+22.0};
-            let width=if group_count==1 {((1920.0-50.0)/3.0-8.0_f32).max(95.0)}else{305.0};
-            let group=layout::rect(layout::cpu_group_key(i,j),layout::Rect{x,y,w:width,h:116.0});
+            let y=if p.laid {260.0}else{263.0};
+            let group=layout::cpu_group(i,j,group_count,y);
             draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
             draw_text(&format!("GROUP {} ({:.0},{:.0}) {:.0}x{:.0}",j+1,group.x,group.y,group.w,group.h),
                 group.x+4.0,group.y+13.0,13.0,red);
