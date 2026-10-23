@@ -357,7 +357,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             // the horizontal stride rather than shrinking the cards. The final
             // card always fits inside the group frame.
             let inset=if i==0 && player_art {16.0}
-                else if i>0 && has_neon_cpu_panel(){if j==0 {12.0}else{4.0}}
+                else if i>0 && has_neon_cpu_panel(){if j==0 {6.0}else{2.0}}
                 else {6.0};
             let available=(width-inset-16.0-card_w).max(0.0);
             let step=if shown_len>1 {
