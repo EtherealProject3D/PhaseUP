@@ -40,13 +40,13 @@ pub(super) fn cpu_panel(player:usize)->Rect {
     rect(match index {0=>"cpu_1_panel",1=>"cpu_2_panel",_=>"cpu_3_panel"},
         Rect{x:8.0+index as f32*636.0,y:72.0,w:632.0,h:376.0})
 }
-pub(super) fn cpu_group(player:usize,group:usize,count:usize,y:f32)->Rect {
+pub(super) fn cpu_group(player:usize,group:usize,count:usize,_y:f32)->Rect {
     let panel=cpu_panel(player);
-    // The two lower bays in the neon artwork begin about 8 logical
-    // pixels inside the outer frame, not 16. Match their visible extents
-    // with symmetric insets and a narrow center seam.
+    // One common geometry for both bays, independent of card count or
+    // whether the CPU has already laid its phase.
     let inner_x=panel.x+8.0;
     let inner_w=panel.w-16.0;
+    let y=panel.y+191.0;
     let default=if count==1 {
         Rect{x:inner_x,y,w:inner_w,h:116.0}
     }else{
@@ -55,6 +55,10 @@ pub(super) fn cpu_group(player:usize,group:usize,count:usize,y:f32)->Rect {
         Rect{x:inner_x+group as f32*(w+gap),y,w,h:116.0}
     };
     rect(cpu_group_key(player,group),default)
+}
+pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
+    let margin=if neon {24.0}else{16.0};
+    Rect{x:group.x+margin,y:group.y+36.0,w:(group.w-2.0*margin).max(0.0),h:84.0}
 }
 pub(super) fn cpu_group_key(player:usize,group:usize)->&'static str{
     match (player,group){(1,0)=>"cpu_1_group_1",(1,1)=>"cpu_1_group_2",(2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",(3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2"}
