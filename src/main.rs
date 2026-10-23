@@ -319,7 +319,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let label_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
                 let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
-                let (hx,hy)=if i==0 {layout::human_content_offset(true)}else{(0.0,0.0)};
+                let (hx,hy)=if i==0 {layout::human_content_offset(true,group_count)}else{(0.0,0.0)};
                 menu_label(&desc,label_x+ox+hx,y+if player_art {if group_count==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
@@ -383,7 +383,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // The neon panel has a thick decorative frame and the card artwork
             // visually extends beyond its nominal 55px hitbox. Reserve equal
             // safe margins on both sides before distributing the stack.
-            let card_area=if i>0 {layout::cpu_card_area(group_rect,has_neon_cpu_panel())}else{layout::human_card_area(group_rect)};
+            let card_area=if i>0 {layout::cpu_card_area(group_rect,has_neon_cpu_panel())}else{layout::human_card_area(group_rect,p.table.len())};
             let usable_w=card_area.w.max(card_w);
             let available=(usable_w-card_w).max(0.0);
             let step=if shown_len>1 {
@@ -890,7 +890,7 @@ fn draw_cpu_bounds(g:&Game) {
         else {PHASES[g.players[0].phase.min(PHASES.len()-1)].len()};
     for j in 0..human_count.min(2) {
         let group=layout::human_phase_group(j,human_count);
-        let safe=layout::human_card_area(group);
+        let safe=layout::human_card_area(group,human_count);
         draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
         draw_rectangle_lines(safe.x,safe.y,safe.w,safe.h,1.5,green);
         draw_text(&format!("HUMAN {} {:.0}x{:.0}",j+1,group.w,group.h),
@@ -1283,22 +1283,22 @@ async fn main(){
                 if !wireframe {
                     draw_rectangle(16.0,470.0,440.0,174.0,Color::new(0.01,0.025,0.045,0.94));
                     let target=if align_labels {"LABELS"}else{"CARDS"};
-                    let (ox,oy)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
-                    menu_label(&format!("ALIGN {} {} X:{:.0} Y:{:.0}",if align_human {"HUMAN"}else{"CPU"},target,ox,oy),28.0,497.0,20.0,WHITEISH);
+                    let (ox,oy)=if align_human {layout::human_content_offset(align_labels,workshop_preview.players[0].table.len())}else{layout::cpu_content_offset(align_labels)};
+                    menu_label(&format!("ALIGN {} {} X:{:.0} Y:{:.0}",if align_human {if workshop_preview.players[0].table.len()==1 {"HUMAN 1"}else{"HUMAN 2"}}else{"CPU"},target,ox,oy),28.0,497.0,20.0,WHITEISH);
                     if button("SWITCH LABELS / CARDS",28.0,507.0,405.0,32.0,true) {align_labels=!align_labels;}
                     let mut dx=0.0;let mut dy=0.0;
                     if button("LEFT",28.0,548.0,96.0,36.0,true) {dx-=1.0;}
                     if button("RIGHT",132.0,548.0,96.0,36.0,true) {dx+=1.0;}
                     if button("UP",236.0,548.0,96.0,36.0,true) {dy-=1.0;}
                     if button("DOWN",340.0,548.0,96.0,36.0,true) {dy+=1.0;}
-                    if dx!=0.0 || dy!=0.0 {if align_human {layout::nudge_human_content(align_labels,dx,dy);}else{layout::nudge_cpu_content(align_labels,dx,dy);}}
+                    if dx!=0.0 || dy!=0.0 {if align_human {layout::nudge_human_content(align_labels,workshop_preview.players[0].table.len(),dx,dy);}else{layout::nudge_cpu_content(align_labels,dx,dy);}}
                     if button("SAVE OFFSETS",28.0,594.0,196.0,36.0,true) {
                         #[cfg(not(target_os="android"))]
                         if let Err(error)=layout::save(){eprintln!("Failed to save CPU offsets: {error}");}
                     }
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
                         let (x,y)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
-                        if align_human {layout::nudge_human_content(align_labels,-x,-y);}else{layout::nudge_cpu_content(align_labels,-x,-y);}
+                        if align_human {layout::nudge_human_content(align_labels,workshop_preview.players[0].table.len(),-x,-y);}else{layout::nudge_cpu_content(align_labels,-x,-y);}
                     }
                     if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
                         if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
