@@ -59,7 +59,7 @@ pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
     let inset=if neon {24.0}else{16.0};
     Rect {
         x:group.x+inset,
-        y:group.y+24.0,
+        y:group.y+30.0,
         w:group.w-2.0*inset,
         h:84.0,
     }
