@@ -58,7 +58,7 @@ pub(super) fn cpu_group(player:usize,group:usize,count:usize,_y:f32)->Rect {
 }
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
     let margin=if neon {24.0}else{16.0};
-    Rect{x:group.x+margin,y:group.y+36.0,w:(group.w-2.0*margin).max(0.0),h:84.0}
+    Rect{x:group.x+margin,y:group.y+46.0,w:(group.w-2.0*margin).max(0.0),h:84.0}
 }
 pub(super) fn cpu_group_key(player:usize,group:usize)->&'static str{
     match (player,group){(1,0)=>"cpu_1_group_1",(1,1)=>"cpu_1_group_2",(2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",(3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2"}
