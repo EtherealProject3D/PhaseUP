@@ -5,9 +5,9 @@ pub(super) fn zoom()->f32{ZOOM.with(|z|z.get())}
 pub(super) fn pan()->(f32,f32){PAN.with(|p|p.get())}
 
 
-pub(super) struct Editor {pub enabled:bool, selected:usize, drag:Option<(bool,f32,f32,layout::Rect)>, status:String}
+pub(super) struct Editor {pub enabled:bool, selected:usize, drag:Option<(bool,f32,f32,layout::Rect)>, status:String, undo:Vec<(&'static str,layout::Rect)>}
 impl Editor {
-    pub fn new()->Self {Self{enabled:false,selected:0,drag:None,status:"E: edit layout | Tab: select | Ctrl+S: save".into()}}
+    pub fn new()->Self {Self{enabled:false,selected:0,drag:None,status:"E: edit layout | Tab: select | Ctrl+S: save".into(),undo:Vec::new()}}
     #[cfg(not(target_os="android"))]
     fn save_layout(&mut self){
         self.status=match layout::save(){
@@ -50,6 +50,8 @@ impl Editor {
                 if mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h {
                     self.selected=i;
                     let resize=mx>r.x+r.w-20. && my>r.y+r.h-20.;
+                    self.undo.push((name,r));
+                    if self.undo.len()>100 {self.undo.remove(0);}
                     self.drag=Some((resize,mx,my,r));break;
                 }
             }
@@ -70,6 +72,15 @@ impl Editor {
         #[cfg(not(target_os="android"))]
         if is_key_pressed(KeyCode::S) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {
             self.save_layout();
+        }
+        let undo_key=is_key_pressed(KeyCode::Z) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
+        if undo_key || button("UNDO",1330.,1127.,270.,54.,true) {
+            if let Some((name,previous))=self.undo.pop(){
+                layout::set(name,previous);
+                self.status=format!("UNDID {name}");
+                #[cfg(not(target_os="android"))]
+                self.save_layout();
+            }
         }
         if button("SAVE LAYOUT",1620.,1127.,270.,54.,true) {
             #[cfg(not(target_os="android"))]
