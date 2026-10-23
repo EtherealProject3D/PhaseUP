@@ -40,16 +40,13 @@ impl Editor {
             ZOOM.with(|z|z.set(1.0));
             PAN.with(|p|p.set((0.0,0.0)));
         }
-        const ITEMS:[(&str,layout::Rect);2]=[
-            ("game_logo",layout::Rect{x:24.,y:10.,w:230.,h:42.}),
-            ("turn_banner",layout::Rect{x:16.,y:55.,w:1888.,h:62.}),
-        ];
-        if is_key_pressed(KeyCode::Tab){self.selected=(self.selected+1)%ITEMS.len();}
+        let items=crate::layout::editor_items();
+        if is_key_pressed(KeyCode::Tab){self.selected=(self.selected+1)%items.len();}
         let (mx,my)=game_mouse();
         if is_mouse_button_pressed(MouseButton::Left){
             self.drag=None;
-            for i in (0..ITEMS.len()).rev(){
-                let (name,default)=ITEMS[i];let r=layout::rect(name,default);
+            for i in (0..items.len()).rev(){
+                let (name,default)=items[i];let r=layout::rect(name,default);
                 if mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h {
                     self.selected=i;
                     let resize=mx>r.x+r.w-20. && my>r.y+r.h-20.;
@@ -68,7 +65,7 @@ impl Editor {
             if resize {r.w=(r.w+dx).max(40.);r.h=(r.h+dy).max(24.);}
             else {r.x+=dx;r.y+=dy;}
             r.x=r.x.round();r.y=r.y.round();r.w=r.w.round();r.h=r.h.round();
-            layout::set(ITEMS[self.selected].0,r);
+            layout::set(items[self.selected].0,r);
         }
         #[cfg(not(target_os="android"))]
         if is_key_pressed(KeyCode::S) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {
@@ -78,7 +75,7 @@ impl Editor {
             #[cfg(not(target_os="android"))]
             self.save_layout();
         }
-        for (i,(name,default)) in ITEMS.iter().enumerate(){
+        for (i,(name,default)) in items.iter().enumerate(){
             let r=layout::rect(name,*default);
             let color=if i==self.selected {YELLOW}else{ACCENT};
             draw_rectangle_lines(r.x,r.y,r.w,r.h,3.,color);
@@ -86,6 +83,6 @@ impl Editor {
             menu_label(name,r.x,r.y-5.,17.,color);
         }
         draw_rectangle(550.,123.,1050.,56.,Color::new(0.,0.,0.,0.9));
-        menu_label(&format!("EDIT MODE | {} | {}",ITEMS[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel zoom to cursor | 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
+        menu_label(&format!("EDIT MODE | {} | {}",items[self.selected].0,format!("{} | zoom {:.2}x (Ctrl+wheel zoom to cursor | 0 reset)",self.status,zoom())),566.,157.,20.,WHITEISH);
     }
 }
