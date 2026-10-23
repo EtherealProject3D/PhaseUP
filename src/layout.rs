@@ -31,6 +31,9 @@ pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
     }
     items
 }
+pub(super) fn cpu_group_key(player:usize,group:usize)->&'static str{
+    match (player,group){(1,0)=>"cpu_1_group_1",(1,1)=>"cpu_1_group_2",(2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",(3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2"}
+}
 pub(super) fn default_rect(name:&str)->Option<Rect>{
     editor_items().into_iter().find(|(key,_)|*key==name).map(|(_,r)|r)
 }
