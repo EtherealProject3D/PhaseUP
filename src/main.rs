@@ -285,7 +285,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x-16.0,y-46.0,832.0,181.0,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-                let gx=x+j as f32*if i==0 {403.0}else{312.0};
+                let base_x=x+j as f32*if i==0 {403.0}else{312.0};
+                let group_rect=layout::rect(if i==0 {"player_phase"}else{layout::cpu_group_key(i,j)},layout::Rect{x:base_x,y,w:width,h:116.});
+                let gx=group_rect.x;
+                let y=group_rect.y;
+                let width=group_rect.w;
                 if !player_art && !(active_theme()==Theme::Futuristic && i>0 && has_neon_cpu_panel()) {
                     draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
                     draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
@@ -311,7 +315,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-            let x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
+            let base_x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
+            let group_rect=layout::rect(if i==0 {"player_phase"}else{layout::cpu_group_key(i,j)},layout::Rect{x:base_x,y:yy,w:width,h:116.});
+            let x=group_rect.x;
+            let yy=group_rect.y;
+            let width=group_rect.w;
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             if !player_art && !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
