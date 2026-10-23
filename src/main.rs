@@ -299,11 +299,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
-            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x-16.0,y-46.0,832.0,181.0,group_count==1);
+            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel().x,layout::human_phase_panel().y,layout::human_phase_panel().w,layout::human_phase_panel().h,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let base_x=x+j as f32*if i==0 {403.0}else{312.0};
-                let group_rect=if i==0 {layout::rect("player_phase",layout::Rect{x:base_x,y,w:width,h:116.})}else{layout::cpu_group(i,j,group_count,y)};
+                let group_rect=if i==0 {layout::human_phase_group(j,group_count)}else{layout::cpu_group(i,j,group_count,y)};
                 let gx=group_rect.x;
                 let y=group_rect.y;
                 let width=group_rect.w;
@@ -329,12 +329,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
-        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(x-16.0,y-34.0,832.0,181.0,p.table.len()==1);
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel().x,layout::human_phase_panel().y,layout::human_phase_panel().w,layout::human_phase_panel().h,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
             let base_x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
-            let group_rect=if i==0 {layout::rect("player_phase",layout::Rect{x:base_x,y:yy,w:width,h:116.})}else{layout::cpu_group(i,j,p.table.len(),yy)};
+            let group_rect=if i==0 {layout::human_phase_group(j,p.table.len())}else{layout::cpu_group(i,j,p.table.len(),yy)};
             let x=group_rect.x;
             let yy=group_rect.y;
             let width=group_rect.w;
@@ -381,7 +381,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // The neon panel has a thick decorative frame and the card artwork
             // visually extends beyond its nominal 55px hitbox. Reserve equal
             // safe margins on both sides before distributing the stack.
-            let card_area=if i>0 {layout::cpu_card_area(group_rect,has_neon_cpu_panel())}else{layout::Rect{x:x+16.0,y:yy+6.0,w:(width-32.0).max(card_w),h:card_h}};
+            let card_area=if i>0 {layout::cpu_card_area(group_rect,has_neon_cpu_panel())}else{layout::human_card_area(group_rect)};
             let usable_w=card_area.w.max(card_w);
             let available=(usable_w-card_w).max(0.0);
             let step=if shown_len>1 {
@@ -879,6 +879,21 @@ fn draw_cpu_bounds(g:&Game) {
     let orange=Color::new(1.0,0.68,0.12,1.0);
     let green=Color::new(0.1,1.0,0.5,1.0);
     let cyan=Color::new(0.3,0.85,1.0,1.0);
+    // Human laid-phase diagnostics: same fixed geometry for laid/unlaid states.
+    let human=layout::human_phase_panel();
+    draw_rectangle_lines(human.x,human.y,human.w,human.h,2.5,red);
+    draw_text(&format!("HUMAN PANEL ({:.0},{:.0}) {:.0}x{:.0}",human.x,human.y,human.w,human.h),
+        human.x+8.0,human.y+16.0,14.0,red);
+    let human_count=if g.players[0].laid {g.players[0].table.len()}
+        else {PHASES[g.players[0].phase.min(PHASES.len()-1)].len()};
+    for j in 0..human_count.min(2) {
+        let group=layout::human_phase_group(j,human_count);
+        let safe=layout::human_card_area(group);
+        draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
+        draw_rectangle_lines(safe.x,safe.y,safe.w,safe.h,1.5,green);
+        draw_text(&format!("HUMAN {} {:.0}x{:.0}",j+1,group.w,group.h),
+            group.x+4.0,group.y+13.0,13.0,red);
+    }
     for i in 1..4 {
         let p=&g.players[i];
         let panel=layout::cpu_panel(i);
