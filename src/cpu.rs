@@ -62,6 +62,7 @@ impl Game {
                             }
                             self.players[i].table=groups;self.players[i].laid=true;
                             self.log_move(format!("{} laid phase {}",self.cpu_name(i),self.players[i].phase+1));
+                            if self.players[i].hand.is_empty(){self.end_round(i);return;}
                     }
                 }
                 self.cpu_step=2;
@@ -96,6 +97,7 @@ impl Game {
                         order_run(&mut self.players[target].table[group]);
                     }
                     self.log_move(if target==i {format!("{} hit with {} {}",self.cpu_name(i),card_article(card.kind),card_text(card.kind))}else{format!("{} hit {} with {} {}",self.cpu_name(i),self.cpu_name(target),card_article(card.kind),card_text(card.kind))});
+                    if self.players[i].hand.is_empty(){self.end_round(i);return;}
                 } else {self.cpu_step=3;}
             }
             _ => {

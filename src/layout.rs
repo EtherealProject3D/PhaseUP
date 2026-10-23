@@ -1,4 +1,4 @@
-// Developer layout overrides. Desktop reads an editable JSON file; Android uses defaults.
+// Desktop reads editable layout overrides; Android embeds the saved build layout.
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -10,7 +10,10 @@ thread_local! { static OVERRIDES: RefCell<HashMap<String,Rect>> = RefCell::new(H
 pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
     let mut items=vec![
         ("game_logo",Rect{x:24.,y:10.,w:230.,h:42.}),
-        ("turn_banner",Rect{x:16.,y:55.,w:1888.,h:62.}),
+        ("game_version",Rect{x:270.,y:21.,w:140.,h:25.}),
+        ("round_turn_counter",Rect{x:1400.,y:16.,w:288.,h:28.}),
+        ("menu_button",Rect{x:1710.,y:8.,w:100.,h:40.}),
+        ("upper_banner",Rect{x:12.,y:8.,w:1896.,h:48.}),
         ("cpu_1_panel",Rect{x:16.,y:72.,w:626.,h:376.}),
         ("cpu_2_panel",Rect{x:648.,y:72.,w:626.,h:376.}),
         ("cpu_3_panel",Rect{x:1280.,y:72.,w:626.,h:376.}),
@@ -184,7 +187,6 @@ pub(super) fn clear_all()->Result<(),String>{
 }
 
 // Accept legacy files that ended in a literal backslash-n due to an older save bug.
-#[cfg(not(target_os="android"))]
 fn parse_layout(data:&str)->Option<serde_json::Value>{
     serde_json::from_str(data).ok().or_else(||{
         let trimmed=data.trim_end();
@@ -196,7 +198,10 @@ fn parse_layout(data:&str)->Option<serde_json::Value>{
 pub(super) fn reload(){
     let mut values=HashMap::new();
     #[cfg(not(target_os="android"))]
-    if let Ok(data)=std::fs::read_to_string("assets/layouts/game_16_10.json") {
+    let data=std::fs::read_to_string("assets/layouts/game_16_10.json").ok();
+    #[cfg(target_os="android")]
+    let data=Some(include_str!("../assets/layouts/game_16_10.json").to_owned());
+    if let Some(data)=data {
         if let Some(json)=parse_layout(&data) {
             if let Some(elements)=json.get("elements").and_then(|v|v.as_object()) {
                 for (name,element) in elements {
@@ -210,5 +215,44 @@ pub(super) fn reload(){
             }
         }
     }
+    if !values.contains_key("draw_count_offset") {
+        if let Some(offset)=values.get("draw_text_offset").copied() {
+            values.insert("draw_count_offset".to_owned(),offset);
+        }
+    }
     OVERRIDES.with(|m|*m.borrow_mut()=values);
+}
+
+pub(super) fn pile_offset(discard:bool,label:bool)->(f32,f32) {
+    let key=match (discard,label) {(false,false)=>"draw_pile_offset",(false,true)=>"draw_text_offset",(true,false)=>"discard_pile_offset",(true,true)=>"discard_text_offset"};
+    let r=rect(key,Rect{x:0.,y:0.,w:1.,h:1.});
+    (r.x,r.y)
+}
+pub(super) fn nudge_pile(discard:bool,label:bool,dx:f32,dy:f32) {
+    let key=match (discard,label) {(false,false)=>"draw_pile_offset",(false,true)=>"draw_text_offset",(true,false)=>"discard_pile_offset",(true,true)=>"discard_text_offset"};
+    let (x,y)=pile_offset(discard,label);
+    set(key,Rect{x:(x+dx).clamp(-80.,80.),y:(y+dy).clamp(-40.,40.),w:1.,h:1.});
+}
+// Shared by rendering, click/drag hitboxes, and card animation endpoints.
+pub(super) fn pile_position(discard:bool)->(f32,f32) {
+    let (dx,dy)=pile_offset(discard,false);
+    let y=if crate::active_theme()==crate::Theme::Futuristic {460.}else{485.};
+    (if discard {1048.+dx}else{760.+dx},y+dy)
+}
+pub(super) fn alignment_offset(target:usize,label:bool,count:usize)->(f32,f32) {
+    match target {0=>cpu_content_offset(label),1=>human_content_offset(label,count),4=>draw_count_offset(),_=>pile_offset(target==3,label)}
+}
+pub(super) fn nudge_alignment(target:usize,label:bool,count:usize,dx:f32,dy:f32) {
+    match target {0=>nudge_cpu_content(label,dx,dy),1=>nudge_human_content(label,count,dx,dy),4=>nudge_draw_count(dx,dy),_=>nudge_pile(target==3,label,dx,dy)}
+}
+
+// Preserve the previously shared text adjustment when loading older layouts.
+// Once loaded, the count has its own offset independent of the draw title.
+pub(super) fn draw_count_offset()->(f32,f32) {
+    let r=rect("draw_count_offset",Rect{x:0.,y:0.,w:1.,h:1.});
+    (r.x,r.y)
+}
+pub(super) fn nudge_draw_count(dx:f32,dy:f32) {
+    let (x,y)=draw_count_offset();
+    set("draw_count_offset",Rect{x:(x+dx).clamp(-80.,80.),y:(y+dy).clamp(-40.,40.),w:1.,h:1.});
 }

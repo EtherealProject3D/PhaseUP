@@ -51,6 +51,16 @@ thread_local! {
 }
 pub(super) async fn load_neon_ui(){
     load_neon_player_phase().await;
+    let path=format!("{}neon_forge/ui/phaseup_logo.png",asset_prefix());
+    if let Ok(texture)=load_texture(&path).await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_LOGO.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
+    let path=format!("{}neon_forge/ui/upper_banner.png",asset_prefix());
+    if let Ok(texture)=load_texture(&path).await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_UPPER_BANNER.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
     for (layout,names) in [
         ["cpu_panel_single.png","cpu_panel_single_active.png"],
         ["cpu_panel_double.png","cpu_panel_double_active.png"],
@@ -86,6 +96,25 @@ pub(super) fn neon_cpu_panel(x:f32,y:f32,w:f32,h:f32,active_alpha:f32,single:boo
 }
 thread_local! {
     static NEON_PLAYER_PHASE_FRAMES:RefCell<[Option<Texture2D>;2]>=RefCell::new([None,None]);
+    static NEON_UPPER_BANNER:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+    static NEON_LOGO:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+}
+pub(super) fn neon_logo(x:f32,y:f32,w:f32,h:f32)->bool {
+    NEON_LOGO.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    })
+}
+pub(super) fn neon_upper_banner(x:f32,y:f32,w:f32,h:f32){
+    let painted=NEON_UPPER_BANNER.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    });
+    if !painted {neon_frame(x,y,w,h,true);}
 }
 pub(super) async fn load_neon_player_phase(){
     for (i,name) in ["player_phase_single.png","player_phase_double.png"].iter().enumerate(){

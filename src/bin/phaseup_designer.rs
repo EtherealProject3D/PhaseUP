@@ -13,7 +13,11 @@ impl Box2 {
 fn defaults()->BTreeMap<String,Box2>{
  let mut m=BTreeMap::new();
  for (n,x,y,w,h) in [
- ("game_logo",24.,10.,230.,42.),("turn_banner",16.,55.,1888.,62.),
+ ("game_logo",24.,10.,230.,42.),
+ ("game_version",270.,21.,140.,25.),
+ ("round_turn_counter",1400.,16.,288.,28.),
+ ("menu_button",1710.,8.,100.,40.),
+ ("upper_banner",12.,8.,1896.,48.),
  ("cpu_1_panel",16.,72.,626.,376.),("cpu_2_panel",648.,72.,626.,376.),
  ("cpu_3_panel",1280.,72.,626.,376.),("player_phase",560.,656.,800.,140.),
  ("stage_1",274.,853.,680.,117.),("stage_2",960.,853.,680.,117.),

@@ -524,3 +524,55 @@ fn long_run_cpu_rejects_weak_or_duplicate_window_override() {
     assert!(!cpu_long_run_discard_improves(&hand,number(2312,5,2),4));
     assert!(!cpu_long_run_discard_improves(&hand,skip(2313),4));
 }
+
+#[test]
+fn laying_last_cards_ends_round_without_discard() {
+    let mut g=Game::new();
+    g.stage=Stage::Play;
+    g.players[0].hand=[set(1000,3,3),set(1010,5,3)].concat();
+    g.selected=g.players[0].hand.iter().map(|c|c.id).collect();
+    let discard=g.discard.len();
+    g.lay();
+    assert!(g.players[0].hand.is_empty());
+    assert_eq!(g.stage,Stage::RoundOver);
+    assert_eq!(g.players[0].phase,1);
+    assert_eq!(g.discard.len(),discard);
+}
+
+#[test]
+fn hitting_last_card_ends_round_without_discard() {
+    let mut g=Game::new();
+    g.stage=Stage::Play;
+    g.players[0].laid=true;
+    g.players[0].table=vec![set(1000,3,3),set(1010,5,3)];
+    g.players[0].hand=vec![number(1020,3,0)];
+    g.selected=vec![1020];
+    g.hit(0,0);
+    assert!(g.players[0].hand.is_empty());
+    assert_eq!(g.stage,Stage::RoundOver);
+    assert_eq!(g.players[0].phase,1);
+}
+
+#[test]
+fn cpu_laying_last_cards_ends_round_immediately() {
+    let mut g=Game::new();
+    g.stage=Stage::Cpu;g.turn=1;g.cpu_step=1;g.cpu_speed=0;
+    g.players[1].hand=[set(1000,3,3),set(1010,5,3)].concat();
+    g.cpu_action();
+    assert!(g.players[1].hand.is_empty());
+    assert_eq!(g.stage,Stage::RoundOver);
+    assert_eq!(g.turn,1);
+}
+
+#[test]
+fn cpu_hitting_last_card_ends_round_immediately() {
+    let mut g=Game::new();
+    g.stage=Stage::Cpu;g.turn=1;g.cpu_step=2;g.cpu_speed=0;
+    g.players[1].laid=true;
+    g.players[1].table=vec![set(1000,3,3),set(1010,5,3)];
+    g.players[1].hand=vec![number(1020,3,0)];
+    g.cpu_action();
+    assert!(g.players[1].hand.is_empty());
+    assert_eq!(g.stage,Stage::RoundOver);
+    assert_eq!(g.turn,1);
+}

@@ -45,14 +45,24 @@ impl Editor {
         let (mx,my)=game_mouse();
         if is_mouse_button_pressed(MouseButton::Left){
             self.drag=None;
-            for i in (0..items.len()).rev(){
+            // Prefer the smallest containing element so foreground controls
+            // remain selectable inside large background panels and banners.
+            let hit=(0..items.len()).rev().filter(|&i|{
+                let (name,default)=&items[i];let r=layout::rect(name,*default);
+                mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h
+            }).min_by(|&a,&b|{
+                let ra=layout::rect(&items[a].0,items[a].1);
+                let rb=layout::rect(&items[b].0,items[b].1);
+                (ra.w*ra.h).total_cmp(&(rb.w*rb.h))
+            });
+            if let Some(i)=hit {
                 let (name,default)=&items[i];let r=layout::rect(name,*default);
                 if mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h {
                     self.selected=i;
                     let resize=mx>r.x+r.w-20. && my>r.y+r.h-20.;
                     self.undo.push((name.clone(),r));
                     if self.undo.len()>100 {self.undo.remove(0);}
-                    self.drag=Some((resize,mx,my,r));break;
+                    self.drag=Some((resize,mx,my,r));
                 }
             }
         }

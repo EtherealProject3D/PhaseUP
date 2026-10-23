@@ -4,6 +4,18 @@
     "width": 1920
   },
   "elements": {
+    "cpu_1_panel": {
+      "height": 376.0,
+      "width": 626.0,
+      "x": 16.0,
+      "y": 72.0
+    },
+    "cpu_3_panel": {
+      "height": 376.0,
+      "width": 626.0,
+      "x": 1280.0,
+      "y": 72.0
+    },
     "cpu_cards_offset": {
       "height": 1.0,
       "width": 1.0,
@@ -15,6 +27,54 @@
       "width": 1.0,
       "x": 0.0,
       "y": -2.0
+    },
+    "discard_pile_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -10.0
+    },
+    "discard_text_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": 10.0
+    },
+    "draw_count_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -1.0
+    },
+    "draw_pile_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -10.0
+    },
+    "draw_text_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": 10.0
+    },
+    "game_logo": {
+      "height": 42.0,
+      "width": 230.0,
+      "x": 848.0,
+      "y": 21.0
+    },
+    "game_version": {
+      "height": 25.0,
+      "width": 140.0,
+      "x": 1130.0,
+      "y": 28.0
+    },
+    "hand_panel": {
+      "height": 217.0,
+      "width": 1896.0,
+      "x": 13.0,
+      "y": 972.0
     },
     "human_double_cards_offset": {
       "height": 1.0,
@@ -33,6 +93,24 @@
       "width": 1.0,
       "x": 0.0,
       "y": -6.0
+    },
+    "menu_button": {
+      "height": 40.0,
+      "width": 100.0,
+      "x": 1755.0,
+      "y": 22.0
+    },
+    "round_turn_counter": {
+      "height": 28.0,
+      "width": 288.0,
+      "x": 1386.0,
+      "y": 27.0
+    },
+    "upper_banner": {
+      "height": 74.0,
+      "width": 1906.0,
+      "x": 6.0,
+      "y": 4.0
     }
   },
   "schema_version": 1
