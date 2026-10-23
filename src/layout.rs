@@ -55,7 +55,7 @@ pub(super) fn human_content_offset(label:bool,count:usize)->(f32,f32) {
     (r.x,r.y)
 }
 pub(super) fn nudge_human_content(label:bool,count:usize,dx:f32,dy:f32) {
-    let key=if label {"human_label_offset"}else{"human_cards_offset"};
+    let key=match (count==1,label) {(true,true)=>"human_single_label_offset",(true,false)=>"human_single_cards_offset",(false,true)=>"human_double_label_offset",(false,false)=>"human_double_cards_offset"};
     let mut r=rect(key,Rect{x:0.0,y:0.0,w:1.0,h:1.0});
     r.x=(r.x+dx).clamp(-80.0,80.0);
     r.y=(r.y+dy).clamp(-40.0,40.0);
