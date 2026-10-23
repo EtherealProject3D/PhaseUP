@@ -1279,7 +1279,9 @@ async fn main(){
                     workshop_board=false;
                     layout_editor.close();
                 }
-                // Live shared CPU content alignment. No geometry or artwork edits.
+                // Draw editor behind the alignment toolbar so its panels cannot hide the controls.
+                if !wireframe {layout_editor.draw(&workshop_preview);}
+                // Live CPU/human alignment controls; only offsets move, never artwork or group bounds.
                 if !wireframe {
                     draw_rectangle(16.0,470.0,440.0,174.0,Color::new(0.01,0.025,0.045,0.94));
                     let target=if align_labels {"LABELS"}else{"CARDS"};
@@ -1299,6 +1301,9 @@ async fn main(){
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
                         let (x,y)=if align_human {layout::human_content_offset(align_labels,workshop_preview.players[0].table.len())}else{layout::cpu_content_offset(align_labels)};
                         if align_human {layout::nudge_human_content(align_labels,workshop_preview.players[0].table.len(),-x,-y);}else{layout::nudge_cpu_content(align_labels,-x,-y);}
+                    }
+                    if button(if align_human {"TARGET: HUMAN"}else{"TARGET: CPU"},28.0,654.0,405.0,42.0,true) {
+                        align_human=!align_human;
                     }
                     if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
                         if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
@@ -1323,8 +1328,6 @@ async fn main(){
                         }
                     }
                 }
-                // Editor first; toolbar last so it cannot obscure the controls.
-                if !wireframe {layout_editor.draw(&workshop_preview);}
                 draw_rectangle(1400.0,12.0,490.0,74.0,Color::new(0.02,0.04,0.07,0.96));
                 let caption=if wireframe {"EXIT WIREFRAME (F7)"}else{"SHOW WIREFRAME (F7)"};
                 if button(caption,1420.0,22.0,450.0,52.0,true) {
