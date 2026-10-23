@@ -1,8 +1,39 @@
 {
-  "schema_version": 1,
   "canvas": {
-    "width": 1920,
-    "height": 1200
+    "height": 1200,
+    "width": 1920
   },
-  "elements": {}
+  "elements": {
+    "cpu_cards_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": 2.0
+    },
+    "cpu_label_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -2.0
+    },
+    "human_double_cards_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -4.0
+    },
+    "human_double_label_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": 1.0
+    },
+    "human_single_label_offset": {
+      "height": 1.0,
+      "width": 1.0,
+      "x": 0.0,
+      "y": -6.0
+    }
+  },
+  "schema_version": 1
 }
