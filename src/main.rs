@@ -319,7 +319,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let label_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
                 let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
-                menu_label(&desc,label_x+ox,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                let (hx,hy)=if i==0 {layout::human_content_offset(true)}else{(0.0,0.0)};
+                menu_label(&desc,label_x+ox+hx,y+if player_art {-7.0+hy}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
                 menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -351,7 +352,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // Place the requirement at the top of the frame, above laid cards.
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
             let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
-            menu_label(&desc,desc_x+ox,yy+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0},17.0,WHITEISH);
+            let (hx,hy)=if i==0 {layout::human_content_offset(true)}else{(0.0,0.0)};
+            menu_label(&desc,desc_x+ox+hx,yy+if player_art {-7.0+hy}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -391,7 +393,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let stack_x=card_area.x+(card_area.w-stack_w)/2.0;
             if let Some(slot)=preview {
                 let cx=stack_x+slot as f32*step;
-                let cy=if i>0 {card_area.y}else{yy+if player_art {6.0}else{26.0}};
+                let cy=card_area.y;
                 draw_rectangle_lines(cx,cy,card_w,card_h,2.5,YELLOW);
             }
             for (k,card) in group.iter().enumerate() {
@@ -400,8 +402,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 if g.cpu_hit_flight.as_ref().is_some_and(|flight|flight.target==i && flight.group==j && flight.card.id==card.id) {continue;}
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=stack_x+shown as f32*step;
-                let cy=if i>0 {card_area.y}else{yy+if player_art {6.0}else{26.0}};
-                let card_pos=if i>0 {layout::Rect{x:cx,y:cy,w:card_w,h:card_h}}else{layout::rect(&format!("laid_card_{}",card.id),layout::Rect{x:cx,y:cy,w:card_w,h:card_h})};
+                let cy=card_area.y;
+                let card_pos=layout::Rect{x:cx,y:cy,w:card_w,h:card_h};
                 let (cx,cy)=(card_pos.x,card_pos.y);
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
@@ -1141,6 +1143,7 @@ async fn main(){
     let mut show_bounds=false;
     let mut wireframe=false;
     let mut align_labels=true;
+    let mut align_human=false;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1285,6 +1288,42 @@ async fn main(){
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
                         let (x,y)=layout::cpu_content_offset(align_labels);
                         layout::nudge_cpu_content(align_labels,-x,-y);
+                    }
+                }
+                if !wireframe {
+                    if button(if align_human {"TARGET: HUMAN"}else{"TARGET: CPU"},28.0,654.0,405.0,38.0,true) {
+                        align_human=!align_human;
+                    }
+                    if align_human {
+                        let target=if align_labels {"LABELS"}else{"CARDS"};
+                        let (ox,oy)=layout::human_content_offset(align_labels);
+                        menu_label(&format!("HUMAN {}  X:{:.0} Y:{:.0}",target,ox,oy),28.0,721.0,20.0,WHITEISH);
+                        if button("LEFT",28.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,-1.0,0.0);}
+                        if button("RIGHT",132.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,1.0,0.0);}
+                        if button("UP",236.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,0.0,-1.0);}
+                        if button("DOWN",340.0,738.0,96.0,36.0,true) {layout::nudge_human_content(align_labels,0.0,1.0);}
+                    }
+                    if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
+                        if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
+                            workshop_preview.players[0].phase=phase;
+                            workshop_preview.players[0].laid=true;
+                            workshop_preview.players[0].table=(0..2).map(|j|vec![
+                                Card{id:9100+j as u32*10,kind:Kind::Number(5,0)},
+                                Card{id:9101+j as u32*10,kind:Kind::Number(5,1)},
+                                Card{id:9102+j as u32*10,kind:Kind::Number(5,2)}
+                            ]).collect();
+                        }
+                    }
+                    if button("HUMAN: 1 GROUP",236.0,790.0,196.0,42.0,true) {
+                        if let Some(phase)=PHASES.iter().position(|groups|groups.len()==1) {
+                            workshop_preview.players[0].phase=phase;
+                            workshop_preview.players[0].laid=true;
+                            workshop_preview.players[0].table=vec![vec![
+                                Card{id:9200,kind:Kind::Number(5,0)},
+                                Card{id:9201,kind:Kind::Number(5,1)},
+                                Card{id:9202,kind:Kind::Number(5,2)}
+                            ]];
+                        }
                     }
                 }
                 // Editor first; toolbar last so it cannot obscure the controls.
