@@ -379,6 +379,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let (cx,cy)=(card_pos.x,card_pos.y);
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
+                    // A laid group can overlap heavily. Repeat the value in the
+                    // exposed upper-left strip without changing the card art.
+                    if step<card_w-2.0 {
+                        let value=card_text(card.kind);
+                        let font_size=if value.len()>1 {15.0}else{18.0};
+                        draw_rectangle(cx+4.0,cy+5.0,24.0,22.0,Color::new(0.01,0.04,0.09,0.88));
+                        draw_text(&value,cx+6.0,cy+22.0,font_size,WHITE);
+                    }
                 } else {
                     let color=color_for(card.kind);
                     draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
