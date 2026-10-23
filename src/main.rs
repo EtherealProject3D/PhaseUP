@@ -1248,7 +1248,17 @@ async fn main(){
                     workshop_board=false;
                     layout_editor.close();
                 }
-                layout_editor.draw(&workshop_preview);
+                if wireframe {
+                    // Do not draw editor selection overlays over the isolated geometry.
+                    if button("EXIT WIREFRAME (F7)",1450.0,1120.0,390.0,54.0,true) {
+                        wireframe=false;
+                    }
+                } else {
+                    if button("WIREFRAME (F7)",1450.0,1120.0,390.0,54.0,true) {
+                        wireframe=true;
+                    }
+                    layout_editor.draw(&workshop_preview);
+                }
                 None
             } else {
                 draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)
