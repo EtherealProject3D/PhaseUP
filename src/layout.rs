@@ -40,26 +40,28 @@ pub(super) fn cpu_panel(player:usize)->Rect {
     rect(match index {0=>"cpu_1_panel",1=>"cpu_2_panel",_=>"cpu_3_panel"},
         Rect{x:8.0+index as f32*636.0,y:72.0,w:632.0,h:376.0})
 }
-pub(super) fn cpu_group(player:usize,group:usize,count:usize,_y:f32)->Rect {
+// Canonical two-slot CPU geometry. Both slots are identical, even when
+// one slot is empty or the phase has a single requirement.
+pub(super) fn cpu_group(player:usize,group:usize,_count:usize,_y:f32)->Rect {
     let panel=cpu_panel(player);
-    // One common geometry for both bays, independent of card count or
-    // whether the CPU has already laid its phase.
-    let inner_x=panel.x+8.0;
-    let inner_w=panel.w-16.0;
-    let y=panel.y+191.0;
-    let default=if count==1 {
-        Rect{x:inner_x,y,w:inner_w,h:116.0}
-    }else{
-        let gap=6.0;
-        let w=(inner_w-gap)/2.0;
-        Rect{x:inner_x+group as f32*(w+gap),y,w,h:116.0}
-    };
-    // Use canonical geometry; old saved group overrides are no longer valid.
-    default
+    let inset=8.0;
+    let gap=6.0;
+    let width=(panel.w-2.0*inset-gap)/2.0;
+    Rect {
+        x:panel.x+inset+group as f32*(width+gap),
+        y:panel.y+191.0,
+        w:width,
+        h:116.0,
+    }
 }
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
-    let margin=if neon {24.0}else{16.0};
-    Rect{x:group.x+margin,y:group.y+46.0,w:(group.w-2.0*margin).max(0.0),h:84.0}
+    let inset=if neon {24.0}else{16.0};
+    Rect {
+        x:group.x+inset,
+        y:group.y+46.0,
+        w:group.w-2.0*inset,
+        h:84.0,
+    }
 }
 pub(super) fn cpu_group_key(player:usize,group:usize)->&'static str{
     match (player,group){(1,0)=>"cpu_1_group_1",(1,1)=>"cpu_1_group_2",(2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",(3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2"}
