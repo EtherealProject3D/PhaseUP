@@ -1186,6 +1186,43 @@ async fn main(){
                 let p=&workshop_preview.players[target];
                 menu_label(&format!("CPU {} | GROUP 1: {} | GROUP 2: {}",target,p.table.first().map_or(0,Vec::len),p.table.get(1).map_or(0,Vec::len)),1300.0,348.0,20.0,WHITEISH);
                 menu_label("Changes appear in FULL BOARD PREVIEW.",1300.0,380.0,18.0,MUTED);
+                // Human staging and laid-phase stress tests. The mock game is isolated
+                // from real gameplay; staged cards are also present in the hand.
+                menu_label("HUMAN CARD TESTING",1300.0,440.0,25.0,ACCENT);
+                for group_index in 0..2 {
+                    let y=480.0+group_index as f32*68.0;
+                    if button(&format!("STAGE {} +",group_index+1),1300.0,y,245.0,54.0,true){
+                        let p=&mut workshop_preview.players[0];
+                        let next=p.hand.iter().chain(p.table.iter().flatten()).map(|c|c.id).max().unwrap_or(60000).max(60000)+1;
+                        if workshop_preview.staged[group_index].len()<24 {
+                            p.hand.push(Card{id:next,kind:Kind::Number((next%12+1) as u8,(next%4) as u8)});
+                            workshop_preview.staged[group_index].push(next);
+                        }
+                    }
+                    if button(&format!("STAGE {} -",group_index+1),1570.0,y,245.0,54.0,true){
+                        if let Some(id)=workshop_preview.staged[group_index].pop(){
+                            workshop_preview.players[0].hand.retain(|c|c.id!=id);
+                        }
+                    }
+                    let y=625.0+group_index as f32*68.0;
+                    if button(&format!("LAID {} +",group_index+1),1300.0,y,245.0,54.0,true){
+                        let p=&mut workshop_preview.players[0];
+                        p.laid=true;
+                        while p.table.len()<=group_index {p.table.push(Vec::new());}
+                        let next=p.hand.iter().chain(p.table.iter().flatten()).map(|c|c.id).max().unwrap_or(70000).max(70000)+1;
+                        if p.table[group_index].len()<40 {
+                            p.table[group_index].push(Card{id:next,kind:Kind::Number((next%12+1) as u8,(next%4) as u8)});
+                        }
+                    }
+                    if button(&format!("LAID {} -",group_index+1),1570.0,y,245.0,54.0,true){
+                        if let Some(group)=workshop_preview.players[0].table.get_mut(group_index){group.pop();}
+                    }
+                }
+                let human=&workshop_preview.players[0];
+                menu_label(&format!("STAGED: {} / {}  |  LAID: {} / {}",
+                    workshop_preview.staged[0].len(),workshop_preview.staged[1].len(),
+                    human.table.first().map_or(0,Vec::len),human.table.get(1).map_or(0,Vec::len)),
+                    1300.0,785.0,19.0,WHITEISH);
                 menu_label("PRESS R TO RELOAD ARTWORK FROM DISK",710.0,900.0,20.0,MUTED);
                 if button("FULL BOARD PREVIEW",710.0,915.0,500.0,55.0,true){workshop_board=true;}
             }
