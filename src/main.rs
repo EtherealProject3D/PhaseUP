@@ -873,17 +873,17 @@ fn draw_cpu_bounds(g:&Game) {
             draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
             draw_text(&format!("GROUP {} ({:.0},{:.0}) {:.0}x{:.0}",j+1,group.x,group.y,group.w,group.h),
                 group.x+4.0,group.y+13.0,13.0,red);
-            let margin=if has_neon_cpu_panel(){24.0}else{16.0};
-            draw_rectangle_lines(group.x+margin,group.y+28.0,(group.w-2.0*margin).max(0.0),88.0,1.5,green);
+            let safe=layout::cpu_card_area(group,has_neon_cpu_panel());
+            draw_rectangle_lines(safe.x,safe.y,safe.w,safe.h,1.5,green);
             if p.laid {
                 if let Some(cards)=p.table.get(j) {
                     let count=cards.len();
                     let card_w=55.0;
-                    let available=(group.w-2.0*margin-card_w).max(0.0);
+                    let available=(safe.w-card_w).max(0.0);
                     let step=if count>1 {(available/(count-1) as f32).min(card_w+1.0)}else{0.0};
                     let stack_w=card_w+count.saturating_sub(1) as f32*step;
-                    let stack_x=group.x+(group.w-stack_w)/2.0;
-                    let cy=group.y+if has_neon_cpu_panel(){36.0}else{26.0};
+                    let stack_x=safe.x+(safe.w-stack_w)/2.0;
+                    let cy=safe.y;
                     if count>0 {
                         draw_rectangle_lines(stack_x,cy,stack_w,84.0,2.0,orange);
                         draw_text(&format!("STACK x={:.0} w={:.0}",stack_x,stack_w),stack_x,cy+98.0,13.0,orange);
