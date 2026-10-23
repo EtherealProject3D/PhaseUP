@@ -26,7 +26,9 @@ pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
                 (2,0)=>"cpu_2_group_1",(2,1)=>"cpu_2_group_2",
                 (3,0)=>"cpu_3_group_1",_=>"cpu_3_group_2",
             };
-            items.push((name,Rect{x:32.+(i-1) as f32*632.+j as f32*312.,y:263.,w:305.,h:116.}));
+            let panel_x=16.0+(i-1) as f32*632.0;
+            let w=(626.0-16.0-6.0)/2.0;
+            items.push((name,Rect{x:panel_x+8.0+j as f32*(w+6.0),y:263.,w,h:116.}));
         }
     }
     items
@@ -40,12 +42,15 @@ pub(super) fn cpu_panel(player:usize)->Rect {
 }
 pub(super) fn cpu_group(player:usize,group:usize,count:usize,y:f32)->Rect {
     let panel=cpu_panel(player);
-    let inner_x=panel.x+16.0;
-    let inner_w=panel.w-32.0;
+    // The two lower bays in the neon artwork begin about 8 logical
+    // pixels inside the outer frame, not 16. Match their visible extents
+    // with symmetric insets and a narrow center seam.
+    let inner_x=panel.x+8.0;
+    let inner_w=panel.w-16.0;
     let default=if count==1 {
         Rect{x:inner_x,y,w:inner_w,h:116.0}
     }else{
-        let gap=8.0;
+        let gap=6.0;
         let w=(inner_w-gap)/2.0;
         Rect{x:inner_x+group as f32*(w+gap),y,w,h:116.0}
     };
