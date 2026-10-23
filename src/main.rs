@@ -318,7 +318,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
                 let label_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
-                menu_label(&desc,label_x,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
+                let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
+                menu_label(&desc,label_x+ox,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
                 menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
@@ -349,7 +350,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
             // Place the requirement at the top of the frame, above laid cards.
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
-            menu_label(&desc,desc_x,yy+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,WHITEISH);
+            let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
+            menu_label(&desc,desc_x+ox,yy+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -1123,6 +1125,7 @@ async fn main(){
     workshop_preview.players[1].table=vec![vec![Card{id:9001,kind:Kind::Number(5,0)},Card{id:9002,kind:Kind::Number(5,1)},Card{id:9003,kind:Kind::Number(5,2)}],vec![Card{id:9004,kind:Kind::Number(8,3)},Card{id:9005,kind:Kind::Number(8,0)},Card{id:9006,kind:Kind::Wild}]];
     let mut show_bounds=false;
     let mut wireframe=false;
+    let mut align_labels=true;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1246,6 +1249,28 @@ async fn main(){
                 if button("BACK TO TOOLS",24.0,1120.0,240.0,54.0,true){
                     workshop_board=false;
                     layout_editor.close();
+                }
+                // Live shared CPU content alignment. No geometry or artwork edits.
+                if !wireframe {
+                    draw_rectangle(16.0,470.0,440.0,174.0,Color::new(0.01,0.025,0.045,0.94));
+                    let target=if align_labels {"LABELS"}else{"CARDS"};
+                    let (ox,oy)=layout::cpu_content_offset(align_labels);
+                    menu_label(&format!("ALIGN CPU {}  X:{:.0} Y:{:.0}",target,ox,oy),28.0,497.0,20.0,WHITEISH);
+                    if button("SWITCH LABELS / CARDS",28.0,507.0,405.0,32.0,true) {align_labels=!align_labels;}
+                    let mut dx=0.0;let mut dy=0.0;
+                    if button("LEFT",28.0,548.0,96.0,36.0,true) {dx-=1.0;}
+                    if button("RIGHT",132.0,548.0,96.0,36.0,true) {dx+=1.0;}
+                    if button("UP",236.0,548.0,96.0,36.0,true) {dy-=1.0;}
+                    if button("DOWN",340.0,548.0,96.0,36.0,true) {dy+=1.0;}
+                    if dx!=0.0 || dy!=0.0 {layout::nudge_cpu_content(align_labels,dx,dy);}
+                    if button("SAVE OFFSETS",28.0,594.0,196.0,36.0,true) {
+                        #[cfg(not(target_os="android"))]
+                        if let Err(error)=layout::save(){eprintln!("Failed to save CPU offsets: {error}");}
+                    }
+                    if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
+                        let (x,y)=layout::cpu_content_offset(align_labels);
+                        layout::nudge_cpu_content(align_labels,-x,-y);
+                    }
                 }
                 // Editor first; toolbar last so it cannot obscure the controls.
                 if !wireframe {layout_editor.draw(&workshop_preview);}
