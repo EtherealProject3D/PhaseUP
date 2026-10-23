@@ -870,7 +870,7 @@ fn draw_cpu_bounds(g:&Game) {
         let group_count=if p.laid {p.table.len()}else{PHASES[p.phase.min(PHASES.len()-1)].len()};
         for j in 0..group_count.min(2) {
             let x=32.0+(i-1) as f32*632.0+j as f32*312.0;
-            let y=if p.laid {250.0+9.0}else{241.0+22.0};
+            let y=if p.laid {241.0+10.0+9.0}else{241.0+22.0};
             let width=if group_count==1 {((1920.0-50.0)/3.0-8.0_f32).max(95.0)}else{305.0};
             let group=layout::rect(layout::cpu_group_key(i,j),layout::Rect{x,y,w:width,h:116.0});
             draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
