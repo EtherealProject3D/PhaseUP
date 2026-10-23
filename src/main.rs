@@ -366,6 +366,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=x+if i==0 && player_art {16.0}else if i>0 && has_neon_cpu_panel(){if j==0 {12.0}else{4.0}}else{6.0}+shown as f32*step;
                 let cy=yy+if i==0 && player_art {6.0}else if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
+                let card_pos=layout::rect(&format!("laid_card_{}",card.id),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
+                let (cx,cy)=(card_pos.x,card_pos.y);
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
                 } else {
@@ -535,6 +537,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         for (i,card) in visible_cards.iter().enumerate() {
             let shifted=i+usize::from(insert_at.is_some_and(|slot|i>=slot));
             let cx=x+10.0+shifted as f32*57.0;
+            let card_pos=layout::rect(&format!("stage_card_{}",card.id),layout::Rect{x:cx,y:y+29.0,w:50.0,h:76.0});
+            let cx=card_pos.x;
             if cx+51.0<x+stage_w {
                 let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
                     let (mx,my)=game_mouse();
@@ -1142,7 +1146,7 @@ async fn main(){
                     workshop_board=false;
                     layout_editor.close();
                 }
-                layout_editor.draw();
+                layout_editor.draw(&workshop_preview);
                 None
             } else {
                 draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)
