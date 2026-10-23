@@ -1127,6 +1127,10 @@ async fn main(){
             previous_fullscreen=fullscreen;
         }
         if is_key_pressed(KeyCode::F5) {layout::reload();}
+        #[cfg(not(target_os="android"))]
+        if is_key_pressed(KeyCode::F6) {
+            if let Err(error)=layout::clear_all(){eprintln!("Failed to reset layout overrides: {error}");}
+        }
         if is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
