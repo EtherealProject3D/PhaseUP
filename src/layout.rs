@@ -109,6 +109,18 @@ pub(super) fn save()->Result<(),String>{
     std::fs::write(path,serde_json::to_string_pretty(&root).map_err(|e|e.to_string())?+"\n").map_err(|e|e.to_string())
 }
 
+// Remove every saved and in-memory layout override, retaining only renderer defaults.
+#[cfg(not(target_os="android"))]
+pub(super) fn clear_all()->Result<(),String>{
+    let path="assets/layouts/game_16_10.json";
+    let root=serde_json::json!({"schema_version":1,"canvas":{"width":1920,"height":1200},"elements":{}});
+    std::fs::create_dir_all("assets/layouts").map_err(|e|e.to_string())?;
+    std::fs::write(path,format!("{}\n",serde_json::to_string_pretty(&root).map_err(|e|e.to_string())?))
+        .map_err(|e|e.to_string())?;
+    OVERRIDES.with(|m|m.borrow_mut().clear());
+    Ok(())
+}
+
 // Accept legacy files that ended in a literal backslash-n due to an older save bug.
 #[cfg(not(target_os="android"))]
 fn parse_layout(data:&str)->Option<serde_json::Value>{
