@@ -70,7 +70,7 @@ pub(super) fn nudge_cpu_content(label:bool,dx:f32,dy:f32) {
     set(key,r);
 }
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
-    let inset=if neon {24.0}else{16.0};
+    let inset=if neon {12.0}else{16.0};
     Rect {
         x:group.x+inset+cpu_content_offset(false).0,
         y:group.y+36.0+cpu_content_offset(false).1,
