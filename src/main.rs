@@ -217,10 +217,28 @@ fn player_color(i:usize)->Color {
     }
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
-fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool){
+fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wireframe:bool){
     set_default_camera();
     clear_background(active_theme().background());
     let sw=1920.0;let sh=game_canvas_height();
+    if wireframe {
+        // Isolate logical geometry: no card art, neon textures, or game labels.
+        // Use the exact same F4 geometry renderer for a direct comparison.
+        let (pw,ph)=(screen_width(),screen_height());
+        let scale=(pw/sw).min(ph/sh);
+        let camera=Camera2D {
+            target:vec2(sw/2.0+layout_editor::pan().0,sh/2.0+layout_editor::pan().1),
+            zoom:vec2(2.0*scale/pw,2.0*scale/ph)*layout_editor::zoom(),
+            ..Default::default()
+        };
+        set_camera(&camera);
+        clear_background(Color::new(0.025,0.035,0.055,1.0));
+        draw_cpu_bounds(g);
+        draw_text("WIREFRAME MODE - F7 to return to artwork",24.0,48.0,25.0,WHITE);
+        set_default_camera();
+        return;
+    }
+
     let (pw,ph)=(screen_width(),screen_height());
     let scale=(pw/sw).min(ph/sh);
     let camera=Camera2D {
@@ -1105,6 +1123,7 @@ async fn main(){
     workshop_preview.players[1].laid=true;
     workshop_preview.players[1].table=vec![vec![Card{id:9001,kind:Kind::Number(5,0)},Card{id:9002,kind:Kind::Number(5,1)},Card{id:9003,kind:Kind::Number(5,2)}],vec![Card{id:9004,kind:Kind::Number(8,3)},Card{id:9005,kind:Kind::Number(8,0)},Card{id:9006,kind:Kind::Wild}]];
     let mut show_bounds=false;
+    let mut wireframe=false;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1142,6 +1161,7 @@ async fn main(){
             if let Err(error)=layout::clear_all(){eprintln!("Failed to reset layout overrides: {error}");}
         }
         if is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
+        if is_key_pressed(KeyCode::F7) {wireframe=!wireframe;}
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
@@ -1207,7 +1227,7 @@ async fn main(){
         if menu==MenuScreen::Playing {
             has_game=true;
             game.update_cpu();
-            draw_game(&mut game,show_debug,show_moves,show_bounds);
+            draw_game(&mut game,show_debug,show_moves,show_bounds,wireframe);
             draw_rectangle(1710.0,8.0,100.0,40.0,PANEL);
             menu_label("MENU",1724.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
@@ -1222,7 +1242,7 @@ async fn main(){
                 }
             }
             let action=if menu==MenuScreen::UiWorkshop && workshop_board {
-                draw_game(&mut workshop_preview,false,false,show_bounds);
+                draw_game(&mut workshop_preview,false,false,show_bounds,wireframe);
                 // Board preview is intentionally clean: testing controls live in the gallery.
                 if button("BACK TO TOOLS",24.0,1120.0,240.0,54.0,true){
                     workshop_board=false;
