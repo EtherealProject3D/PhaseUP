@@ -269,6 +269,24 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let banner=layout::rect("turn_banner",layout::Rect{x:16.,y:55.,w:sw-32.,h:62.});
     if active_theme()!=Theme::Futuristic {draw_rectangle(banner.x,banner.y,banner.w,banner.h,active_theme().panel());}
     else {for i in 0..3 {let panel=layout::rect(match i {0=>"cpu_1_panel",1=>"cpu_2_panel",_=>"cpu_3_panel"},layout::Rect{x:8.0+i as f32*636.0,y:72.,w:632.,h:376.});neon_cpu_panel(panel.x,panel.y,panel.w,panel.h,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}}
+    // The original CPU PNG bakes two lower frames into one image, and their
+    // visual edges do not match the canonical logical group rectangles.
+    // Cover only that lower artwork and redraw both frames from the same
+    // geometry used for card placement and F4 diagnostics.
+    if active_theme()==Theme::Futuristic && has_neon_cpu_panel() {
+        for player in 1..4 {
+            let panel=layout::cpu_panel(player);
+            let left=layout::cpu_group(player,0,2,0.0);
+            let right=layout::cpu_group(player,1,2,0.0);
+            let cover_y=left.y-8.0;
+            draw_rectangle(panel.x+2.0,cover_y,panel.w-4.0,
+                (panel.y+panel.h-cover_y-2.0).max(0.0),
+                Color::new(0.008,0.025,0.045,1.0));
+            for group in [left,right] {
+                neon_frame(group.x,group.y,group.w,group.h,false);
+            }
+        }
+    }
     for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
         menu_label(&cpu_status,status_x,124.,16.,MUTED); 
