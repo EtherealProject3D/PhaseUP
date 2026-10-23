@@ -895,6 +895,17 @@ fn draw_cpu_bounds(g:&Game) {
         draw_rectangle_lines(safe.x,safe.y,safe.w,safe.h,1.5,green);
         draw_text(&format!("HUMAN {} {:.0}x{:.0}",j+1,group.w,group.h),
             group.x+4.0,group.y+13.0,13.0,red);
+        if let Some(cards)=g.players[0].table.get(j).filter(|_|g.players[0].laid) {
+            let count=cards.len();
+            let card_w=55.0;
+            let step=if count>1 {((safe.w-card_w).max(0.0)/(count-1) as f32).min(56.0)}else{0.0};
+            let stack_w=card_w+count.saturating_sub(1) as f32*step;
+            let stack_x=safe.x+(safe.w-stack_w)/2.0;
+            draw_rectangle_lines(stack_x,safe.y,stack_w,84.0,2.0,orange);
+            for k in 0..count {
+                draw_rectangle_lines(stack_x+k as f32*step,safe.y,card_w,84.0,1.0,orange);
+            }
+        }
     }
     for i in 1..4 {
         let p=&g.players[i];
