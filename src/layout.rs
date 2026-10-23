@@ -37,8 +37,9 @@ pub(super) fn editor_items()->Vec<(&'static str,Rect)> {
 // rendered neon CPU panel, rather than an unrelated fixed 632px grid.
 pub(super) fn cpu_panel(player:usize)->Rect {
     let index=player.saturating_sub(1).min(2);
-    rect(match index {0=>"cpu_1_panel",1=>"cpu_2_panel",_=>"cpu_3_panel"},
-        Rect{x:8.0+index as f32*636.0,y:72.0,w:632.0,h:376.0})
+    // Fixed shared geometry: per-player saved overrides must not introduce
+    // subtle differences in panel size or relative group placement.
+    Rect{x:8.0+index as f32*636.0,y:72.0,w:632.0,h:376.0}
 }
 // Canonical two-slot CPU geometry. Both slots are identical, even when
 // one slot is empty or the phase has a single requirement.
