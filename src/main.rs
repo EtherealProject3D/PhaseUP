@@ -217,7 +217,7 @@ fn player_color(i:usize)->Color {
     }
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
-fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
+fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool){
     set_default_camera();
     clear_background(active_theme().background());
     let sw=1920.0;let sh=game_canvas_height();
@@ -848,7 +848,60 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
         } else if button("NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
     }
     draw_card_flights(g,sw,sh);
+    if show_bounds {draw_cpu_bounds(g);}
     if show_debug {debug_overlay(g);}
+}
+
+// F4 visual diagnostic: show the actual layout coordinates used by the renderer.
+// Red = panel/group rectangles, orange = card footprint, green = card-safe area.
+// These guides are intentionally drawn after cards so their edges remain visible.
+fn draw_cpu_bounds(g:&Game) {
+    let red=Color::new(1.0,0.12,0.15,1.0);
+    let orange=Color::new(1.0,0.68,0.12,1.0);
+    let green=Color::new(0.1,1.0,0.5,1.0);
+    let cyan=Color::new(0.3,0.85,1.0,1.0);
+    for i in 1..4 {
+        let p=&g.players[i];
+        let panel=layout::rect(match i {1=>"cpu_1_panel",2=>"cpu_2_panel",_=>"cpu_3_panel"},
+            layout::Rect{x:8.0+(i-1) as f32*636.0,y:72.0,w:632.0,h:376.0});
+        draw_rectangle_lines(panel.x,panel.y,panel.w,panel.h,2.5,red);
+        draw_text(&format!("CPU {} PANEL ({:.0},{:.0}) {:.0}x{:.0}",i,panel.x,panel.y,panel.w,panel.h),
+            panel.x+8.0,panel.y+16.0,14.0,red);
+        let group_count=if p.laid {p.table.len()}else{PHASES[p.phase.min(PHASES.len()-1)].len()};
+        for j in 0..group_count.min(2) {
+            let x=32.0+(i-1) as f32*632.0+j as f32*312.0;
+            let y=if p.laid {250.0+9.0}else{241.0+22.0};
+            let width=if group_count==1 {((1920.0-50.0)/3.0-8.0_f32).max(95.0)}else{305.0};
+            let group=layout::rect(layout::cpu_group_key(i,j),layout::Rect{x,y,w:width,h:116.0});
+            draw_rectangle_lines(group.x,group.y,group.w,group.h,2.0,red);
+            draw_text(&format!("GROUP {} ({:.0},{:.0}) {:.0}x{:.0}",j+1,group.x,group.y,group.w,group.h),
+                group.x+4.0,group.y+13.0,13.0,red);
+            let margin=if has_neon_cpu_panel(){24.0}else{16.0};
+            draw_rectangle_lines(group.x+margin,group.y+28.0,(group.w-2.0*margin).max(0.0),88.0,1.5,green);
+            if p.laid {
+                if let Some(cards)=p.table.get(j) {
+                    let count=cards.len();
+                    let card_w=55.0;
+                    let available=(group.w-2.0*margin-card_w).max(0.0);
+                    let step=if count>1 {(available/(count-1) as f32).min(card_w+1.0)}else{0.0};
+                    let stack_w=card_w+count.saturating_sub(1) as f32*step;
+                    let stack_x=group.x+(group.w-stack_w)/2.0;
+                    let cy=group.y+if has_neon_cpu_panel(){36.0}else{26.0};
+                    if count>0 {
+                        draw_rectangle_lines(stack_x,cy,stack_w,84.0,2.0,orange);
+                        draw_text(&format!("STACK x={:.0} w={:.0}",stack_x,stack_w),stack_x,cy+98.0,13.0,orange);
+                    }
+                    for (k,card) in cards.iter().enumerate(){
+                        let default=layout::Rect{x:stack_x+k as f32*step,y:cy,w:card_w,h:84.0};
+                        let actual=layout::rect(&format!("laid_card_{}",card.id),default);
+                        draw_rectangle_lines(actual.x,actual.y,actual.w,actual.h,1.0,orange);
+                    }
+                }
+            }
+        }
+    }
+    draw_text("F4 BOUNDS: RED panel/group  GREEN safe region  ORANGE card/stack  |  F4 hide",
+        28.0,game_canvas_height()-12.0,18.0,cyan);
 }
 
 // Desktop window dimensions are stored outside the repository, in the user's
@@ -1044,6 +1097,7 @@ async fn main(){
     workshop_preview.turn_count=4;
     workshop_preview.players[1].laid=true;
     workshop_preview.players[1].table=vec![vec![Card{id:9001,kind:Kind::Number(5,0)},Card{id:9002,kind:Kind::Number(5,1)},Card{id:9003,kind:Kind::Number(5,2)}],vec![Card{id:9004,kind:Kind::Number(8,3)},Card{id:9005,kind:Kind::Number(8,0)},Card{id:9006,kind:Kind::Wild}]];
+    let mut show_bounds=false;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1076,6 +1130,7 @@ async fn main(){
             previous_fullscreen=fullscreen;
         }
         if is_key_pressed(KeyCode::F5) {layout::reload();}
+        if is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
         if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
@@ -1141,7 +1196,7 @@ async fn main(){
         if menu==MenuScreen::Playing {
             has_game=true;
             game.update_cpu();
-            draw_game(&mut game,show_debug,show_moves);
+            draw_game(&mut game,show_debug,show_moves,show_bounds);
             draw_rectangle(1710.0,8.0,100.0,40.0,PANEL);
             menu_label("MENU",1724.0,35.0,22.0,ACCENT);
             let (mx,my)=game_mouse();
@@ -1156,7 +1211,7 @@ async fn main(){
                 }
             }
             let action=if menu==MenuScreen::UiWorkshop && workshop_board {
-                draw_game(&mut workshop_preview,false,false);
+                draw_game(&mut workshop_preview,false,false,show_bounds);
                 // Board preview is intentionally clean: testing controls live in the gallery.
                 if button("BACK TO TOOLS",24.0,1120.0,240.0,54.0,true){
                     workshop_board=false;
