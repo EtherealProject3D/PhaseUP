@@ -55,11 +55,25 @@ pub(super) fn cpu_group(player:usize,group:usize,_count:usize,_y:f32)->Rect {
         h:116.0,
     }
 }
+// Shared live Workshop offsets, stored as tiny layout rectangles so the
+// existing F5 reload and layout::save persistence work unchanged.
+pub(super) fn cpu_content_offset(label:bool)->(f32,f32) {
+    let key=if label {"cpu_label_offset"}else{"cpu_cards_offset"};
+    let r=rect(key,Rect{x:0.0,y:0.0,w:1.0,h:1.0});
+    (r.x,r.y)
+}
+pub(super) fn nudge_cpu_content(label:bool,dx:f32,dy:f32) {
+    let key=if label {"cpu_label_offset"}else{"cpu_cards_offset"};
+    let mut r=rect(key,Rect{x:0.0,y:0.0,w:1.0,h:1.0});
+    r.x=(r.x+dx).clamp(-80.0,80.0);
+    r.y=(r.y+dy).clamp(-40.0,40.0);
+    set(key,r);
+}
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
     let inset=if neon {24.0}else{16.0};
     Rect {
-        x:group.x+inset,
-        y:group.y+36.0,
+        x:group.x+inset+cpu_content_offset(false).0,
+        y:group.y+36.0+cpu_content_offset(false).1,
         w:group.w-2.0*inset,
         h:84.0,
     }
