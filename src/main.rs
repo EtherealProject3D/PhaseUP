@@ -390,7 +390,14 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 (available/(shown_len-1) as f32).min(card_w+1.0)
             }else{0.0};
             let stack_w=card_w+shown_len.saturating_sub(1) as f32*step;
-            let stack_x=card_area.x+(card_area.w-stack_w)/2.0;
+            // Center CPU stacks against the actual group/artwork center, not
+            // the card-safe rectangle (which may have a saved offset).
+            // Preserve the user's shared CPU horizontal nudge exactly once.
+            let stack_x=if i>0 && has_neon_cpu_panel() {
+                group_rect.x+(group_rect.w-stack_w)/2.0+layout::cpu_content_offset(false).0
+            } else {
+                card_area.x+(card_area.w-stack_w)/2.0
+            };
             if let Some(slot)=preview {
                 let cx=stack_x+slot as f32*step;
                 let cy=card_area.y;
