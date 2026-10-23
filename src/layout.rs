@@ -49,8 +49,21 @@ pub(super) fn human_phase_group(group:usize,count:usize)->Rect {
     Rect{x:panel.x+inset+group as f32*(width+gap),
         y:panel.y+46.0,w:width,h:116.0}
 }
+pub(super) fn human_content_offset(label:bool)->(f32,f32) {
+    let key=if label {"human_label_offset"}else{"human_cards_offset"};
+    let r=rect(key,Rect{x:0.0,y:0.0,w:1.0,h:1.0});
+    (r.x,r.y)
+}
+pub(super) fn nudge_human_content(label:bool,dx:f32,dy:f32) {
+    let key=if label {"human_label_offset"}else{"human_cards_offset"};
+    let mut r=rect(key,Rect{x:0.0,y:0.0,w:1.0,h:1.0});
+    r.x=(r.x+dx).clamp(-80.0,80.0);
+    r.y=(r.y+dy).clamp(-40.0,40.0);
+    set(key,r);
+}
 pub(super) fn human_card_area(group:Rect)->Rect {
-    Rect{x:group.x+16.0,y:group.y+6.0,w:group.w-32.0,h:84.0}
+    {let (dx,dy)=human_content_offset(false);
+    Rect{x:group.x+16.0+dx,y:group.y+6.0+dy,w:group.w-32.0,h:84.0}}
 }
 pub(super) fn cpu_panel(player:usize)->Rect {
     let index=player.saturating_sub(1).min(2);
