@@ -1298,7 +1298,9 @@ async fn main(){
                     }
                     if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
                         let (x,y)=if align_human {layout::human_content_offset(align_labels)}else{layout::cpu_content_offset(align_labels)};
-                        if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
+                        if align_human {layout::nudge_human_content(align_labels,-x,-y);}else{layout::nudge_cpu_content(align_labels,-x,-y);}
+                    }
+                    if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
                         if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
                             workshop_preview.players[0].phase=phase;
                             workshop_preview.players[0].laid=true;
