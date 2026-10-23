@@ -54,7 +54,8 @@ pub(super) fn cpu_group(player:usize,group:usize,count:usize,_y:f32)->Rect {
         let w=(inner_w-gap)/2.0;
         Rect{x:inner_x+group as f32*(w+gap),y,w,h:116.0}
     };
-    rect(cpu_group_key(player,group),default)
+    // Use canonical geometry; old saved group overrides are no longer valid.
+    default
 }
 pub(super) fn cpu_card_area(group:Rect,neon:bool)->Rect {
     let margin=if neon {24.0}else{16.0};
