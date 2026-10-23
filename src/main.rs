@@ -382,7 +382,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool){
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=stack_x+shown as f32*step;
                 let cy=if i>0 {card_area.y}else{yy+if player_art {6.0}else{26.0}};
-                let card_pos=layout::rect(&format!("laid_card_{}",card.id),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
+                let card_pos=if i>0 {layout::Rect{x:cx,y:cy,w:card_w,h:card_h}}else{layout::rect(&format!("laid_card_{}",card.id),layout::Rect{x:cx,y:cy,w:card_w,h:card_h})};
                 let (cx,cy)=(card_pos.x,card_pos.y);
                 if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_w,card_h,false);
@@ -890,7 +890,7 @@ fn draw_cpu_bounds(g:&Game) {
                     }
                     for (k,card) in cards.iter().enumerate(){
                         let default=layout::Rect{x:stack_x+k as f32*step,y:cy,w:card_w,h:84.0};
-                        let actual=layout::rect(&format!("laid_card_{}",card.id),default);
+                        let actual=default;
                         draw_rectangle_lines(actual.x,actual.y,actual.w,actual.h,1.0,orange);
                     }
                 }
