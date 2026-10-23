@@ -268,9 +268,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     };
     let banner=layout::rect("turn_banner",layout::Rect{x:16.,y:55.,w:sw-32.,h:62.});
     if active_theme()!=Theme::Futuristic {draw_rectangle(banner.x,banner.y,banner.w,banner.h,active_theme().panel());}
-    else {for i in 0..3 {let panel=layout::rect(match i {0=>"cpu_1_panel",1=>"cpu_2_panel",_=>"cpu_3_panel"},layout::Rect{x:8.0+i as f32*636.0,y:72.,w:632.,h:376.});neon_cpu_panel(panel.x,panel.y,panel.w,panel.h,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}}
-    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {28.0+(i-1) as f32*632.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
-        let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
+    else {for i in 0..3 {let panel=layout::cpu_panel(i+1);neon_cpu_panel(panel.x,panel.y,panel.w,panel.h,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}}
+    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {layout::cpu_panel(i).x+20.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
+        let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
         menu_label(&cpu_status,status_x,124.,16.,MUTED); 
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
@@ -316,10 +316,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 // Single-requirement phases occupy the full CPU frame: center
                 // their labels across both decorative lower panels.
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
-                let label_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0}
+                let label_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
                 menu_label(&desc,label_x,y+if player_art {-7.0}else if i>0 && has_neon_cpu_panel(){30.0}else{22.0},17.0,Color::new(0.62,0.71,0.78,1.0));
-                let not_laid_x=if cpu_full_span {16.0+(i-1) as f32*632.0+(626.0-menu_text_width("NOT LAID",17))/2.0}
+                let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
                 menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
@@ -345,7 +345,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             }
             let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
-                16.0+(i-1) as f32*632.0+(626.0-menu_text_width(&desc,17))/2.0
+                {let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0-10.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
             // Place the requirement at the top of the frame, above laid cards.
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
