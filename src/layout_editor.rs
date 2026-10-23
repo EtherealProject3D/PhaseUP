@@ -5,7 +5,7 @@ pub(super) fn zoom()->f32{ZOOM.with(|z|z.get())}
 pub(super) fn pan()->(f32,f32){PAN.with(|p|p.get())}
 
 
-pub(super) struct Editor {pub enabled:bool, selected:usize, drag:Option<(bool,f32,f32,layout::Rect)>, status:String, undo:Vec<(&'static str,layout::Rect)>}
+pub(super) struct Editor {pub enabled:bool, selected:usize, drag:Option<(bool,f32,f32,layout::Rect)>, status:String, undo:Vec<(String,layout::Rect)>}
 impl Editor {
     pub fn new()->Self {Self{enabled:false,selected:0,drag:None,status:"E: edit layout | Tab: select | Ctrl+S: save".into(),undo:Vec::new()}}
     #[cfg(not(target_os="android"))]
@@ -16,7 +16,7 @@ impl Editor {
         };
     }
     pub fn close(&mut self){self.enabled=false;self.drag=None;ZOOM.with(|z|z.set(1.0));PAN.with(|p|p.set((0.0,0.0)));}
-    pub fn draw(&mut self){
+    pub fn draw(&mut self,preview:&Game){
         if is_key_pressed(KeyCode::E) {self.enabled=!self.enabled;self.drag=None;}
         if !self.enabled {ZOOM.with(|z|z.set(1.0));return;}
         let wheel=mouse_wheel().1;
@@ -40,17 +40,17 @@ impl Editor {
             ZOOM.with(|z|z.set(1.0));
             PAN.with(|p|p.set((0.0,0.0)));
         }
-        let items=crate::layout::editor_items();
+        let items=crate::layout::editor_items_for(preview);
         if is_key_pressed(KeyCode::Tab){self.selected=(self.selected+1)%items.len();}
         let (mx,my)=game_mouse();
         if is_mouse_button_pressed(MouseButton::Left){
             self.drag=None;
             for i in (0..items.len()).rev(){
-                let (name,default)=items[i];let r=layout::rect(name,default);
+                let (name,default)=&items[i];let r=layout::rect(name,*default);
                 if mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h {
                     self.selected=i;
                     let resize=mx>r.x+r.w-20. && my>r.y+r.h-20.;
-                    self.undo.push((name,r));
+                    self.undo.push((name.clone(),r));
                     if self.undo.len()>100 {self.undo.remove(0);}
                     self.drag=Some((resize,mx,my,r));break;
                 }
@@ -67,7 +67,7 @@ impl Editor {
             if resize {r.w=(r.w+dx).max(40.);r.h=(r.h+dy).max(24.);}
             else {r.x+=dx;r.y+=dy;}
             r.x=r.x.round();r.y=r.y.round();r.w=r.w.round();r.h=r.h.round();
-            layout::set(items[self.selected].0,r);
+            layout::set(&items[self.selected].0,r);
         }
         #[cfg(not(target_os="android"))]
         if is_key_pressed(KeyCode::S) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)) {
@@ -76,7 +76,7 @@ impl Editor {
         let undo_key=is_key_pressed(KeyCode::Z) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl));
         if undo_key || button("UNDO",1330.,1127.,270.,54.,true) {
             if let Some((name,previous))=self.undo.pop(){
-                layout::set(name,previous);
+                layout::set(&name,previous);
                 self.status=format!("UNDID {name}");
                 #[cfg(not(target_os="android"))]
                 self.save_layout();
