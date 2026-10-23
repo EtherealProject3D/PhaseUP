@@ -359,13 +359,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool){
             let inset=if i==0 && player_art {16.0}
                 else if i>0 && has_neon_cpu_panel(){if j==0 {6.0}else{2.0}}
                 else {6.0};
-            let available=(width-inset-16.0-card_w).max(0.0);
+            // The neon panel has a thick decorative frame and the card artwork
+            // visually extends beyond its nominal 55px hitbox. Reserve equal
+            // safe margins on both sides before distributing the stack.
+            let side_margin=if i>0 && has_neon_cpu_panel(){24.0}else{16.0};
+            let usable_w=(width-2.0*side_margin).max(card_w);
+            let available=(usable_w-card_w).max(0.0);
             let step=if shown_len>1 {
                 (available/(shown_len-1) as f32).min(card_w+1.0)
             }else{0.0};
-            // Center the complete overlapping stack, not just its first card.
             let stack_w=card_w+shown_len.saturating_sub(1) as f32*step;
-            let stack_x=x+(width-stack_w).max(0.0)/2.0;
+            let stack_x=x+(width-stack_w)/2.0;
             if let Some(slot)=preview {
                 let cx=stack_x+slot as f32*step;
                 let cy=yy+if i==0 && player_art {6.0}else if i>0 && has_neon_cpu_panel(){36.0}else{26.0};
