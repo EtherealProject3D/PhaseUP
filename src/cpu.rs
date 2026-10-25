@@ -36,7 +36,7 @@ impl Game {
                 if let Some(c)=card {
                     self.players[i].hand.push(c);
                     if self.cpu_speed!=0 {
-                        let duration=match self.cpu_speed {1=>0.30,3=>1.05,_=>0.60};
+                        let duration=self.action_duration(0.60);
                         self.cpu_draw_flight=Some(CpuDrawFlight {
                             player:i,from_discard:use_discard,card_id:c.id,
                             started:get_time(),duration
@@ -56,7 +56,7 @@ impl Game {
                             let ids:Vec<u32>=groups.iter().flatten().map(|c|c.id).collect();
                             Self::remove_ids(&mut self.players[i].hand,&ids);
                             if self.cpu_speed!=0 {
-                                let per_card=match self.cpu_speed {1=>0.12,3=>0.34,_=>0.20};
+                                let per_card=self.action_duration(0.20);
                                 let cards=groups.iter().enumerate().flat_map(|(g,group)|group.iter().copied().enumerate().map(move |(k,card)|(card,g,k))).collect();
                                 self.cpu_phase_flight=Some(CpuPhaseFlight{player:i,cards,started:get_time(),per_card});
                             }
@@ -86,7 +86,7 @@ impl Game {
                     let origin_count=self.players[i].hand.len();
                     self.players[i].hand.remove(j);
                     if self.cpu_speed!=0 {
-                        let duration=match self.cpu_speed {1=>0.30,3=>1.05,_=>0.60};
+                        let duration=self.action_duration(0.60);
                         self.cpu_hit_flight=Some(CpuHitFlight{
                             card,player:i,target,group,origin_index:j,origin_count,
                             started:get_time(),duration
@@ -128,7 +128,7 @@ impl Game {
                 let count_before=self.players[i].hand.len();
                 let card=self.players[i].hand.remove(idx);
                 if self.cpu_speed!=0 {
-                    let duration=match self.cpu_speed {1=>0.30,3=>1.05,_=>0.60};
+                    let duration=self.action_duration(0.60);
                     self.cpu_discard_flight=Some(CpuDiscardFlight{
                         card,player:i,origin_index:idx,origin_count:count_before,
                         started:get_time(),duration
@@ -147,7 +147,7 @@ impl Game {
                         self.turn=1;
                         self.cpu_skip=None;
                         self.cpu_draw_flight=None;
-                        self.cpu_next_at=get_time()+0.75;
+                        self.cpu_next_at=get_time()+self.action_duration(0.75);
                     } else {
                         self.cpu_skip=Some(target);
                         self.turn=target;
@@ -173,12 +173,12 @@ impl Game {
         }else if get_time()>=self.cpu_next_at {
             let previous_turn=self.turn;
             self.cpu_action();
-            let delay: f64=match self.cpu_speed {1=>0.35,3=>1.35,_=>0.75};
+            let delay: f64=self.action_duration(0.75);
             // A turn handoff is measured from the outgoing discard landing,
             // rather than from the instant the discard action was processed.
             // This prevents the next CPU drawing over the previous animation.
             let handoff_delay: f64=if self.turn!=previous_turn && self.stage==Stage::Cpu {
-                let pause_after_landing: f64=match self.cpu_speed {1=>0.18,3=>0.35,_=>0.25};
+                let pause_after_landing: f64=self.action_duration(0.25);
                 let discard_remaining=self.cpu_discard_flight.as_ref()
                     .map(|flight|(flight.started+flight.duration-get_time()).max(0.0))
                     .unwrap_or(0.0);
@@ -191,10 +191,10 @@ impl Game {
                 }
             }else{delay};
             let phase_delay=self.cpu_phase_flight.as_ref()
-                .map(|flight|(flight.started+flight.duration()-get_time()+0.10).max(0.0))
+                .map(|flight|(flight.started+flight.duration()-get_time()+self.action_duration(0.10)).max(0.0))
                 .unwrap_or(0.0);
             let hit_delay=self.cpu_hit_flight.as_ref()
-                .map(|flight|(flight.started+flight.duration-get_time()+0.10).max(0.0))
+                .map(|flight|(flight.started+flight.duration-get_time()+self.action_duration(0.10)).max(0.0))
                 .unwrap_or(0.0);
             self.cpu_next_at=get_time()+handoff_delay.max(phase_delay).max(hit_delay);
         }

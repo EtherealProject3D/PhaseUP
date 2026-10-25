@@ -12,7 +12,7 @@ fn discard_underlay_remains_until_incoming_card_lands() {
     let mut g=Game::new();
     let old=number(4000,7,0);let incoming=number(4001,9,1);
     g.discard=vec![old,incoming];
-    g.human_discard_flight=Some(HumanDiscardFlight{card:incoming,from_x:0.,from_y:0.,started:0.});
+    g.human_discard_flight=Some(HumanDiscardFlight{card:incoming,from_x:0.,from_y:0.,started:0.,duration:0.60});
     assert_eq!(g.visible_discards(false).last().unwrap().id,old.id);
     g.human_discard_flight=None;
     assert_eq!(g.visible_discards(false).last().unwrap().id,incoming.id);
@@ -126,6 +126,53 @@ fn staging_label_positions_are_independent_by_group_mode_and_readiness() {
     assert_eq!(layout::staging_label_key(0,1,false),"staging_single_label_1");
     assert_eq!(layout::staging_label_key(1,2,false),"staging_double_label_2");
     assert_eq!(layout::staging_label_key(1,2,true),"staging_double_ready_label_2");
+}
+
+#[test]
+fn game_speed_keys_cycle_and_unknown_values_default_to_normal() {
+    for speed in [GameSpeed::Slow,GameSpeed::Normal,GameSpeed::Fast] {
+        assert_eq!(GameSpeed::from_key(speed.key()),speed);
+        assert_eq!(GameSpeed::from_code(speed.code()),speed);
+        assert_eq!(speed.next().next().next(),speed);
+    }
+    assert_eq!(GameSpeed::from_key(""),GameSpeed::Normal);
+    assert_eq!(GameSpeed::from_key("broken setting"),GameSpeed::Normal);
+    assert_eq!(GameSpeed::from_key(" fast\n"),GameSpeed::Fast);
+    assert_eq!(GameSpeed::Normal.duration(0.60),0.60);
+    assert_eq!(GameSpeed::Normal.duration(0.75),0.75);
+    assert!(GameSpeed::Fast.duration(0.60)<0.60);
+    assert!(GameSpeed::Slow.duration(0.60)>0.60);
+}
+
+#[test]
+fn changing_speed_preserves_animation_progress_and_landing_handoff_gap() {
+    let mut g=Game::new();g.cpu_speed=2;
+    let card=number(4100,5,0);
+    g.cpu_draw_flight=Some(CpuDrawFlight{player:1,from_discard:true,card_id:card.id,started:9.8,duration:0.6});
+    g.cpu_discard_flight=Some(CpuDiscardFlight{card,player:1,origin_index:0,origin_count:10,started:9.8,duration:0.6});
+    g.cpu_hit_flight=Some(CpuHitFlight{card,player:1,target:2,group:0,origin_index:0,origin_count:10,started:9.8,duration:0.6});
+    g.human_draw_flight=Some(HumanDrawFlight{card_id:card.id,from_discard:true,started:9.8,duration:0.6});
+    g.human_discard_flight=Some(HumanDiscardFlight{card,from_x:0.,from_y:0.,started:9.8,duration:0.6});
+    g.cpu_phase_flight=Some(CpuPhaseFlight{player:1,cards:vec![(card,0,0)],started:9.8,per_card:0.2});
+    g.human_phase_flight=Some(HumanPhaseFlight{cards:vec![(card,0,0,0.,0.)],started:9.8,per_card:0.18});
+    g.cpu_next_at=10.65; // .4 seconds remaining flight plus .25 pause.
+    for speed in [GameSpeed::Fast,GameSpeed::Slow,GameSpeed::Normal] {
+        g.change_speed(speed,10.0);
+        let check=|started:f64,duration:f64| {
+            assert!(((10.0-started)/duration-1.0/3.0).abs()<1e-9);
+            assert!((duration-speed.duration(0.60)).abs()<1e-9);
+        };
+        let a=g.cpu_draw_flight.as_ref().unwrap();check(a.started,a.duration);
+        let a=g.cpu_discard_flight.as_ref().unwrap();check(a.started,a.duration);
+        assert!((g.cpu_next_at-(a.started+a.duration)-speed.duration(0.25)).abs()<1e-9);
+        let a=g.cpu_hit_flight.as_ref().unwrap();check(a.started,a.duration);
+        let a=g.human_draw_flight.as_ref().unwrap();check(a.started,a.duration);
+        let a=g.human_discard_flight.as_ref().unwrap();check(a.started,a.duration);
+        let a=g.cpu_phase_flight.as_ref().unwrap();
+        assert!(((10.0-a.started)/a.per_card-1.0).abs()<1e-9);
+        let a=g.human_phase_flight.as_ref().unwrap();
+        assert!(((10.0-a.started)/a.per_card-0.2/0.18).abs()<1e-9);
+    }
 }
 
 #[test]

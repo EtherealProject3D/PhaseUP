@@ -42,8 +42,8 @@ impl HumanPhaseFlight {
     }
 }
 
-pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
-pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
+pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64, pub(super) duration:f64 }
+pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64, pub(super) duration:f64 }
 
 pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
     // Reveal CPU phase cards in sequence, flying from their former hand area.
@@ -130,7 +130,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
             let end_x=hand_slot.x+index as f32*spacing;
             let end_y=hand_slot.y;
             let (start_x,start_y)=layout::pile_position(flight.from_discard);
-            let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
+            let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
             let eased=t*t*(3.0-2.0*t);
             let x=start_x+(end_x-start_x)*eased;
             let y=start_y+(end_y-start_y)*eased-50.0*(4.0*t*(1.0-t));
@@ -160,7 +160,7 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
     }
     // A button-triggered human discard flies from its sorted hand slot.
     if let Some(flight)=&g.human_discard_flight {
-        let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
+        let t=((get_time()-flight.started)/flight.duration).clamp(0.0,1.0) as f32;
         let eased=t*t*(3.0-2.0*t);
         let (to_x,to_y)=layout::pile_position(true);
         let x=flight.from_x+(to_x-flight.from_x)*eased;
@@ -186,6 +186,6 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
 
 pub(super) fn expire_human_flights(g:&mut Game) {
     if g.human_phase_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration()) {g.human_phase_flight=None;}
-    if g.human_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_draw_flight=None;}
-    if g.human_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=0.60) {g.human_discard_flight=None;}
+    if g.human_draw_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {g.human_draw_flight=None;}
+    if g.human_discard_flight.as_ref().is_some_and(|a|get_time()-a.started>=a.duration) {g.human_discard_flight=None;}
 }

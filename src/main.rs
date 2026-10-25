@@ -32,6 +32,8 @@ mod ai;
 use ai::*;
 mod roster;
 use roster::*;
+mod speed;
+use speed::*;
 mod cpu;
 mod animations;
 use animations::*;
@@ -57,7 +59,7 @@ impl Game {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let cpu_roster=select_opponents(read_cpu_difficulty());
         let cpu_names=cpu_roster.map(|cpu|cpu.name.to_string());
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:2,cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None,hover_lifts:Vec::new()};g.deal();g
+        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:active_game_speed().code(),cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None,hover_lifts:Vec::new()};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
@@ -110,7 +112,7 @@ impl Game {
         if self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
-        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time()})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"the Discard pile"}else{"the Deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
+        if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time(),duration:self.action_duration(0.60)})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"the Discard pile"}else{"the Deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn lay(&mut self) {
         if self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
@@ -142,7 +144,7 @@ impl Game {
                 }
             }
             self.human_phase_flight=Some(HumanPhaseFlight{
-                cards:flights,started:phase_animation_start_time(),per_card:0.18
+                cards:flights,started:phase_animation_start_time(),per_card:self.action_duration(0.18)
             });
             Self::remove_ids(&mut self.players[0].hand,&self.selected);
             self.players[0].table=groups;self.players[0].laid=true;self.selected.clear();self.staged=[vec![],vec![]];
@@ -180,7 +182,7 @@ impl Game {
         if card.is_empty(){return;}
         let c=card[0];
         self.human_draw_flight=None;
-        self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time()});
+        self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time(),duration:self.action_duration(0.60)});
         self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
         if c.kind!=Kind::Skip {self.log_move(format!("You discarded {} {}",card_article(c.kind),card_text(c.kind)));}
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
@@ -196,9 +198,9 @@ impl Game {
         // Let a button-triggered discard finish before the next CPU draws.
         // Drag-and-drop discards clear this flight and remain immediate.
         let discard_remaining=self.human_discard_flight.as_ref()
-            .map(|flight|(0.60-(get_time()-flight.started)).max(0.0))
+            .map(|flight|(flight.duration-(get_time()-flight.started)).max(0.0))
             .unwrap_or(0.0);
-        self.cpu_next_at=get_time()+if discard_remaining>0.0 {discard_remaining+0.12}else{0.15};
+        self.cpu_next_at=get_time()+if discard_remaining>0.0 {discard_remaining+self.action_duration(0.12)}else{self.action_duration(0.15)};
         if self.cpu_speed==0 && discard_remaining==0.0 {
             while self.stage==Stage::Cpu {self.cpu_action();}
         }
@@ -1103,34 +1105,37 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,panel_y+145.0,22.0,MUTED);
+            menu_label("WINDOW",750.0,panel_y+138.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            let preset_button_clicked=menu_button(&window_text,panel_y+178.0);
+            let preset_button_clicked=menu_button(&window_text,panel_y+164.0);
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+258.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,panel_y+355.0,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+382.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",750.0,panel_y+475.0,22.0,MUTED);
-            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),panel_y+502.0){
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+236.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",750.0,panel_y+329.0,22.0,MUTED);
+            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
+            if !*resolution_open && menu_button(&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
+                let next=active_game_speed().next();set_game_speed(next);save_game_speed(next);
+            }
+            menu_label("APPEARANCE",750.0,panel_y+515.0,22.0,MUTED);
+            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+582.0){return Some(MenuScreen::DeveloperTools);}
-            if !*resolution_open && menu_button("BACK",panel_y+662.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+742.0){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("BACK",panel_y+682.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
-                if resolution_picker(834.0,panel_y+242.0) {*resolution_open=false;}
+                if resolution_picker(834.0,panel_y+228.0) {*resolution_open=false;}
                 // Do not interpret the click that opened the picker as an outside click.
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+178.0&&my<=panel_y+242.0;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+242.0&&my<=panel_y+568.0;
+                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+164.0&&my<=panel_y+228.0;
+                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+228.0&&my<=panel_y+554.0;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
@@ -1196,6 +1201,7 @@ async fn main(){
     load_menu_fonts().await;
     load_neon_cards().await;
     load_neon_ui().await;
+    set_game_speed(read_game_speed());
     let mut game=Game::new();
     let mut show_debug=false;
     let (mut show_moves,mut fullscreen)=read_preferences();
@@ -1235,6 +1241,8 @@ async fn main(){
     #[cfg(target_os="windows")]
     let mut position_changed_at=get_time();
     loop {
+        game.change_speed(active_game_speed(),get_time());
+        workshop_preview.change_speed(active_game_speed(),get_time());
         if previous_fullscreen!=fullscreen {
             if !fullscreen {
                 let (w,h)=windowed_size;
