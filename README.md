@@ -2,13 +2,15 @@
 
 An ad-free, offline, Rust card game for Windows and Android.
 
-## Download v0.4.0
+## Download v0.4.1
 
-Get the Windows ZIP or Android APK from the [GitHub release](https://github.com/EtherealProject3D/PhaseUP/releases/tag/v0.4.0).
+Get the Windows ZIP or Android APK from the [GitHub release](https://github.com/EtherealProject3D/PhaseUP/releases/tag/v0.4.1).
 On Windows, extract the entire ZIP and run `phaseup.exe`, keeping the `assets` folder beside it.
 The Android APK is a sideloadable ARM64 build (Android 8.0 or newer).
 
-Version 0.4.0 includes the polished Neon Forge board and menus, automatic run sorting,
+Version 0.4.1 adds a warning before discarding when your staged phase is ready to lay,
+plus corrected staging-text alignment and developer preview card controls.
+It includes the polished Neon Forge board and menus, automatic run sorting,
 improved card animations, and saved Slow/Normal/Fast game speeds. Official builds
 use Neon Forge; additional themes and audio are planned for a future version.
 

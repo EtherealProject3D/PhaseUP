@@ -2,6 +2,12 @@ name: Android APK (flight build)
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional existing version tag to attach this APK to a release draft"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -32,3 +38,52 @@ jobs:
           name: PhaseUP-Android-APK
           path: target/android-artifacts/release/apk/*.apk
           if-no-files-found: error
+
+  release-apk:
+    if: inputs.release_tag != ''
+    needs: android
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PhaseUP-Android-APK
+          path: android-build
+      - name: Verify and name release APK
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          BUILD_REF: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import hashlib, os, pathlib, re, shutil, zipfile
+          tag = os.environ['RELEASE_TAG']
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', tag), 'Invalid release tag'
+          assert os.environ['BUILD_REF'] == tag, 'Build must run from the release tag'
+          apks = list(pathlib.Path('android-build').rglob('*.apk'))
+          assert len(apks) == 1, 'Expected exactly one APK'
+          apk = apks[0]
+          with zipfile.ZipFile(apk) as z:
+              assert z.testzip() is None, 'APK archive is corrupt'
+              names = z.namelist()
+              assert any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in names)
+              for name in ['fonts/Oxanium-SemiBold.ttf', 'neon_forge/ui/hand_panel.png', 'layouts/game_16_10.json']:
+                  assert 'assets/' + name in names, name
+              manifest = z.read('AndroidManifest.xml')
+              assert tag[1:].encode() in manifest or tag[1:].encode('utf-16le') in manifest
+          destination = pathlib.Path(f'PhaseUP-{tag}-Android-arm64.apk')
+          shutil.copyfile(apk, destination)
+          print('Verified APK SHA256:', hashlib.sha256(destination.read_bytes()).hexdigest())
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f'APK={destination}\n')
+          PY
+      - name: Attach verified APK to release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --title "PhaseUP $RELEASE_TAG" --draft
+          fi
+          gh release upload "$RELEASE_TAG" "$APK" --clobber
