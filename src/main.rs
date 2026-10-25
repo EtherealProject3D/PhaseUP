@@ -19,10 +19,10 @@ enum Stage { Draw, Play, Cpu, RoundOver, GameOver }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SortMode { Runs, Colors, Sets }
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
-    if layout_editor::pointer_over_tools(){return false;}
+    if board_input_blocked() || layout_editor::pointer_over_tools(){return false;}
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
-struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, cpu_phase_flight:Option<CpuPhaseFlight>, cpu_hit_flight:Option<CpuHitFlight>, human_draw_flight:Option<HumanDrawFlight>, human_phase_flight:Option<HumanPhaseFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight>, hover_lifts:Vec<(u32,f32,f32,f64)> }
+struct Game { pending_discard:Option<u32>, players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, cpu_phase_flight:Option<CpuPhaseFlight>, cpu_hit_flight:Option<CpuHitFlight>, human_draw_flight:Option<HumanDrawFlight>, human_phase_flight:Option<HumanPhaseFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight>, hover_lifts:Vec<(u32,f32,f32,f64)> }
 
 mod game_rules;
 mod phases;
@@ -61,7 +61,7 @@ impl Game {
         let players=(0..4).map(|_|Player{hand:vec![],phase:0,laid:false,score:0,table:vec![]}).collect();
         let cpu_roster=select_opponents(read_cpu_difficulty());
         let cpu_names=cpu_roster.map(|cpu|cpu.name.to_string());
-        let mut g=Self{players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:active_game_speed().code(),cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None,hover_lifts:Vec::new()};g.deal();g
+        let mut g=Self{pending_discard:None,players,deck:vec![],discard:vec![],turn:0,stage:Stage::Draw,selected:vec![],message:String::new(),round:0,sort:SortMode::Runs,staged:[vec![],vec![]],drag:None,pile_drag:None,drawn_card:None,cpu_names,cpu_roster,move_log:Vec::new(),turn_count:1,staged_drag:None,cpu_step:0,cpu_skip:None,cpu_next_at:0.0,cpu_speed:active_game_speed().code(),cpu_draw_flight:None,cpu_phase_flight:None,cpu_hit_flight:None,human_draw_flight:None,human_phase_flight:None,cpu_discard_flight:None,human_discard_flight:None,hover_lifts:Vec::new()};g.deal();g
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
@@ -73,7 +73,7 @@ impl Game {
         &self.discard[..self.discard.len().saturating_sub(hidden)]
     }
     fn stage_card(&mut self,id:u32,group:usize) {
-        if self.stage!=Stage::Play||self.turn!=0{return;}
+        if self.pending_discard.is_some()||self.stage!=Stage::Play||self.turn!=0{return;}
         if group>=PHASES[self.players[0].phase].len(){return;}
         if !self.players[0].hand.iter().any(|c|c.id==id){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
@@ -89,7 +89,7 @@ impl Game {
         }
     }
     fn move_staged_card(&mut self,id:u32,group:usize,index:usize) {
-        if self.stage!=Stage::Play||group>=self.staged.len(){return;}
+        if self.pending_discard.is_some()||self.stage!=Stage::Play||group>=self.staged.len(){return;}
         if !self.staged.iter().any(|bucket|bucket.contains(&id)){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         let at=index.min(self.staged[group].len());self.staged[group].insert(at,id);
@@ -111,13 +111,13 @@ impl Game {
         for id in ids {self.stage_card(id,group);}
     }
     fn draw(&mut self,discard:bool,animate:bool) {
-        if self.stage!=Stage::Draw||self.turn!=0{return;}
+        if self.pending_discard.is_some()||self.stage!=Stage::Draw||self.turn!=0{return;}
         if discard && self.discard.last().is_some_and(|c|c.kind==Kind::Skip) {self.message="Skip cards cannot be taken from discard".into();return;}
         let c=if discard {self.discard.pop()} else {self.draw_deck()};
         if let Some(c)=c {self.drawn_card=Some(c.id);self.players[0].hand.push(c);self.human_draw_flight=if animate {Some(HumanDrawFlight{card_id:c.id,from_discard:discard,started:get_time(),duration:self.action_duration(0.60)})}else{None};self.stage=Stage::Play;self.log_move(format!("You drew from {}",if discard {"the Discard pile"}else{"the Deck"}));self.message="Select cards to lay your phase, or select one to discard".into();}
     }
     fn lay(&mut self) {
-        if self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
+        if self.pending_discard.is_some()||self.stage!=Stage::Play||self.turn!=0||self.players[0].laid{return;}
         let cards:Vec<Card>=self.players[0].hand.iter().copied().filter(|c|self.selected.contains(&c.id)).collect();
         let phase=self.players[0].phase;
         // Preserve the player's explicit staging groups when they form a valid phase.
@@ -156,7 +156,7 @@ impl Game {
         }else{self.message=format!("Selected cards do not match phase {} ({})",phase+1,phase_name(phase));}
     }
     fn hit(&mut self, target:usize,group:usize) {
-        if self.stage!=Stage::Play||self.turn!=0 {self.message="Draw a card before playing onto a phase.".into();return;}
+        if self.pending_discard.is_some()||self.stage!=Stage::Play||self.turn!=0 {self.message="Draw a card before playing onto a phase.".into();return;}
         if !self.players[0].laid {self.message="Complete your own phase before adding cards to the table.".into();return;}
         if self.selected.len()!=1 {self.message="Select exactly one card, then click a table group to add it.".into();return;}
         let Some(card)=self.players[0].hand.iter().find(|c|c.id==self.selected[0]).copied() else{return;};
@@ -169,9 +169,23 @@ impl Game {
             if self.players[0].hand.is_empty(){self.end_round(0);}
         }else{self.message="That card does not fit this group. For runs, add a number at either end.".into();}
     }
-    fn discard_selected(&mut self) {
-        if self.stage!=Stage::Play||self.turn!=0||self.selected.len()!=1{return;}
+    fn discard_selected(&mut self) {self.request_discard(true);}
+    fn request_discard(&mut self,animate:bool){
+        if self.pending_discard.is_some() || self.stage!=Stage::Play || self.turn!=0 || self.selected.len()!=1 {return;}
         let id=self.selected[0];
+        if !self.players[0].hand.iter().any(|c|c.id==id){return;}
+        if self.staged_phase_ready(){self.pending_discard=Some(id);return;}
+        self.commit_discard(id,animate);
+    }
+    fn cancel_discard(&mut self){self.pending_discard=None;}
+    fn confirm_discard(&mut self){
+        if let Some(id)=self.pending_discard.take(){
+            if self.stage==Stage::Play && self.turn==0 && self.players[0].hand.iter().any(|c|c.id==id){
+                self.commit_discard(id,true);
+            }
+        }
+    }
+    fn commit_discard(&mut self,id:u32,animate:bool){
         // Capture the card's actual sorted hand slot before removing it.
         let mut sorted:Vec<Card>=self.players[0].hand.iter().copied()
             .filter(|c|!self.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
@@ -184,7 +198,7 @@ impl Game {
         if card.is_empty(){return;}
         let c=card[0];
         self.human_draw_flight=None;
-        self.human_discard_flight=Some(HumanDiscardFlight{card:c,from_x,from_y,started:get_time(),duration:self.action_duration(0.60)});
+        self.human_discard_flight=animate.then(||HumanDiscardFlight{card:c,from_x,from_y,started:phase_animation_start_time(),duration:self.action_duration(0.60)});
         self.discard.push(c);self.unstage_card(c.id);self.selected.clear();
         if c.kind!=Kind::Skip {self.log_move(format!("You discarded {} {}",card_article(c.kind),card_text(c.kind)));}
         if self.players[0].hand.is_empty(){self.end_round(0);return;}
@@ -200,9 +214,9 @@ impl Game {
         // Let a button-triggered discard finish before the next CPU draws.
         // Drag-and-drop discards clear this flight and remain immediate.
         let discard_remaining=self.human_discard_flight.as_ref()
-            .map(|flight|(flight.duration-(get_time()-flight.started)).max(0.0))
+            .map(|flight|(flight.duration-(phase_animation_start_time()-flight.started)).max(0.0))
             .unwrap_or(0.0);
-        self.cpu_next_at=get_time()+if discard_remaining>0.0 {discard_remaining+self.action_duration(0.12)}else{self.action_duration(0.15)};
+        self.cpu_next_at=phase_animation_start_time()+if discard_remaining>0.0 {discard_remaining+self.action_duration(0.12)}else{self.action_duration(0.15)};
         if self.cpu_speed==0 && discard_remaining==0.0 {
             while self.stage==Stage::Cpu {self.cpu_action();}
         }
@@ -223,6 +237,7 @@ fn player_color(i:usize)->Color {
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wireframe:bool){
+    set_board_input_blocked(g.pending_discard.is_some());
     if !wireframe {layout::begin_scene();}
     set_default_camera();
     clear_background(active_theme().background());
@@ -242,6 +257,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         draw_cpu_bounds(g);
         draw_text("WIREFRAME MODE - F7 to return to artwork",24.0,48.0,25.0,WHITE);
         layout::end_scene();
+        set_board_input_blocked(false);
         return;
     }
 
@@ -772,10 +788,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             if (mx-ox).abs()+(my-oy).abs()>12.0 {
                 if g.stage==Stage::Play&&inside(discard_x,discard_y,pile_w,pile_h) {
                     g.selected=vec![id];
-                    g.discard_selected();
-                    // Drag-and-drop is already a direct physical movement.
-                    // Only button-triggered discards should fly.
-                    g.human_discard_flight=None;
+                    g.request_discard(false);
                 } else if let Some((group,index))=stage_drop {
                     g.stage_card_at(id,group,index);
                 }
@@ -790,13 +803,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         g.pile_drag=None;
     }
     // Completion banner sits between the staging slots and turn guidance.
-    let phase=g.players[0].phase.min(PHASES.len()-1);
-    let staged_complete=g.stage==Stage::Play&&!g.players[0].laid
-        && (0..groups.len()).all(|group|{
-            let cards:Vec<Card>=g.staged[group].iter()
-                .filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
-            cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
-        });
+    let staged_complete=g.staged_phase_ready();
     let instruction_color=if staged_complete {GREEN}else{turn_color};
     if active_theme()==Theme::Futuristic && neon_turn_instruction(guidance_x,guidance_y,guidance_w,guidance_h,instruction_color,staged_complete) {
         let text=if staged_complete {"PHASE COMPLETE  -  LAY PHASE"}else{turn_text};
@@ -932,6 +939,22 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if show_bounds {draw_cpu_bounds(g);}
     if show_debug {debug_overlay(g);}
     layout::end_scene();
+    set_board_input_blocked(false);
+    if g.pending_discard.is_some(){draw_discard_warning(g,sw,sh);}
+}
+
+fn draw_discard_warning(g:&mut Game,sw:f32,sh:f32){
+    draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.72));
+    let (x,y)=(sw/2.-320.,sh/2.-127.);
+    if active_theme()==Theme::Futuristic {neon_compact_panel(x,y,640.,254.);}
+    else{panel_decoration(x,y,640.,254.);}
+    let title="PHASE READY TO LAY";
+    menu_heading(title,x+(640.-menu_text_width(title,28))/2.,y+53.,28.);
+    for (text,offset) in [("Your staged phase is ready to lay.",103.),("Discard anyway, or go back and lay your phase?",136.)] {
+        menu_label(text,x+(640.-menu_text_width(text,22))/2.,y+offset,22.,WHITEISH);
+    }
+    if button("GO BACK",x+40.,y+180.,260.,44.,true){g.cancel_discard();}
+    else if button("DISCARD ANYWAY",x+340.,y+180.,260.,44.,true){g.confirm_discard();}
 }
 
 // F4 visual diagnostic: show the actual layout coordinates used by the renderer.
@@ -1276,7 +1299,8 @@ async fn main(){
         if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
         if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F7) {wireframe=!wireframe;}
         if cfg!(feature="developer-tools") && menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
-        if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
+        if is_key_pressed(KeyCode::Escape) && game.pending_discard.is_some(){game.cancel_discard();}
+        else if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.
         let (mx,my)=game_mouse();
@@ -1343,7 +1367,7 @@ async fn main(){
             draw_game(&mut game,show_debug,show_moves,show_bounds,wireframe);
             let (mx,my)=game_mouse();
             let menu_button=layout::rect("menu_button",layout::Rect{x:1710.,y:8.,w:100.,h:40.});
-            if is_mouse_button_pressed(MouseButton::Left)&&mx>=menu_button.x&&mx<=menu_button.x+menu_button.w&&my>=menu_button.y&&my<=menu_button.y+menu_button.h {menu=MenuScreen::Home;}
+            if game.pending_discard.is_none() && is_mouse_button_pressed(MouseButton::Left)&&mx>=menu_button.x&&mx<=menu_button.x+menu_button.w&&my>=menu_button.y&&my<=menu_button.y+menu_button.h {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && game.human_discard_flight.is_none() && game.cpu_discard_flight.is_none() && !layout_editor::editing() {
                 let back=layout::rect("main_menu_button_1",layout::Rect{x:975.0,y:game_canvas_height()/2.0-164.0+257.0,w:190.0,h:40.0});
                 if is_mouse_button_pressed(MouseButton::Left) && mx>=back.x && mx<=back.x+back.w && my>=back.y && my<=back.y+back.h {menu=MenuScreen::Home;}

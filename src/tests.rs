@@ -291,6 +291,101 @@ fn workshop_respects_group_availability_and_supports_cpu_card_choices() {
     assert!(target_cards(&g,1,PreviewTarget::Laid(1)).is_empty());
 }
 
+fn ready_discard_game(phase:usize)->Game {
+    let mut g=Game::new();g.players[0].hand.clear();
+    workshop::choose_phase(&mut g,0,phase);
+    workshop::fill_staged_phase(&mut g,5,0);
+    g.players[0].hand.push(number(80000,12,1));
+    g.selected=vec![80000];g.cpu_speed=2;
+    g
+}
+
+#[test]
+fn discard_warning_covers_buttons_and_drag_for_every_phase() {
+    for phase in 0..10 {for animate in [true,false] {
+        let mut g=ready_discard_game(phase);
+        let hand:Vec<_>=g.players[0].hand.iter().map(|c|c.id).collect();
+        let discard:Vec<_>=g.discard.iter().map(|c|c.id).collect();
+        let staging=g.staged.clone();let log=g.move_log.clone();
+        if animate {g.discard_selected();}else{g.request_discard(false);}
+        assert_eq!(g.pending_discard,Some(80000));
+        assert_eq!(g.stage,Stage::Play);assert_eq!(g.turn,0);
+        assert_eq!(g.players[0].hand.iter().map(|c|c.id).collect::<Vec<_>>(),hand);
+        assert_eq!(g.discard.iter().map(|c|c.id).collect::<Vec<_>>(),discard);
+        assert_eq!(g.staged,staging);assert_eq!(g.selected,vec![80000]);assert_eq!(g.move_log,log);
+        assert!(g.human_discard_flight.is_none());
+    }}
+}
+
+#[test]
+fn canceling_discard_warning_preserves_state_and_allows_laying_phase() {
+    let mut g=ready_discard_game(0);let staged=g.staged.clone();
+    g.discard_selected();
+    // Other gameplay actions cannot change the staged phase behind the dialog.
+    g.stage_card(80000,0);g.move_staged_card(staged[0][0],1,0);g.lay();
+    assert_eq!(g.staged,staged);
+    g.cancel_discard();
+    assert!(g.pending_discard.is_none());
+    assert_eq!(g.selected,vec![80000]);assert_eq!(g.staged,staged);
+    assert!(g.staged_phase_ready());
+    g.selected=g.staged.iter().flatten().copied().collect();g.lay();
+    assert!(g.players[0].laid);
+    assert_eq!(g.players[0].hand.len(),1);
+}
+
+#[test]
+fn confirming_discard_warning_discards_original_card_exactly_once() {
+    for animate in [true,false] {
+        let mut g=ready_discard_game(4);let staging=g.staged.clone();let count=g.discard.len();
+        g.request_discard(animate);
+        g.confirm_discard();
+        assert_eq!(g.discard.len(),count+1);assert_eq!(g.discard.last().unwrap().id,80000);
+        assert!(!g.players[0].hand.iter().any(|c|c.id==80000));
+        assert_eq!(g.staged,staging);assert!(g.selected.is_empty());
+        assert!(g.pending_discard.is_none());assert_eq!(g.stage,Stage::Cpu);
+        assert_eq!(g.human_discard_flight.as_ref().unwrap().card.id,80000);
+        g.confirm_discard();assert_eq!(g.discard.len(),count+1);
+    }
+}
+
+#[test]
+fn discard_warning_is_skipped_for_incomplete_invalid_or_already_laid_phase() {
+    for case in 0..3 {
+        let mut g=ready_discard_game(0);
+        match case {
+            0=>{g.staged[1].pop();},
+            1=>{let id=g.staged[1][0];g.players[0].hand.iter_mut().find(|c|c.id==id).unwrap().kind=Kind::Skip;},
+            _=>g.players[0].laid=true,
+        }
+        assert!(!g.staged_phase_ready());
+        g.discard_selected();
+        assert!(g.pending_discard.is_none());assert_eq!(g.stage,Stage::Cpu);
+        assert_eq!(g.discard.last().unwrap().id,80000);
+    }
+}
+
+#[test]
+fn ready_check_accepts_extra_cards_and_wilds_but_rejects_duplicate_ids() {
+    let mut g=ready_discard_game(0);
+    workshop::add_card(&mut g,0,workshop::PreviewTarget::Stage(0),Kind::Wild);
+    assert!(g.staged_phase_ready());
+    let id=g.staged[0][0];g.staged[1][0]=id;
+    assert!(!g.staged_phase_ready());
+    g.staged[1][0]=u32::MAX;
+    assert!(!g.staged_phase_ready());
+}
+
+#[test]
+fn new_round_clears_pending_discard_and_stale_confirmation_is_safe() {
+    let mut g=ready_discard_game(0);g.discard_selected();g.deal();
+    assert!(g.pending_discard.is_none());let count=g.discard.len();
+    g.confirm_discard();assert_eq!(g.discard.len(),count);
+    let mut g=ready_discard_game(0);g.discard_selected();
+    g.players[0].hand.retain(|c|c.id!=80000);
+    let count=g.discard.len();g.confirm_discard();
+    assert_eq!(g.discard.len(),count);assert!(g.pending_discard.is_none());
+}
+
 #[test]
 fn deck_has_correct_distribution_and_unique_ids() {
     let deck=make_deck();

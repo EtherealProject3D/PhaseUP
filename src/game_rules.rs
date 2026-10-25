@@ -4,7 +4,7 @@ use crate::*;
 
 impl Game {
     pub(super) fn deal(&mut self) {
-        self.move_log.clear();
+        self.pending_discard=None;self.move_log.clear();
         self.deck=make_deck();self.discard.clear();self.selected.clear();self.staged=[vec![],vec![]];self.drag=None;self.staged_drag=None;self.pile_drag=None;self.drawn_card=None;self.human_draw_flight=None;self.human_phase_flight=None;self.cpu_discard_flight=None;self.human_discard_flight=None;self.cpu_draw_flight=None;self.cpu_phase_flight=None;self.cpu_hit_flight=None;self.turn=0;self.stage=Stage::Draw;self.cpu_step=0;self.cpu_skip=None;self.turn_count=1;self.round+=1;
         for p in &mut self.players {p.hand.clear();p.laid=false;p.table.clear();}
         for _ in 0..10 {for i in 0..4 {let c=self.deck.pop().unwrap();self.players[i].hand.push(c);}}
@@ -46,6 +46,18 @@ impl Game {
             self.stage=Stage::RoundOver;
             self.message=format!("{} went out! Scores updated. Continue for next round.",self.cpu_name(winner));
         }
+    }
+    pub(super) fn staged_phase_ready(&self)->bool {
+        if self.stage!=Stage::Play || self.turn!=0 || self.players[0].laid {return false;}
+        let phase=self.players[0].phase;
+        let Some(groups)=PHASES.get(phase) else{return false;};
+        let mut used=Vec::new();
+        groups.iter().enumerate().all(|(group,&minimum)|{
+            let ids=&self.staged[group];
+            if ids.iter().any(|id|{let duplicate=used.contains(id);used.push(*id);duplicate}){return false;}
+            let cards:Vec<_>=ids.iter().filter_map(|id|self.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
+            cards.len()==ids.len() && cards.len()>=minimum && valid_group(&cards,requirement(phase,group))
+        })
     }
     pub(super) fn result_winner(&self)->usize {
         if self.stage==Stage::GameOver {

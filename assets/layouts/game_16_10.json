@@ -326,79 +326,79 @@
       "height": 76.0,
       "width": 50.0,
       "x": 627.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_10": {
       "height": 76.0,
       "width": 50.0,
       "x": 1139.9998779296875,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_11": {
       "height": 76.0,
       "width": 50.0,
       "x": 1197.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_2": {
       "height": 76.0,
       "width": 50.0,
       "x": 684.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_3": {
       "height": 76.0,
       "width": 50.0,
       "x": 741.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_4": {
       "height": 76.0,
       "width": 50.0,
       "x": 798.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_5": {
       "height": 76.0,
       "width": 50.0,
       "x": 855.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_6": {
       "height": 76.0,
       "width": 50.0,
       "x": 912.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_7": {
       "height": 76.0,
       "width": 50.0,
       "x": 969.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_8": {
       "height": 76.0,
       "width": 50.0,
       "x": 1026.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_card_9": {
       "height": 76.0,
       "width": 50.0,
       "x": 1083.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_cards": {
       "height": 76.0,
       "width": 660.0,
       "x": 299.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_1_row_offset": {
       "height": 1.0,
       "width": 57.0,
       "x": 629.0,
-      "y": 874.0
+      "y": 875.0
     },
     "stage_double_2": {
       "height": 134.0,
@@ -451,67 +451,67 @@
     "stage_single_1_card_1": {
       "height": 76.0,
       "width": 50.0,
-      "x": 792.0,
+      "x": 763.5,
       "y": 874.0
     },
     "stage_single_1_card_10": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1304.9998779296875,
+      "x": 1276.4998779296875,
       "y": 874.0
     },
     "stage_single_1_card_11": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1362.0,
+      "x": 1333.5,
       "y": 874.0
     },
     "stage_single_1_card_2": {
       "height": 76.0,
       "width": 50.0,
-      "x": 849.0,
+      "x": 820.5,
       "y": 874.0
     },
     "stage_single_1_card_3": {
       "height": 76.0,
       "width": 50.0,
-      "x": 906.0,
+      "x": 877.5,
       "y": 874.0
     },
     "stage_single_1_card_4": {
       "height": 76.0,
       "width": 50.0,
-      "x": 963.0,
+      "x": 934.5,
       "y": 874.0
     },
     "stage_single_1_card_5": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1020.0,
+      "x": 991.5,
       "y": 874.0
     },
     "stage_single_1_card_6": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1077.0,
+      "x": 1048.5,
       "y": 874.0
     },
     "stage_single_1_card_7": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1134.0,
+      "x": 1105.5,
       "y": 874.0
     },
     "stage_single_1_card_8": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1191.0,
+      "x": 1162.5,
       "y": 874.0
     },
     "stage_single_1_card_9": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1248.0,
+      "x": 1219.5,
       "y": 874.0
     },
     "stage_single_1_cards": {
@@ -523,20 +523,32 @@
     "stage_single_1_row_offset": {
       "height": 1.0,
       "width": 57.0,
-      "x": 794.0,
+      "x": 765.5,
       "y": 874.0
     },
     "staging_double_label_1": {
       "height": 16.0,
       "width": 127.31199645996094,
-      "x": 324.0,
-      "y": 854.0
+      "x": 569.0,
+      "y": 853.0
     },
     "staging_double_label_2": {
       "height": 16.0,
       "width": 127.31199645996094,
-      "x": 1008.0,
-      "y": 854.0
+      "x": 1253.0,
+      "y": 853.0
+    },
+    "staging_double_ready_label_1": {
+      "height": 16.0,
+      "width": 176.11199951171875,
+      "x": 539.9439697265625,
+      "y": 853.0
+    },
+    "staging_double_ready_label_2": {
+      "height": 16.0,
+      "width": 176.11199951171875,
+      "x": 1223.9439697265625,
+      "y": 853.0
     },
     "staging_label_1": {
       "height": 16.0,

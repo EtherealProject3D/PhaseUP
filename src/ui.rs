@@ -1,6 +1,9 @@
 // Android assets are packaged at the APK asset root; desktop assets live under assets/.
 fn asset_prefix()->&'static str {if cfg!(target_os="android"){""}else{"assets/"}}
 use std::cell::RefCell;
+thread_local! {static BOARD_INPUT_BLOCKED:std::cell::Cell<bool>=const {std::cell::Cell::new(false)};}
+pub(super) fn board_input_blocked()->bool {BOARD_INPUT_BLOCKED.with(|b|b.get())}
+pub(super) fn set_board_input_blocked(blocked:bool){BOARD_INPUT_BLOCKED.with(|b|b.set(blocked));}
 thread_local! {
     static MENU_FONTS:RefCell<[Option<Font>;3]>=RefCell::new([None,None,None]);
     static NEON_BODY_FONT:RefCell<Option<Font>>=const {RefCell::new(None)};
@@ -485,7 +488,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let t=card_text(card.kind);let size: f32=if w<45.0{23.0}else{32.0};let dims=measure_text(&t,None,size as u16,1.0);
         label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     }
-    let m=game_mouse();!layout_editor::pointer_over_tools()&&m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
+    let m=game_mouse();!board_input_blocked()&&!layout_editor::pointer_over_tools()&&m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 pub(super) fn column_hand_width(count:usize,card_w:f32)->f32 {
     if count<=1 {0.0}else{(count-1) as f32*24.0_f32.min((450.0-card_w)/(count-1) as f32)}
