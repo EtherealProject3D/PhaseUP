@@ -122,16 +122,13 @@ impl Game {
         if let Some(mut groups)=staged_groups.or_else(||partition_phase_flexible(&cards,phase)) {
             order_table_groups(&mut groups,phase);
             // Capture the original staging positions before clearing the staging area.
-            let stage_w=if PHASES[phase].len()==1 {800.0}else{680.0};
-            let stage_left=(1920.0-(PHASES[phase].len() as f32*stage_w
-                +(PHASES[phase].len().saturating_sub(1)) as f32*6.0))/2.0;
             let mut flights=Vec::new();
             for (group_idx,group_cards) in groups.iter().enumerate() {
                 for (slot,card) in group_cards.iter().copied().enumerate() {
                     let staged=self.staged.iter().enumerate().find_map(|(g,ids)|
                         ids.iter().position(|id|*id==card.id).map(|idx|(g,idx)));
                     let (from_x,from_y)=if let Some((g,idx))=staged {
-                        (stage_left+g as f32*(stage_w+6.0)+10.0+idx as f32*57.0,1200.0-347.0+29.0)
+                        {let r=layout::staging_card(g,idx,PHASES[phase].len(),self.staged[g].len());(r.x,r.y)}
                     }else{
                         (960.0,1200.0-166.0)
                     };
@@ -169,13 +166,10 @@ impl Game {
         let mut sorted:Vec<Card>=self.players[0].hand.iter().copied()
             .filter(|c|!self.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
         sorted.sort_by_key(|c|sort_key(*c,self.sort));
-        let n=sorted.len();
-        let width=((1920.0-48.0)/(n.max(1) as f32)).min(75.0);
-        let spacing=if n>1 {((1600.0-48.0-width)/(n-1) as f32).min(81.0)}else{0.0};
-        let left=(1920.0-(spacing*(n.saturating_sub(1) as f32)+width))/2.0;
-        let index=sorted.iter().position(|c|c.id==id).unwrap_or(n.saturating_sub(1));
-        let from_x=left+index as f32*spacing;
-        let from_y=1200.0-166.0;
+        let (hand_slot,spacing)=layout::hand_layout(sorted.len());
+        let index=sorted.iter().position(|c|c.id==id).unwrap_or(sorted.len().saturating_sub(1));
+        let from_x=hand_slot.x+index as f32*spacing;
+        let from_y=hand_slot.y;
         let card=Self::remove_ids(&mut self.players[0].hand,&[id]);
         if card.is_empty(){return;}
         let c=card[0];
@@ -219,6 +213,7 @@ fn player_color(i:usize)->Color {
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wireframe:bool){
+    if !wireframe {layout::begin_scene();}
     set_default_camera();
     clear_background(active_theme().background());
     let sw=1920.0;let sh=game_canvas_height();
@@ -236,6 +231,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         clear_background(Color::new(0.025,0.035,0.055,1.0));
         draw_cpu_bounds(g);
         draw_text("WIREFRAME MODE - F7 to return to artwork",24.0,48.0,25.0,WHITE);
+        layout::end_scene();
         return;
     }
 
@@ -247,6 +243,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         ..Default::default()
     };
     set_camera(&camera);
+    if active_theme()==Theme::Futuristic {neon_game_background(sw,sh);}
     expire_human_flights(g);
     if active_theme()==Theme::Futuristic {
         let header=layout::rect("upper_banner",layout::Rect{x:12.0,y:8.0,w:sw-24.0,h:48.0});
@@ -254,18 +251,20 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     let logo=layout::rect("game_logo",layout::Rect{x:24.,y:10.,w:230.,h:42.});
     if active_theme()!=Theme::Futuristic || !neon_logo(logo.x,logo.y,logo.w,logo.h) {
-        menu_label("PHASEUP",logo.x,logo.y+logo.h-10.,32.,ACCENT);
+        editable_label("logo_text","PHASEUP",logo.x,logo.y+logo.h-10.,32.,ACCENT);
     }
     let version="v0.3.2-dev";
     let version_rect=layout::rect("game_version",layout::Rect{x:270.,y:21.,w:140.,h:25.});
-    label(version,version_rect.x,version_rect.y+19.,19.,MUTED);
+    editable_label("version_text",version,version_rect.x,version_rect.y+19.,19.,MUTED);
     let menu_button=layout::rect("menu_button",layout::Rect{x:1710.,y:8.,w:100.,h:40.});
-    draw_rectangle(menu_button.x,menu_button.y,menu_button.w,menu_button.h,PANEL);
-    menu_label("MENU",menu_button.x+(menu_button.w-menu_text_width("MENU",22))/2.0,menu_button.y+27.,22.,ACCENT);
+    let menu_hover=inside(menu_button.x,menu_button.y,menu_button.w,menu_button.h);
+    let metal_menu=active_theme()==Theme::Futuristic && neon_metal_button(menu_button.x,menu_button.y,menu_button.w,menu_button.h,menu_hover,true);
+    if !metal_menu {draw_rectangle(menu_button.x,menu_button.y,menu_button.w,menu_button.h,PANEL);}
+    editable_label("menu_text","MENU",menu_button.x+(menu_button.w-menu_text_width("MENU",22))/2.0,menu_button.y+menu_button.h/2.0+7.,22.,if metal_menu {WHITEISH}else{ACCENT});
     let round_status=format!("ROUND {}  |  TURN {}",g.round,g.turn_count);
     let round_status_width=menu_text_width(&round_status,22);
     let counter=layout::rect("round_turn_counter",layout::Rect{x:1400.,y:16.,w:288.,h:28.});
-    menu_label(&round_status,counter.x+counter.w-round_status_width,counter.y+22.,22.0,MUTED);
+    editable_label("round_turn_text",&round_status,counter.x+counter.w-round_status_width,counter.y+22.,22.0,MUTED);
     let (turn_text,turn_color)=match g.stage {
         Stage::Draw=>("YOUR TURN  -  DRAW 1 CARD TO BEGIN",ACCENT),
         Stage::Cpu=>("CPU TURN  -  WATCH THE ACTIONS",YELLOW),
@@ -279,20 +278,21 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     for i in 1..4 {let x=if active_theme()==Theme::Futuristic {layout::cpu_panel(i).x+20.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
-        menu_label(&cpu_status,status_x,124.,16.,MUTED); 
+        editable_label("cpu_score_text",&cpu_status,status_x,124.,16.,MUTED);
         // Face-down fanned hand: the visible backs represent the actual hand count.
         let count=p.hand.len();
         let card_w=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){72.6}else{54.0};let card_h=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){90.2}else{70.0};
         let step=if count>1 {if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){26.0}else{column_hand_width(count,card_w)/(count-1) as f32}}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
-            cpu_card_back(x+10.0+k as f32*step,if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){153.0}else{162.0},card_w,card_h);
+            let back=layout::rect(&format!("cpu_{i}_hand_card_{}",k+1),layout::Rect{x:x+10.+k as f32*step,y:if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){153.}else{162.},w:card_w,h:card_h});
+            cpu_card_back(back.x,back.y,back.w,back.h);
         }
         // Identify the player directly beneath their face-down hand.
         let name=g.cpu_name(i);
-        menu_label(&name,x+12.0,146.,18.,player_color(i));
+        editable_label("cpu_name_text",&name,x+12.0,146.,18.,player_color(i));
         let name_width=menu_text_width(&name,18);
-        menu_label(&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+12.0+name_width,146.,18.,WHITEISH);
+        editable_label("cpu_hand_status_text",&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+12.0+name_width,146.,18.,WHITEISH);
     }
     let table_y=241.;
     let mut hit_click=None;
@@ -304,10 +304,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         if !p.laid {
             let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
             let y=if i==0 {sh-532.0}else{table_y+22.0};
-            if i==0 {menu_label("YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
+            if i==0 {editable_label(if PHASES[p.phase.min(9)].len()==1 {"human_single_unlaid_title"}else{"human_double_unlaid_title"},"YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
             let phase=p.phase.min(PHASES.len()-1);
             let group_count=PHASES[phase].len();
-            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel().x,layout::human_phase_panel().y,layout::human_phase_panel().w,layout::human_phase_panel().h,group_count==1);
+            let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(group_count).x,layout::human_phase_panel(group_count).y,layout::human_phase_panel(group_count).w,layout::human_phase_panel(group_count).h,group_count==1);
             for j in 0..group_count {
                 let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
                 let base_x=x+j as f32*if i==0 {403.0}else{312.0};
@@ -328,17 +328,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width(&desc,17))/2.0}else if player_art {gx+(width-menu_text_width(&desc,17))/2.0}else{gx+8.0};
                 let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
                 let (hx,hy)=if i==0 {layout::human_content_offset(true,group_count)}else{(0.0,0.0)};
-                menu_label(&desc,label_x+ox+hx,y+if player_art {if group_count==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,Color::new(0.62,0.71,0.78,1.0));
+                editable_label(&format!("player_{i}_{}_unlaid_requirement",if group_count==1 {"single"}else{"double"}),&desc,label_x+ox+hx,y+if player_art {if group_count==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,Color::new(0.62,0.71,0.78,1.0));
                 let not_laid_x=if cpu_full_span {{let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width("NOT LAID",17))/2.0}}
                     else if i>0 && has_neon_cpu_panel(){gx+(width-menu_text_width("NOT LAID",17))/2.0-10.0}else if player_art {gx+(width-menu_text_width("NOT LAID",17))/2.0}else{gx+10.0};
-                menu_label("NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
+                editable_label(&format!("player_{i}_{}_not_laid",if group_count==1 {"single"}else{"double"}),"NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
         if !p.laid {continue;}
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
-        if i==0 {menu_label("YOUR LAID PHASE",x,y,17.0,player_color(i));}
-        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel().x,layout::human_phase_panel().y,layout::human_phase_panel().w,layout::human_phase_panel().h,p.table.len()==1);
+        if i==0 {editable_label(if p.table.len()==1 {"human_single_laid_title"}else{"human_double_laid_title"},"YOUR LAID PHASE",x,y,17.0,player_color(i));}
+        let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(p.table.len()).x,layout::human_phase_panel(p.table.len()).y,layout::human_phase_panel(p.table.len()).w,layout::human_phase_panel(p.table.len()).h,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
             let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
@@ -361,7 +361,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let desc_x=if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{desc_x};
             let (ox,oy)=if i>0 {layout::cpu_content_offset(true)}else{(0.0,0.0)};
             let (hx,hy)=if i==0 {layout::human_content_offset(true,p.table.len())}else{(0.0,0.0)};
-            menu_label(&desc,desc_x+ox+hx,yy+if player_art {if p.table.len()==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,WHITEISH);
+            editable_label(&format!("player_{i}_{}_laid_requirement",if p.table.len()==1 {"single"}else{"double"}),&desc,desc_x+ox+hx,yy+if player_art {if p.table.len()==1 {5.0+hy}else{-7.0+hy}}else if i>0 && has_neon_cpu_panel(){30.0+oy}else{22.0+hy},17.0,WHITEISH);
             let card_w=55.0;
             let card_h=84.0;
             // While dragging a valid card from the hand, preview the space it
@@ -409,7 +409,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             if let Some(slot)=preview {
                 let cx=stack_x+slot as f32*step;
                 let cy=card_area.y;
-                draw_rectangle_lines(cx,cy,card_w,card_h,2.5,YELLOW);
+                if active_theme()!=Theme::Futuristic {draw_rectangle_lines(cx,cy,card_w,card_h,2.5,YELLOW);}
             }
             for (k,card) in group.iter().enumerate() {
                 if i==0 && g.human_phase_flight.as_ref().is_some_and(|flight|!flight.visible(card.id,get_time())) {continue;}
@@ -418,20 +418,20 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let shown=k+usize::from(preview.is_some_and(|slot|k>=slot));
                 let cx=stack_x+shown as f32*step;
                 let cy=card_area.y;
-                let card_pos=layout::Rect{x:cx,y:cy,w:card_w,h:card_h};
+                let card_pos=layout::rect(&format!("player_{i}_{}_laid_{}_card_{}",if p.table.len()==1 {"single"}else{"double"},j+1,k+1),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
                 let (cx,cy)=(card_pos.x,card_pos.y);
                 if active_theme()==Theme::Futuristic {
-                    let _=card_ui(*card,cx,cy,card_w,card_h,false);
+                    let _=card_ui(*card,cx,cy,card_pos.w,card_pos.h,false);
                 } else {
                     let color=color_for(card.kind);
                     draw_rectangle(cx+1.0,cy+2.0,card_w,card_h,BG);
                     draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
                     draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
                     let value=card_text(card.kind);
-                    label(&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                    editable_label("plain_card_value",&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
                 }
             }
-            if can_place {label("CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}
+            if can_place && active_theme()!=Theme::Futuristic {editable_label("hit_instruction","CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}
             if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,116.0) {
                 hit_click=Some((i,j));
             }
@@ -455,14 +455,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let (draw_tx,draw_ty)=layout::pile_offset(false,true);
     let (count_tx,count_ty)=layout::draw_count_offset();
     let (discard_tx,discard_ty)=layout::pile_offset(true,true);
-    menu_label("DRAW",deck_x+draw_tx,pile_y-17.0+draw_ty,19.0,MUTED);
-    menu_label("DISCARD",discard_x+discard_tx,discard_y-17.0+discard_ty,19.0,MUTED);
+    editable_label("draw_title","DRAW",deck_x+draw_tx,pile_y-17.0+draw_ty,19.0,MUTED);
+    editable_label("discard_title","DISCARD",discard_x+discard_tx,discard_y-17.0+discard_ty,19.0,MUTED);
     if active_theme()==Theme::Futuristic && neon_draw_back(deck_x,pile_y,pile_w,pile_h) {
-        if g.stage==Stage::Draw {
-            draw_rectangle_lines(deck_x-2.0,pile_y-2.0,pile_w+4.0,pile_h+4.0,2.0,active_theme().accent());
-        }
         let count_text=format!("{} left",g.deck.len());
-        menu_label(&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+pile_h+22.0+count_ty,17.0,WHITEISH);
+        editable_label("draw_remaining_count",&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+pile_h+22.0+count_ty,17.0,WHITEISH);
     } else {
     // Offset layers expose the thickness of the remaining draw deck.
     let layers=g.deck.len().min(3);
@@ -478,9 +475,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     draw_line(deck_x+pile_w-13.0,pile_y+15.0,deck_x+13.0,pile_y+pile_h-15.0,1.0,active_theme().accent());
     draw_rectangle(deck_x+8.0,pile_y+55.0,pile_w-16.0,51.0,Color::new(0.12,0.28,0.38,0.96));
     let draw_text="DRAW";
-    menu_label(draw_text,deck_x+(pile_w-menu_text_width(draw_text,19))/2.0+draw_tx,pile_y+77.0+draw_ty,19.0,WHITEISH);
+    editable_label("draw_card_text",draw_text,deck_x+(pile_w-menu_text_width(draw_text,19))/2.0+draw_tx,pile_y+77.0+draw_ty,19.0,WHITEISH);
     let count_text=format!("{} left",g.deck.len());
-    menu_label(&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+99.0+count_ty,17.0,WHITEISH);
+    editable_label("draw_count_text",&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+99.0+count_ty,17.0,WHITEISH);
     }
     let m=game_mouse();
     if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,pile_y,pile_w,pile_h){g.pile_drag=Some((false,m.0,m.1));}
@@ -490,24 +487,25 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let offset=layer as f32*4.0;
         draw_rectangle(discard_x+offset+3.0,discard_y+offset+4.0,pile_w,pile_h,Color::new(0.035,0.055,0.085,1.0));
         draw_rectangle(discard_x+offset,discard_y+offset,pile_w,pile_h,Color::new(0.17,0.24,0.30,1.0));
-        draw_rectangle_lines(discard_x+offset,discard_y+offset,pile_w,pile_h,1.5,MUTED);
+        if active_theme()!=Theme::Futuristic {draw_rectangle_lines(discard_x+offset,discard_y+offset,pile_w,pile_h,1.5,MUTED);}
     }
     draw_rectangle(discard_x,discard_y,pile_w,pile_h,Color::new(0.10,0.18,0.23,1.0));
-    draw_rectangle_lines(discard_x,discard_y,pile_w,pile_h,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});
+    if active_theme()!=Theme::Futuristic {draw_rectangle_lines(discard_x,discard_y,pile_w,pile_h,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});}
     if let Some(c)=g.discard.last().copied(){
         if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){
             let _=card_ui(c,discard_x,discard_y,pile_w,pile_h,false);
         }
         if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,discard_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
     }else{
-        menu_label("EMPTY",discard_x+20.0+discard_tx,discard_y+82.0+discard_ty,20.0,MUTED);
+        editable_label("discard_empty_text","EMPTY",discard_x+20.0+discard_tx,discard_y+82.0+discard_ty,20.0,MUTED);
     }
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
-    let log_x=1538.0;let log_y=480.0;
-    draw_rectangle(log_x,log_y,374.0,300.0,active_theme().panel());
-    draw_rectangle_lines(log_x,log_y,374.0,300.0,1.5,active_theme().accent());
-    menu_label("RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
+    let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
+    let log_x=log.x;let log_y=log.y;
+    draw_rectangle(log_x,log_y,log.w,log.h,active_theme().panel());
+    draw_rectangle_lines(log_x,log_y,log.w,log.h,1.5,active_theme().accent());
+    editable_label("moves_title","RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
     // Separate the panel heading from the history, including the newest-move highlight.
     draw_line(log_x+10.0,log_y+39.0,log_x+364.0,log_y+39.0,1.0,active_theme().accent());
     // Put the live action *inside* the panel so laid phases cannot cover it.
@@ -518,7 +516,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         draw_rectangle_lines(log_x+9.0,log_y+34.0,356.0,36.0,1.5,YELLOW);
         let notice_size=17;
         let width=menu_text_width(&notice,notice_size);
-        menu_label(&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
+        editable_label("cpu_action_notice",&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
         log_y+113.0
     }else{log_y+69.0};
     let max_events=8;
@@ -536,11 +534,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             if is_actor {Some((i,name))}else{None}
         });
         if let Some((i,name))=actor {
-            menu_label(&name,log_x+14.0,entry_y,18.0,player_color(i));
+            editable_label("move_player_name",&name,log_x+14.0,entry_y,18.0,player_color(i));
             let rest=&event[name.len()..];
-            menu_label(rest,log_x+14.0+menu_text_width(&name,18),entry_y,18.0,WHITEISH);
+            editable_label("move_description",rest,log_x+14.0+menu_text_width(&name,18),entry_y,18.0,WHITEISH);
         }else{
-            menu_label(event,log_x+14.0,entry_y,18.0,WHITEISH);
+            editable_label("move_event",event,log_x+14.0,entry_y,18.0,WHITEISH);
         }
     }
     }
@@ -555,42 +553,44 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let mut stage_drop=None;
     let mut staged_reorder=None;
     for group in 0..groups.len() {
-        let slot=layout::rect(if group==0 {"stage_1"}else{"stage_2"},layout::Rect{x:stage_left+group as f32*(stage_w+6.0),y:stage_y,w:stage_w,h:117.});
+        let slot=layout::rect(&layout::stage_key(group,groups.len(),""),layout::Rect{x:stage_left+group as f32*(stage_w+6.0),y:stage_y,w:stage_w,h:117.});
         let x=slot.x;
         let y=slot.y;
         let stage_w=slot.w;
-        draw_rectangle(x,y,stage_w,117.0,PANEL);
-        let hovering=inside(x,y,stage_w,117.0);
+        let stage_h=slot.h;
+        let stage_art=active_theme()==Theme::Futuristic && neon_staging_slot(x,y,stage_w,stage_h,groups.len()==1);
+        if !stage_art {draw_rectangle(x,y,stage_w,stage_h,PANEL);}
+        let hovering=inside(x,y,stage_w,stage_h);
         let dragging=g.drag.is_some_and(|(_,sx,sy)| {
             let (mx,my)=game_mouse();
             is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
         });
-        if hovering&&dragging&&g.stage==Stage::Play {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,113.0,Color::new(0.12,0.43,0.39,0.65));}
-        draw_rectangle_lines(x,y,stage_w,117.0,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw && g.turn_count==1 {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});
+        if active_theme()!=Theme::Futuristic && hovering&&dragging&&g.stage==Stage::Play {draw_rectangle(x+2.0,y+2.0,stage_w-4.0,(stage_h-4.0).max(0.),Color::new(0.12,0.43,0.39,0.65));}
+        if !stage_art {draw_rectangle_lines(x,y,stage_w,stage_h,if hovering&&dragging&&g.stage==Stage::Play {3.0}else{1.5},if g.stage==Stage::Draw && g.turn_count==1 {MUTED}else if hovering&&dragging {YELLOW}else{ACCENT});}
+        let cards_area=layout::rect(&layout::stage_key(group,groups.len(),"_cards"),layout::Rect{x:x+10.,y:y+29.,w:stage_w-20.,h:76.});
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        menu_label(&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
-        let drag_preview=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
+        editable_label(if groups.len()==1 {"staging_single_label"}else{"staging_double_label"},&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        let dragged_id=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
             let (mx,my)=game_mouse();
-            if is_mouse_button_down(MouseButton::Left)
-                && (mx-sx).abs()+(my-sy).abs()>10.0
-                && inside(x,y,stage_w,117.0) {
-                let slot=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
-                Some((id,slot))
-            } else {None}
+            (is_mouse_button_down(MouseButton::Left) && (mx-sx).abs()+(my-sy).abs()>10.
+                && inside(x,y,stage_w,stage_h)).then_some(id)
         });
-        let visible_cards:Vec<Card>=cards.iter().copied()
-            .filter(|card|drag_preview.is_none_or(|(id,_)|card.id!=id)).collect();
-        let insert_at=drag_preview.map(|(_,slot)|slot.min(visible_cards.len()));
+        let visible_cards:Vec<Card>=cards.iter().copied().filter(|card|dragged_id!=Some(card.id)).collect();
+        let shown_count=visible_cards.len()+usize::from(dragged_id.is_some());
+        let (row_start,card_step)=layout::staging_row(group,shown_count,cards_area,groups.len());
+        let insert_at=dragged_id.map(|_|{
+            (((game_mouse().0-row_start+card_step/2.)/card_step.max(0.001)).floor().max(0.) as usize).min(visible_cards.len())
+        });
         if let Some(slot)=insert_at {
-            let gap_x=x+10.0+slot as f32*57.0;
-            draw_rectangle_lines(gap_x,y+29.0,50.0,76.0,2.0,YELLOW);
+            let gap_x=row_start+slot as f32*card_step;
+            draw_rectangle_lines(gap_x,cards_area.y,50.0,cards_area.h,2.0,YELLOW);
         }
         for (i,card) in visible_cards.iter().enumerate() {
             let shifted=i+usize::from(insert_at.is_some_and(|slot|i>=slot));
-            let cx=x+10.0+shifted as f32*57.0;
-            let card_pos=layout::rect(&format!("stage_card_{}",card.id),layout::Rect{x:cx,y:y+29.0,w:50.0,h:76.0});
+            let cx=row_start+shifted as f32*card_step;
+            let card_pos=layout::rect(&layout::stage_key(group,groups.len(),&format!("_card_{}",shifted+1)),layout::Rect{x:cx,y:cards_area.y,w:50.0,h:cards_area.h});
             let cx=card_pos.x;
             if cx+51.0<x+stage_w {
                 let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
@@ -598,20 +598,24 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     id==card.id&&is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0
                 });
                 if floating {
-                    draw_rectangle(cx,y+29.0,50.0,76.0,Color::new(0.24,0.32,0.40,0.45));
-                    draw_rectangle_lines(cx,y+29.0,50.0,76.0,1.0,MUTED);
-                } else {let _=card_ui(*card,cx,y+29.0,50.0,76.0,false);}
-                if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,y+29.0,50.0,76.0){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
+                    draw_rectangle(cx,cards_area.y,50.0,cards_area.h,Color::new(0.24,0.32,0.40,0.45));
+                    if active_theme()!=Theme::Futuristic {draw_rectangle_lines(cx,cards_area.y,50.0,cards_area.h,1.0,MUTED);}
+                } else {let _=card_ui(*card,cx,card_pos.y,card_pos.w,card_pos.h,false);}
+                if g.stage==Stage::Play&&is_mouse_button_pressed(MouseButton::Left)&&inside(cx,card_pos.y,card_pos.w,card_pos.h){g.staged_drag=Some((card.id,game_mouse().0,game_mouse().1));}
             }
         }
-        if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,117.0) {
-            stage_drop=Some(group);
+        if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,stage_h) {
+            let incoming=g.drag.is_some_and(|(id,_,_)|!g.staged[group].contains(&id));
+            let (drop_start,drop_step)=layout::centered_staging(cards.len()+usize::from(incoming),cards_area);
+            let drop_index=(((game_mouse().0-drop_start+drop_step/2.)/drop_step.max(0.001)).floor().max(0.)) as usize;
+            stage_drop=Some((group,drop_index));
             if let Some((id,sx,sy))=g.staged_drag {
                 let (mx,my)=game_mouse();
                 if (mx-sx).abs()+(my-sy).abs()>10.0 {
-                    let slot=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
                     let source=g.staged.iter().position(|bucket|bucket.contains(&id));
-                    let target_index=if source==Some(group){let old=g.staged[group].iter().position(|v|*v==id).unwrap_or(0);if slot>old{slot.saturating_sub(1)}else{slot}}else{slot};
+                    let amount=cards.len()+usize::from(source!=Some(group));
+                    let (drop_start,drop_step)=layout::centered_staging(amount,cards_area);
+                    let target_index=(((mx-drop_start+drop_step/2.)/drop_step.max(0.001)).floor().max(0.)) as usize;
                     staged_reorder=Some((id,group,target_index));
                 }
             }
@@ -620,9 +624,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         // for selected hand cards; no separate STAGE 1 / STAGE 2 button needed.
         if g.stage==Stage::Play && !g.selected.is_empty()
             && is_mouse_button_pressed(MouseButton::Left)
-            && inside(x+10.0,y+32.0,stage_w-20.0,75.0)
+            && inside(x+10.0,y+32.0,stage_w-20.0,(stage_h-42.0).max(0.))
             && g.drag.is_none() && g.staged_drag.is_none()
-            && !cards.iter().enumerate().any(|(j,_)|inside(x+10.0+j as f32*57.0,y+30.0,50.0,78.0))
+            && !cards.iter().enumerate().any(|(j,_)|{
+                let r=layout::staging_card(group,j,groups.len(),cards.len());inside(r.x,r.y,r.w,r.h)
+            })
         {
             g.stage_selected(group);
         }
@@ -643,11 +649,21 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    if g.stage==Stage::Draw && g.turn_count==1 {for group in 0..groups.len(){let x=stage_left+group as f32*(stage_w+6.0);draw_rectangle(x,stage_y,stage_w,117.0,Color::new(0.04,0.07,0.10,0.72));let t="DRAW FIRST";let tw=menu_text_width(t,24);menu_label(t,x+(stage_w-tw)/2.0,stage_y+67.0,24.0,MUTED);}}
+    if g.stage==Stage::Draw && g.turn_count==1 {
+        for group in 0..groups.len(){
+            let slot=layout::rect(&layout::stage_key(group,groups.len(),""),layout::Rect{x:stage_left+group as f32*(stage_w+6.),y:stage_y,w:stage_w,h:117.});
+            if active_theme()!=Theme::Futuristic {draw_rectangle(slot.x,slot.y,slot.w,117.,Color::new(0.04,0.07,0.10,0.72));}
+            let t="DRAW FIRST";let tw=menu_text_width(t,24);
+            editable_label(if groups.len()==1 {"staging_single_draw_first"}else{"staging_double_draw_first"},t,slot.x+(slot.w-tw)/2.,slot.y+67.,24.,MUTED);
+        }
+    }
     let hand_panel=layout::rect("hand_panel",layout::Rect{x:12.,y:sh-229.,w:sw-24.,h:217.});
     let py=hand_panel.y+72.0;
-    draw_rectangle(hand_panel.x,hand_panel.y,hand_panel.w,hand_panel.h,active_theme().panel());
-    if active_theme()==Theme::Futuristic {neon_frame(hand_panel.x,hand_panel.y,hand_panel.w,hand_panel.h,true);}
+    if active_theme()==Theme::Futuristic {
+        neon_hand_panel(hand_panel.x,hand_panel.y,hand_panel.w,hand_panel.h);
+    } else {
+        draw_rectangle(hand_panel.x,hand_panel.y,hand_panel.w,hand_panel.h,active_theme().panel());
+    }
     // Draw inside the hand panel, after its background and before the cards.
     // Taller, high-contrast banner; hand cards start lower to clear it.
     let phase_bottom=(sh-532.0)+116.0;
@@ -657,23 +673,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let guidance_x=(sw-770.0)/2.0;
     let guidance_w=770.0;
     let guidance_h=43.0;
+    let guidance=layout::rect("turn_instruction",layout::Rect{x:guidance_x,y:guidance_y,w:guidance_w,h:guidance_h});
+    let (guidance_x,guidance_y,guidance_w,guidance_h)=(guidance.x,guidance.y,guidance.w,guidance.h);
     let p=&g.players[0];
     let hand_info=format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score);
     let hand_info_width=menu_text_width(&hand_info,21);
-    menu_label(&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
+    editable_label("hand_heading",&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
         let sort_y=sh-51.0;
-        if button(name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
-        if g.sort==*mode {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
+        if editable_button("sort_button",name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
+        if g.sort==*mode && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
     let mut hand:Vec<Card>=p.hand.iter().copied().filter(|c|!g.staged.iter().any(|v|v.contains(&c.id))).collect();
     hand.sort_by_key(|c|sort_key(*c,g.sort));
-    let n=hand.len();let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
-    let spacing=if n>1{((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
-    let start=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
-    let card_y=py-9.0;
+    let (hand_slot,spacing)=layout::hand_layout(hand.len());
+    let (start,card_y,w)=(hand_slot.x,hand_slot.y,hand_slot.w);
     // Hover lifts a card without changing its selection or gameplay state.
     let (hand_mx,hand_my)=game_mouse();
     let hovered_hand_card=if g.drag.is_none() {
@@ -718,10 +734,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let lifted_y=card_y-hover_lift;
         if is_dragging {
             draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
-            draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);
+            if active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);}
         } else {
             if card_ui(*c,x,lifted_y,w,105.0,selected){toggle=Some(c.id);}
-            if g.drawn_card==Some(c.id){
+            if g.drawn_card==Some(c.id) && active_theme()!=Theme::Futuristic{
                 let y=lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0};
                 draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);
             }
@@ -752,8 +768,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>12.0 {
             let x=mx-41.0;let y=my-55.0;
             draw_rectangle(x,y,82.0,110.0,if from_discard {WHITEISH}else{ACCENT});
-            draw_rectangle_lines(x,y,82.0,110.0,3.0,YELLOW);
-            label(if from_discard {"DISCARD"}else{"DRAW"},x+6.0,y+59.0,17.0,BG);
+            if active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,y,82.0,110.0,3.0,YELLOW);}
+            editable_label("drag_pile_text",if from_discard {"DISCARD"}else{"DRAW"},x+6.0,y+59.0,17.0,BG);
         }
     }
     if is_mouse_button_released(MouseButton::Left) {
@@ -766,9 +782,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     // Drag-and-drop is already a direct physical movement.
                     // Only button-triggered discards should fly.
                     g.human_discard_flight=None;
-                } else if let Some(group)=stage_drop {
-                    let x=stage_left+group as f32*(stage_w+6.0);
-                    let index=(((mx-(x+10.0)+28.5)/57.0).floor().max(0.0)) as usize;
+                } else if let Some((group,index))=stage_drop {
                     g.stage_card_at(id,group,index);
                 }
             }
@@ -799,9 +813,19 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 .filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
             cards.len()>=groups[group]&&valid_group(&cards,requirement(phase,group))
         });
-    if staged_complete {
+    let instruction_color=if staged_complete {GREEN}else{turn_color};
+    if active_theme()==Theme::Futuristic && neon_turn_instruction(guidance_x,guidance_y,guidance_w,guidance_h,instruction_color,staged_complete) {
+        let text=if staged_complete {"PHASE COMPLETE  -  LAY PHASE"}else{turn_text};
+        let size=if staged_complete {21}else{25};
+        let tw=menu_text_width(text,size);
+        editable_label("turn_instruction_text",text,guidance_x+(guidance_w-tw)/2.,guidance_y+guidance_h/2.+size as f32*0.36,size as f32,instruction_color);
+        if staged_complete && !layout_editor::editing() && inside(guidance_x,guidance_y,guidance_w,guidance_h) && is_mouse_button_pressed(MouseButton::Left) {
+            g.selected=g.staged.iter().flatten().copied().collect();
+            g.lay();
+        }
+    } else if staged_complete {
         // A single ready-to-lay banner avoids overlapping the laid-phase area.
-        if button("PHASE COMPLETE  -  LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
+        if editable_button("lay_phase_button","PHASE COMPLETE  -  LAY PHASE",guidance_x,guidance_y,guidance_w,guidance_h,true) {
             g.selected=g.staged.iter().flatten().copied().collect();
             g.lay();
         }
@@ -810,12 +834,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,3.0,GREEN);
         let ready_text="PHASE COMPLETE  -  LAY PHASE";
         let ready_w=menu_text_width(ready_text,21);
-        menu_label(ready_text,guidance_x+(guidance_w-ready_w)/2.0,guidance_y+guidance_h/2.0+7.0,21.0,GREEN);
+        editable_label("phase_ready_text",ready_text,guidance_x+(guidance_w-ready_w)/2.0,guidance_y+guidance_h/2.0+7.0,21.0,GREEN);
     } else {
         draw_rectangle(guidance_x,guidance_y,guidance_w,guidance_h,BG);
         draw_rectangle_lines(guidance_x,guidance_y,guidance_w,guidance_h,2.0,turn_color);
         let tw=menu_text_width(turn_text,25);
-        menu_label(turn_text,sw/2.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
+        editable_label("turn_status_text",turn_text,sw/2.0-tw/2.0,guidance_y+30.0,25.0,turn_color);
     }
     // Hand-area controls match the mockup: clears in the left margin,
     // discard at the right, and sorting buttons remain centered.
@@ -828,17 +852,17 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
     if groups.len()==1 {
-        if button("CLEAR",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
+        if editable_button("clear_single_button","CLEAR",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
     } else {
-        if button("CLEAR ALL",control_x,control_y,control_w,control_h,has_staged) {
+        if editable_button("clear_all_button","CLEAR ALL",control_x,control_y,control_w,control_h,has_staged) {
             g.staged=[vec![],vec![]];
         }
-        if button("CLEAR 1",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
+        if editable_button("clear_first_button","CLEAR 1",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
-        if button("CLEAR 2",control_x,control_y+78.0,control_w,control_h,!g.staged[1].is_empty()) {
+        if editable_button("clear_second_button","CLEAR 2",control_x,control_y+78.0,control_w,control_h,!g.staged[1].is_empty()) {
             g.staged[1].clear();
         }
     }
@@ -847,10 +871,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let discard_width=103.0;
     // Mirror the right discard button across the center of the game board.
     for discard_x in [1920.0-1250.0-discard_width,1250.0] {
-        if button("DISCARD",discard_x,discard_y,discard_width,28.0,discard_ready){
+        if editable_button("discard_button","DISCARD",discard_x,discard_y,discard_width,28.0,discard_ready){
             g.discard_selected();
         }
-        if discard_ready {
+        if discard_ready && active_theme()!=Theme::Futuristic {
             draw_rectangle_lines(discard_x,discard_y,discard_width,28.0,3.0,YELLOW);
         }
     }
@@ -867,26 +891,27 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let game_over=g.stage==Stage::GameOver;
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
         let title_w=menu_text_width(&title,32);
-        menu_label(&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
+        editable_label("round_result_title",&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
         let winner_name=g.cpu_name(g.turn).to_uppercase();
         let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
         let announce_w=menu_text_width(&announcement,27);
-        menu_label(&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
-        menu_label("TOTAL SCORES",x+29.,y+128.,18.,MUTED);
+        editable_label("round_result_message",&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
+        editable_label("score_heading","TOTAL SCORES",x+29.,y+128.,18.,MUTED);
         for i in 0..4 {
             let p=&g.players[i];
             let name=g.cpu_name(i);
             let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
-            menu_label(&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
+            editable_label("score_row",&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
         if game_over {
-            if button("NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
-            let _=button("MAIN MENU",x+280.,y+277.,190.,40.,true);
-        } else if button("NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
+            if editable_button("new_game_button","NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
+            let _=editable_button("main_menu_button","MAIN MENU",x+280.,y+277.,190.,40.,true);
+        } else if editable_button("next_round_button","NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
     }
     draw_card_flights(g,sw,sh);
     if show_bounds {draw_cpu_bounds(g);}
     if show_debug {debug_overlay(g);}
+    layout::end_scene();
 }
 
 // F4 visual diagnostic: show the actual layout coordinates used by the renderer.
@@ -898,7 +923,7 @@ fn draw_cpu_bounds(g:&Game) {
     let green=Color::new(0.1,1.0,0.5,1.0);
     let cyan=Color::new(0.3,0.85,1.0,1.0);
     // Human laid-phase diagnostics: same fixed geometry for laid/unlaid states.
-    let human=layout::human_phase_panel();
+    let human=layout::human_phase_panel(PHASES[g.players[0].phase.min(9)].len());
     draw_rectangle_lines(human.x,human.y,human.w,human.h,2.5,red);
     draw_text(&format!("HUMAN PANEL ({:.0},{:.0}) {:.0}x{:.0}",human.x,human.y,human.w,human.h),
         human.x+8.0,human.y+16.0,14.0,red);
@@ -1006,7 +1031,7 @@ fn menu_button(title:&str,y:f32)->bool {
     // Long theme names must fit inside the standard-width menu buttons.
     let size=if menu_text_width(title,28)>420.0 {23}else{28};
     let w=menu_text_width(title,size);
-    menu_label(title,960.0-w/2.0,y+42.0,size as f32,if hovered {BG} else {WHITEISH});
+    menu_label(title,960.0-w/2.0,y+42.0,size as f32,if hovered && active_theme()!=Theme::Futuristic {BG} else {WHITEISH});
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
@@ -1169,8 +1194,6 @@ async fn main(){
     workshop_preview.players[1].table=vec![vec![Card{id:9001,kind:Kind::Number(5,0)},Card{id:9002,kind:Kind::Number(5,1)},Card{id:9003,kind:Kind::Number(5,2)}],vec![Card{id:9004,kind:Kind::Number(8,3)},Card{id:9005,kind:Kind::Number(8,0)},Card{id:9006,kind:Kind::Wild}]];
     let mut show_bounds=false;
     let mut wireframe=false;
-    let mut align_labels=true;
-    let mut align_target=0usize;
     let mut has_game=false;
     let mut last_size=(screen_width().round() as i32,screen_height().round() as i32);
     let mut size_changed_at=get_time();
@@ -1281,73 +1304,21 @@ async fn main(){
             if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
         } else {
             if menu==MenuScreen::UiWorkshop {
-                // Tab is reserved for selecting layout elements in edit mode.
+                // Tab cycles the unified Workshop selection.
                 if is_key_pressed(KeyCode::R) {
                     load_neon_cards().await;
                     load_neon_ui().await;
                 }
             }
             let action=if menu==MenuScreen::UiWorkshop && workshop_board {
+                layout_editor.open();
                 draw_game(&mut workshop_preview,false,false,show_bounds,wireframe);
                 // Board preview is intentionally clean: testing controls live in the gallery.
                 if button("BACK TO TOOLS",24.0,1120.0,240.0,54.0,true){
                     workshop_board=false;
                     layout_editor.close();
                 }
-                // Draw editor behind the alignment toolbar so its panels cannot hide the controls.
-                if !wireframe {layout_editor.draw(&workshop_preview);}
-                // Live phase-content and pile alignment controls.
-                if !wireframe {
-                    draw_rectangle(16.0,470.0,440.0,174.0,Color::new(0.01,0.025,0.045,0.94));
-                    let target=if align_target==4 {"TEXT"}else if align_labels {"TEXT"}else if align_target>=2 {"PILE"}else{"CARDS"};
-                    let (ox,oy)=layout::alignment_offset(align_target,align_labels,workshop_preview.players[0].table.len());
-                    menu_label(&format!("ALIGN {} {} X:{:.0} Y:{:.0}",match align_target {0=>"CPU",1=>if workshop_preview.players[0].table.len()==1 {"HUMAN 1"}else{"HUMAN 2"},2=>"DRAW",3=>"DISCARD",_=>"DRAW COUNT"},target,ox,oy),28.0,497.0,20.0,WHITEISH);
-                    if button(if align_target==4 {"CARDS LEFT TEXT"}else if align_target>=2 {"SWITCH TEXT / PILE"}else{"SWITCH LABELS / CARDS"},28.0,507.0,405.0,32.0,align_target!=4) {align_labels=!align_labels;}
-                    let mut dx=0.0;let mut dy=0.0;
-                    if button("LEFT",28.0,548.0,96.0,36.0,true) {dx-=1.0;}
-                    if button("RIGHT",132.0,548.0,96.0,36.0,true) {dx+=1.0;}
-                    if button("UP",236.0,548.0,96.0,36.0,true) {dy-=1.0;}
-                    if button("DOWN",340.0,548.0,96.0,36.0,true) {dy+=1.0;}
-                    if dx!=0.0 || dy!=0.0 {layout::nudge_alignment(align_target,align_labels,workshop_preview.players[0].table.len(),dx,dy);}
-                    if button("SAVE OFFSETS",28.0,594.0,196.0,36.0,true) {
-                        #[cfg(not(target_os="android"))]
-                        if let Err(error)=layout::save(){eprintln!("Failed to save alignment offsets: {error}");}
-                    }
-                    if button("RESET SELECTED",236.0,594.0,196.0,36.0,true) {
-                        let (x,y)=layout::alignment_offset(align_target,align_labels,workshop_preview.players[0].table.len());
-                        layout::nudge_alignment(align_target,align_labels,workshop_preview.players[0].table.len(),-x,-y);
-                    }
-                    if button(match align_target {0=>"TARGET: CPU",1=>"TARGET: HUMAN",2=>"TARGET: DRAW",3=>"TARGET: DISCARD",_=>"TARGET: DRAW COUNT"},28.0,654.0,405.0,42.0,true) {
-                        align_target=(align_target+1)%5;
-                    }
-                    if button("HUMAN: 2 GROUPS",28.0,790.0,196.0,42.0,true) {
-                        if let Some(phase)=PHASES.iter().position(|groups|groups.len()==2) {
-                            workshop_preview.players[0].phase=phase;
-                            workshop_preview.players[0].laid=true;
-                            workshop_preview.players[0].table=(0..2).map(|j|vec![
-                                Card{id:9100+j as u32*10,kind:Kind::Number(5,0)},
-                                Card{id:9101+j as u32*10,kind:Kind::Number(5,1)},
-                                Card{id:9102+j as u32*10,kind:Kind::Number(5,2)}
-                            ]).collect();
-                        }
-                    }
-                    if button("HUMAN: 1 GROUP",236.0,790.0,196.0,42.0,true) {
-                        if let Some(phase)=PHASES.iter().position(|groups|groups.len()==1) {
-                            workshop_preview.players[0].phase=phase;
-                            workshop_preview.players[0].laid=true;
-                            workshop_preview.players[0].table=vec![vec![
-                                Card{id:9200,kind:Kind::Number(5,0)},
-                                Card{id:9201,kind:Kind::Number(5,1)},
-                                Card{id:9202,kind:Kind::Number(5,2)}
-                            ]];
-                        }
-                    }
-                }
-                draw_rectangle(1400.0,880.0,490.0,74.0,Color::new(0.02,0.04,0.07,0.96));
-                let caption=if wireframe {"EXIT WIREFRAME (F7)"}else{"SHOW WIREFRAME (F7)"};
-                if button(caption,1420.0,890.0,450.0,52.0,true) {
-                    wireframe=!wireframe;
-                }
+                if workshop_board {layout_editor.draw(&mut workshop_preview,&mut wireframe);}
                 None
             } else {
                 draw_menu(menu,has_game,&mut fullscreen,&mut show_moves,&mut help_scroll,&mut resolution_open,&mut cpu_difficulty)

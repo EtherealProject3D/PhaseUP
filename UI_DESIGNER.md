@@ -18,15 +18,61 @@ The designer opens a resizable desktop window with a hierarchy at left, board ca
 - The editor loads and saves `assets/layouts/game_16_10.json` from the repository working directory.
 - The game's existing UI Workshop overlay remains available for now.
 
-In the game's UI Workshop, open **FULL BOARD PREVIEW** to use the alignment toolbar.
-The **TARGET** button cycles through CPU, HUMAN, DRAW, DISCARD, and DRAW COUNT. For DRAW and
-DISCARD, **SWITCH TEXT / PILE** selects the text or pile; the arrows move that
-selection one logical pixel at a time. DRAW text moves its title; DRAW COUNT independently moves the remaining
-card count. Text offsets are relative to the pile, so moving a pile carries its
-text with it. Click **SAVE OFFSETS** to persist all adjustments across restarts;
-**RESET SELECTED** resets only the selected target and component. Pile click areas
-and card animations follow the adjusted pile positions.
+In the game's UI Workshop, open **FULL BOARD PREVIEW** for the unified layout
+controls. They are available immediately; there is no separate edit-mode toggle
+or per-target alignment toolbar. Existing saved offsets still load normally.
 
 **Current scope:** The canvas shows editable layout rectangles, not a live rendered Macroquad game. It does not yet provide artwork rendering, card-test controls, resize handles, smart equal-spacing guides, or multiple aspect-ratio presets. Those are future integration tasks. Existing game elements only move where the game renderer uses layout overrides.
 
 This binary is gated behind the optional `ui-designer` feature so normal game and Android builds do not compile the desktop editor dependencies.
+
+## Board layout nudging
+
+In UI Workshop > Full Board Preview, the layout tools are always available. Click a
+visible element or use Previous/Next (Tab/Shift+Tab) to select it. Panels, header
+art, visible text, buttons and their labels, card groups and individual card slots
+are listed from the actual rendered board. Drag to move; drag the bottom-right
+handle to resize. The staging artwork and drop region now honor saved height.
+
+Use LEFT/RIGHT/UP/DOWN or the keyboard arrow keys to nudge the selection. STEP
+cycles 1, 5 and 10 logical pixels; Shift multiplies the keyboard step by ten. MODE
+switches between moving and resizing (left/right change width, up/down height).
+F8 hides the tool panel to reach covered elements; keyboard nudging still works.
+Changes save automatically; Ctrl+S saves explicitly, and Ctrl+Z/UNDO reverts.
+RESET SELECTED restores the renderer default for the current element. Invisible
+or state-dependent elements appear when their preview state draws them. Button
+labels are separate selections. Card-slot overrides describe positions, not card
+identities, so a new deal does not assign a layout to a particular card value.
+
+The same toolbar also switches the human preview between one and two phase
+requirements and toggles artwork/wireframe (F7). F8 hides or shows the toolbar
+without turning off selection or keyboard nudging. Back to Tools/Escape exits
+layout manipulation, so normal gameplay remains unaffected.
+
+Drag the **WORKSHOP TOOLS - DRAG HERE** title bar to move the whole tool window,
+including Save and Undo. It stays inside the logical viewport, keeps its current
+position while switching preview states, and remains the same screen size while
+the board is zoomed or panned. F8 still hides/shows it.
+
+Ctrl+click adds an element to the selection, or removes it when already selected.
+Selected elements all show yellow outlines. Drag any selected member to move the
+whole selection, or use the same nudge controls. A normal click on a new element
+replaces the selection; a normal click on an existing member preserves the group
+for dragging. Click empty space to clear. Previous/Next and Tab select one item.
+Group moves/resizes/resets are one Undo action and save together. In Resize mode,
+the same width/height delta is applied to each selected item; relative positions
+are retained.
+
+Moving a staging panel or its `stage_N_cards` area also carries individually
+positioned staging cards, preserving their existing adjustments. Multi-selecting
+both a parent and its children moves each card once, and Undo restores the group.
+Resizing the box does not scale individually adjusted cards. Staged rows center
+horizontally within their card area as its width or card count changes, retaining
+individual adjustments relative to the centered row.
+
+Single- and double-requirement human layouts are independent. Staging elements
+use `stage_single_1...` or `stage_double_1...` / `stage_double_2...` names, with
+separate labels, card rows and slot positions. Human laid-phase frame positions
+are also separate. The single CLEAR button and its text do not share overrides
+with CLEAR ALL / CLEAR 1 / CLEAR 2. Legacy staging overrides import only into the
+double layout and never overwrite explicitly saved mode-specific positions.

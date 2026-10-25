@@ -1,7 +1,10 @@
 // Android assets are packaged at the APK asset root; desktop assets live under assets/.
 fn asset_prefix()->&'static str {if cfg!(target_os="android"){""}else{"assets/"}}
 use std::cell::RefCell;
-thread_local! {static MENU_FONTS:RefCell<[Option<Font>;3]>=RefCell::new([None,None,None]);}
+thread_local! {
+    static MENU_FONTS:RefCell<[Option<Font>;3]>=RefCell::new([None,None,None]);
+    static NEON_BODY_FONT:RefCell<Option<Font>>=const {RefCell::new(None)};
+}
 pub(super) async fn load_menu_fonts(){
     // Windows fonts are optional: keep the original renderer as fallback.
     #[cfg(target_os="windows")]
@@ -10,16 +13,30 @@ pub(super) async fn load_menu_fonts(){
             MENU_FONTS.with(|f|f.borrow_mut()[i]=Some(font));
         }
     }
+    // Bundle the Neon Forge family so desktop and Android use identical glyphs.
+    if let Ok(font)=load_ttf_font(&format!("{}fonts/Oxanium-SemiBold.ttf",asset_prefix())).await {
+        MENU_FONTS.with(|f|f.borrow_mut()[1]=Some(font));
+    }
+    if let Ok(font)=load_ttf_font(&format!("{}fonts/Oxanium-Medium.ttf",asset_prefix())).await {
+        NEON_BODY_FONT.with(|f|*f.borrow_mut()=Some(font));
+    }
 }
-fn with_menu_font<R>(f:impl FnOnce(Option<&Font>)->R)->R {
+fn with_menu_font<R>(size:u16,f:impl FnOnce(Option<&Font>)->R)->R {
+    if active_theme()==Theme::Futuristic && size<=18 {
+        return NEON_BODY_FONT.with(|font|{
+            let font=font.borrow();
+            if let Some(font)=font.as_ref(){f(Some(font))}
+            else {MENU_FONTS.with(|fonts|f(fonts.borrow()[1].as_ref()))}
+        });
+    }
     let i=match active_theme(){Theme::Modern=>0,Theme::Futuristic=>1,Theme::Playful=>2};
     MENU_FONTS.with(|fonts|{let fonts=fonts.borrow();f(fonts[i].as_ref())})
 }
 pub(super) fn menu_text_width(text:&str,size:u16)->f32{
-    with_menu_font(|font|measure_text(text,font,size,1.0).width)
+    with_menu_font(size,|font|measure_text(text,font,size,1.0).width)
 }
 pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
-    with_menu_font(|font|{
+    with_menu_font(size as u16,|font|{
         draw_text_ex(text,x,y,TextParams{font,font_size:size as u16,font_scale:1.0,color:themed_color(color),..Default::default()});
     });
 }
@@ -51,6 +68,26 @@ thread_local! {
 }
 pub(super) async fn load_neon_ui(){
     load_neon_player_phase().await;
+    if let Ok(texture)=load_texture(&format!("{}neon_forge/ui/hand_panel.png",asset_prefix())).await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_HAND_PANEL.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
+    for (i,name) in ["staging_slot_single.png","staging_slot_double.png"].iter().enumerate(){
+        if let Ok(texture)=load_texture(&format!("{}neon_forge/ui/{}",asset_prefix(),name)).await {
+            texture.set_filter(FilterMode::Linear);
+            NEON_STAGING.with(|slots|slots.borrow_mut()[i]=Some(texture));
+        }
+    }
+    let path=format!("{}neon_forge/ui/game_background.png",asset_prefix());
+    if let Ok(texture)=load_texture(&path).await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_BACKGROUND.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
+    let path=format!("{}neon_forge/ui/button_metal.png",asset_prefix());
+    if let Ok(texture)=load_texture(&path).await {
+        texture.set_filter(FilterMode::Linear);
+        NEON_METAL_BUTTON.with(|slot|*slot.borrow_mut()=Some(texture));
+    }
     let path=format!("{}neon_forge/ui/phaseup_logo.png",asset_prefix());
     if let Ok(texture)=load_texture(&path).await {
         texture.set_filter(FilterMode::Linear);
@@ -98,6 +135,87 @@ thread_local! {
     static NEON_PLAYER_PHASE_FRAMES:RefCell<[Option<Texture2D>;2]>=RefCell::new([None,None]);
     static NEON_UPPER_BANNER:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
     static NEON_LOGO:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+    static NEON_METAL_BUTTON:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+    static NEON_BACKGROUND:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+    static NEON_STAGING:RefCell<[Option<Texture2D>;2]>=RefCell::new([None,None]);
+    static NEON_HAND_PANEL:RefCell<Option<Texture2D>>=const {RefCell::new(None)};
+}
+pub(super) fn neon_hand_panel(x:f32,y:f32,w:f32,h:f32){
+    let painted=NEON_HAND_PANEL.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    });
+    if !painted {neon_frame(x,y,w,h,true);}
+}
+pub(super) fn neon_staging_slot(x:f32,y:f32,w:f32,h:f32,single:bool)->bool {
+    NEON_STAGING.with(|slots|{
+        if let Some(texture)=slots.borrow()[if single {0}else{1}].as_ref(){
+            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            true
+        }else{false}
+    })
+}
+pub(super) fn neon_game_background(w:f32,h:f32){
+    NEON_BACKGROUND.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            // Cover the logical board uniformly, preserving the artwork angles.
+            let scale=(w/texture.width()).max(h/texture.height());
+            let source_w=w/scale;let source_h=h/scale;
+            draw_texture_ex(texture,0.,0.,WHITE,DrawTextureParams{
+                dest_size:Some(vec2(w,h)),
+                source:Some(Rect::new((texture.width()-source_w)/2.,(texture.height()-source_h)/2.,source_w,source_h)),
+                ..Default::default()
+            });
+        }
+    });
+}
+pub(super) fn neon_metal_button(x:f32,y:f32,w:f32,h:f32,hover:bool,enabled:bool)->bool {
+    NEON_METAL_BUTTON.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            let source=Rect::new(43.,155.,1897.,473.);
+            let cap=160.;
+            let cap_w=(cap*h/source.h).min(w/2.);
+            let brightness=if !enabled {0.42}
+                else if hover && is_mouse_button_down(MouseButton::Left) {0.65}
+                else if hover {1.0}else{0.85};
+            let tint=Color::new(brightness,brightness,brightness,1.);
+            for (sx,sw,dx,dw) in [
+                (source.x,cap,x,cap_w),
+                (source.x+cap,source.w-2.*cap,x+cap_w,(w-2.*cap_w).max(0.)),
+                (source.x+source.w-cap,cap,x+w-cap_w,cap_w),
+            ] {
+                if dw>0. {
+                    draw_texture_ex(texture,dx,y,tint,DrawTextureParams{
+                        dest_size:Some(vec2(dw,h)),source:Some(Rect::new(sx,source.y,sw,source.h)),
+                        ..Default::default()
+                    });
+                }
+            }
+            true
+        }else{false}
+    })
+}
+pub(super) fn neon_turn_instruction(x:f32,y:f32,w:f32,h:f32,color:Color,actionable:bool)->bool {
+    let hover=actionable && inside(x,y,w,h);
+    if !neon_metal_button(x,y,w,h,hover,true) {return false;}
+    // A state-colored chamfered rim follows the metal silhouette, with a
+    // stronger halo than ordinary controls. Only the ready state is clickable.
+    let cut=(h*0.22).min(w*0.1);
+    let inset=2.;
+    let points=[vec2(x+cut,y+inset),vec2(x+w-cut,y+inset),
+        vec2(x+w-inset,y+cut),vec2(x+w-inset,y+h-cut),
+        vec2(x+w-cut,y+h-inset),vec2(x+cut,y+h-inset),
+        vec2(x+inset,y+h-cut),vec2(x+inset,y+cut)];
+    for (width,alpha) in [(10.,0.05),(6.,0.12),(2.,0.9)] {
+        let glow=Color::new(color.r,color.g,color.b,alpha);
+        for i in 0..points.len() {
+            let a=points[i];let b=points[(i+1)%points.len()];
+            draw_line(a.x,a.y,b.x,b.y,width,glow);
+        }
+    }
+    true
 }
 pub(super) fn neon_logo(x:f32,y:f32,w:f32,h:f32)->bool {
     NEON_LOGO.with(|slot|{
@@ -110,7 +228,10 @@ pub(super) fn neon_logo(x:f32,y:f32,w:f32,h:f32)->bool {
 pub(super) fn neon_upper_banner(x:f32,y:f32,w:f32,h:f32){
     let painted=NEON_UPPER_BANNER.with(|slot|{
         if let Some(texture)=slot.borrow().as_ref(){
-            draw_texture_ex(texture,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            // The authored canvas matches the banner's default aspect ratio.
+            // Honor explicit Workshop width/height edits without recentering.
+            draw_texture_ex(texture,x,y,WHITE,
+                DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
             true
         }else{false}
     });
@@ -155,7 +276,10 @@ pub(super) fn game_mouse()->(f32,f32) {
 pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,crate::theme::themed_color(color));}
 pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
     let mouse=game_mouse();let hover=mouse.0>=x&&mouse.0<=x+w&&mouse.1>=y&&mouse.1<=y+h;
-    if enabled {crate::theme::themed_button(x,y,w,h,hover);} else {draw_rectangle(x,y,w,h,Color::new(0.18,0.22,0.28,1.));}
+    if enabled {crate::theme::themed_button(x,y,w,h,hover);}
+    else if active_theme()!=Theme::Futuristic || !neon_metal_button(x,y,w,h,false,false) {
+        draw_rectangle(x,y,w,h,Color::new(0.18,0.22,0.28,1.));
+    }
     // Keep compact gameplay controls readable with the active theme font.
     let size:u16=if h<=31.0 {16}else{19};
     let t=menu_text_width(text,size);
@@ -220,7 +344,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let ty=yy+h*0.63;
         menu_label(&symbol,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&symbol,tx,ty,size as f32,WHITEISH);
-        if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
+        if selected && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
     } else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) && neon_card_texture(match card.kind {Kind::Number(_,color)=>color as usize,_=>0},x,yy,w,h) {
         let t=card_text(card.kind);
         let size=if w<45.0 {22_u16}else{35_u16};
@@ -229,7 +353,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let ty=yy+h*0.60;
         menu_label(&t,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&t,tx,ty,size as f32,WHITEISH);
-        if selected {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
+        if selected && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
     } else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) {
         // Neon Forge / Dark Metallic: layered machined chassis and colored light core.
         // All detailing scales with the actual card dimensions.
@@ -276,7 +400,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let ty=yy+h*0.63;
         menu_label(&t,tx+1.5,ty+2.0,size as f32,Color::new(0.0,0.0,0.0,0.95));
         menu_label(&t,tx,ty,size as f32,WHITEISH);
-        if selected {
+        if selected && active_theme()!=Theme::Futuristic {
             draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);
         }
     } else {
@@ -301,4 +425,21 @@ pub(super) fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
     draw_rectangle_lines(x+6.0,y+6.0,w-12.0,h-12.0,1.5,ACCENT);
     draw_line(x+8.0,y+8.0,x+w-8.0,y+h-8.0,1.0,ACCENT);
     draw_line(x+w-8.0,y+8.0,x+8.0,y+h-8.0,1.0,ACCENT);
+}
+
+// Explicit persistent IDs keep layout edits independent of changing text.
+pub(super) fn editable_label(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){
+    let key=layout::scene_key(key);
+    let r=layout::rect(&key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
+    menu_label(text,r.x,r.y+r.h,r.h,color);
+}
+pub(super) fn editable_button(key:&str,text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool {
+    let key=layout::scene_key(key);
+    let r=layout::rect(&key,layout::Rect{x,y,w,h});
+    let hover=inside(r.x,r.y,r.w,r.h);
+    if enabled {crate::theme::themed_button(r.x,r.y,r.w,r.h,hover);}
+    else if active_theme()!=Theme::Futuristic || !neon_metal_button(r.x,r.y,r.w,r.h,false,false){draw_rectangle(r.x,r.y,r.w,r.h,Color::new(0.18,0.22,0.28,1.));}
+    let size=if r.h<=31. {16.}else{19.};
+    editable_label(&format!("{key}_text"),text,r.x+(r.w-menu_text_width(text,size as u16))/2.,r.y+r.h/2.+size*0.36,size,if enabled {WHITEISH}else{MUTED});
+    enabled && hover && is_mouse_button_pressed(MouseButton::Left) && !layout_editor::editing()
 }

@@ -91,6 +91,7 @@ pub(super) fn themed_button(x:f32,y:f32,w:f32,h:f32,hover:bool){
             draw_rectangle_lines(x,y,w,h,1.,a);
         }
         Theme::Futuristic=>{
+            if crate::neon_metal_button(x,y,w,h,hover,true) {return;}
             if hover {draw_rectangle(x-3.,y-3.,w+6.,h+6.,Color::new(0.,0.45,0.55,0.35));}
             draw_rectangle(x,y,w,h,if hover{Color::new(0.06,0.25,0.34,1.)}else{t.panel()});
             draw_rectangle_lines(x,y,w,h,if hover{3.}else{2.},a);

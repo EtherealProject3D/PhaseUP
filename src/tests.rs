@@ -576,3 +576,84 @@ fn cpu_hitting_last_card_ends_round_immediately() {
     assert_eq!(g.stage,Stage::RoundOver);
     assert_eq!(g.turn,1);
 }
+
+#[test]
+fn workshop_nudging_moves_without_resizing_and_resizes_without_recentering() {
+    let r=layout::Rect{x:20.,y:30.,w:680.,h:117.};
+    let moved=layout::adjusted(r,-1.,10.,false);
+    assert_eq!((moved.x,moved.y,moved.w,moved.h),(19.,40.,680.,117.));
+    let resized=layout::adjusted(r,5.,10.,true);
+    assert_eq!((resized.x,resized.y,resized.w,resized.h),(20.,30.,685.,127.));
+    let minimum=layout::adjusted(r,-1000.,-1000.,true);
+    assert_eq!((minimum.w,minimum.h),(8.,8.));
+}
+
+#[test]
+fn workshop_scene_lists_rendered_elements_and_keeps_repeated_labels_distinct() {
+    layout::begin_scene();
+    let first=layout::scene_key("test_label");
+    let second=layout::scene_key("test_label");
+    assert_ne!(first,second);
+    let r=layout::Rect{x:1.,y:2.,w:40.,h:20.};
+    layout::rect(&first,r);layout::rect(&first,r);layout::rect(&second,r);
+    layout::rect("test_offset",r);
+    layout::end_scene();
+    let elements=layout::scene_items();
+    assert_eq!(elements.len(),2);
+    assert_eq!(elements[0].0,first);
+    assert_eq!(elements[1].0,second);
+    layout::begin_scene();
+    assert_eq!(layout::scene_key("test_label"),first);
+    assert!(layout::scene_items().is_empty());
+    layout::end_scene();
+}
+
+#[test]
+fn workshop_controls_activate_without_edit_mode_and_close_cleanly() {
+    let mut editor=layout_editor::Editor::new();
+    assert!(!layout_editor::editing());
+    editor.open();
+    assert!(layout_editor::editing());
+    editor.open();
+    assert!(layout_editor::editing());
+    editor.close();
+    assert!(!layout_editor::editing());
+    assert_eq!(layout_editor::zoom(),1.0);
+    assert_eq!(layout_editor::pan(),(0.0,0.0));
+}
+
+#[test]
+fn workshop_tool_window_stays_within_viewport() {
+    let moved=layout_editor::tool_panel_position(vec2(300.,200.));
+    assert_eq!((moved.x,moved.y),(300.,200.));
+    let top_left=layout_editor::tool_panel_position(vec2(-500.,-500.));
+    assert_eq!((top_left.x,top_left.y),(0.,0.));
+    let bottom_right=layout_editor::tool_panel_position(vec2(3000.,3000.));
+    assert_eq!((bottom_right.x,bottom_right.y),(1450.,580.));
+    assert_eq!(bottom_right.x+470.,1920.);
+    assert_eq!(bottom_right.y+620.,1200.);
+}
+
+#[test]
+fn compact_hand_does_not_spread_few_cards_across_a_wide_box() {
+    let area=layout::Rect{x:24.,y:1037.,w:1872.,h:105.};
+    let (start,width,step)=layout::compact_hand(10,area);
+    assert_eq!((width,step),(75.,81.));
+    let row_width=width+step*9.;
+    assert_eq!(start,(1920.-row_width)/2.);
+    let (single,_,single_step)=layout::compact_hand(1,area);
+    assert_eq!(single_step,0.);
+    assert_eq!(single,24.+(1872.-75.)/2.);
+}
+
+#[test]
+fn compact_hand_fits_crowded_hands_and_respects_moved_box() {
+    for count in [0,1,10,11,30,60] {
+        let area=layout::Rect{x:200.,y:900.,w:1000.,h:105.};
+        let (start,width,step)=layout::compact_hand(count,area);
+        assert!(start.is_finite() && width.is_finite() && step.is_finite());
+        assert!(step<=81.);
+        assert!(start>=area.x-0.01);
+        if count>0 {assert!(start+width+step*(count-1) as f32<=area.x+area.w+0.01);}
+    }
+}

@@ -1,0 +1,7 @@
+Created with built-in image_gen using staging_slot_double.png and player_phase_single.png as references.
+Assembled to exact 1360 x 234 and 1600 x 234 canvases using System.Drawing; only flat middle sections extended.
+Installed: ui/staging_slot_double.png and ui/staging_slot_single.png.
+Previous thinner versions saved in artwork/staging_slot_double_thin.png and staging_slot_single_thin.png.
+
+Prompt:
+Edit image 1 (the staging slot) to match the border visual weight of image 2 (the existing laid-phase panel). Keep image 1 proportions, simple undivided slot, dark navy interior, subtle corner etchings, cool blue-gray gunmetal palette and 45-degree corner cuts. Increase metal bevel and cyan light thickness about 70 percent, extending the thicker border INWARD without changing outer silhouette. Aim for roughly 12-14 pixels of complete border at final 1360x234 asset size, corresponding to 6-7 game pixels. Give the edges the same substantial layered brushed-metal finish as image 2. Keep short cyan accents near corners, no full glowing neon rails, no center trapezoid or large decorative plates. No cards, text, logos or buttons. Transparent background outside the frame. One complete horizontal staging panel, 5.812:1 silhouette, fully visible. Preserve a useful clear area inside for cards and dynamic labels.

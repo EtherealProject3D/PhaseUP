@@ -45,7 +45,7 @@ impl HumanPhaseFlight {
 pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64 }
 pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64 }
 
-pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
+pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
     // Reveal CPU phase cards in sequence, flying from their former hand area.
     if let Some(flight)=&g.cpu_phase_flight {
         let elapsed=get_time()-flight.started;
@@ -124,13 +124,11 @@ pub(super) fn draw_card_flights(g:&Game,sw:f32,sh:f32) {
             let mut sorted:Vec<Card>=g.players[0].hand.iter().copied()
                 .filter(|c|!g.staged.iter().any(|bucket|bucket.contains(&c.id))).collect();
             sorted.sort_by_key(|c|sort_key(*c,g.sort));
-            let n=sorted.len();
-            let w=((sw-48.0)/(n.max(1) as f32)).min(75.0);
-            let spacing=if n>1 {((sw-48.0-w)/(n-1) as f32).min(81.0)}else{0.0};
-            let left=(sw-(spacing*(n.saturating_sub(1) as f32)+w))/2.0;
-            let index=sorted.iter().position(|c|c.id==flight.card_id).unwrap_or(n.saturating_sub(1));
-            let end_x=left+index as f32*spacing;
-            let end_y=sh-166.0;
+            let (hand_slot,spacing)=layout::hand_layout(sorted.len());
+            let w=hand_slot.w;
+            let index=sorted.iter().position(|c|c.id==flight.card_id).unwrap_or(sorted.len().saturating_sub(1));
+            let end_x=hand_slot.x+index as f32*spacing;
+            let end_y=hand_slot.y;
             let (start_x,start_y)=layout::pile_position(flight.from_discard);
             let t=((get_time()-flight.started)/0.60).clamp(0.0,1.0) as f32;
             let eased=t*t*(3.0-2.0*t);

@@ -1,0 +1,7 @@
+Created with built-in image_gen, then assembled on an exact 3812 x 148 canvas using System.Drawing.
+Flat rails and center spans extended; chamfered sections scaled uniformly.
+Installed asset: ui/upper_banner.png.
+Backup: artwork/upper_banner_before_canvas_fill.png.
+
+Prompt:
+Edit this banner to fill its full extremely wide 3812 by 148 pixel canvas. Extend the straight horizontal dark metallic top and bottom rails and the navy interior sideways into the transparent left and right margins. Move the existing endcaps outward to the extreme canvas ends; preserve their 45-degree chamfers and height. Preserve the center trapezoids' steep beveled ends, blue-gray metal, cyan accent and the original thickness of all borders. Extend ONLY plain straight rails and navy interior, never stretch angled details. Keep the same style and palette. No text or logos. Actual transparent background outside the silhouette only, minimal margins. If your output canvas cannot match these dimensions, provide the full thin banner centered with transparent padding for exact canvas assembly.

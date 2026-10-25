@@ -4,6 +4,12 @@
     "width": 1920
   },
   "elements": {
+    "clear_single_button_1": {
+      "height": 30.0,
+      "width": 154.0,
+      "x": 433.0,
+      "y": 894.0
+    },
     "cpu_1_panel": {
       "height": 376.0,
       "width": 626.0,
@@ -28,6 +34,18 @@
       "x": 0.0,
       "y": -2.0
     },
+    "discard_button_1": {
+      "height": 34.0,
+      "width": 113.0,
+      "x": 562.0,
+      "y": 1139.0
+    },
+    "discard_button_2": {
+      "height": 34.0,
+      "width": 113.0,
+      "x": 1245.0,
+      "y": 1139.0
+    },
     "discard_pile_offset": {
       "height": 1.0,
       "width": 1.0,
@@ -39,6 +57,12 @@
       "width": 1.0,
       "x": 0.0,
       "y": 10.0
+    },
+    "discard_title_1": {
+      "height": 19.0,
+      "width": 79.11599731445312,
+      "x": 1065.0,
+      "y": 424.0
     },
     "draw_count_offset": {
       "height": 1.0,
@@ -58,11 +82,17 @@
       "x": 0.0,
       "y": 10.0
     },
+    "draw_title_1": {
+      "height": 19.0,
+      "width": 55.593997955322266,
+      "x": 788.0,
+      "y": 424.0
+    },
     "game_logo": {
       "height": 42.0,
       "width": 230.0,
-      "x": 848.0,
-      "y": 21.0
+      "x": 845.0,
+      "y": 22.0
     },
     "game_version": {
       "height": 25.0,
@@ -70,11 +100,23 @@
       "x": 1130.0,
       "y": 28.0
     },
+    "hand_cards": {
+      "height": 105.0,
+      "width": 1872.0,
+      "x": 24.0,
+      "y": 1025.0
+    },
+    "hand_heading_1": {
+      "height": 21.0,
+      "width": 434.84698486328125,
+      "x": 742.5765380859375,
+      "y": 994.0
+    },
     "hand_panel": {
-      "height": 217.0,
+      "height": 229.0,
       "width": 1896.0,
-      "x": 13.0,
-      "y": 972.0
+      "x": 12.0,
+      "y": 970.0
     },
     "human_double_cards_offset": {
       "height": 1.0,
@@ -97,8 +139,26 @@
     "menu_button": {
       "height": 40.0,
       "width": 100.0,
-      "x": 1755.0,
-      "y": 22.0
+      "x": 1747.0,
+      "y": 21.0
+    },
+    "player_phase": {
+      "height": 181.0,
+      "width": 832.0,
+      "x": 544.0,
+      "y": 618.0
+    },
+    "player_phase_double": {
+      "height": 181.0,
+      "width": 832.0,
+      "x": 544.0,
+      "y": 618.0
+    },
+    "player_phase_single": {
+      "height": 181.0,
+      "width": 832.0,
+      "x": 544.0,
+      "y": 618.0
     },
     "round_turn_counter": {
       "height": 28.0,
@@ -106,11 +166,419 @@
       "x": 1386.0,
       "y": 27.0
     },
+    "round_turn_text_1": {
+      "height": 22.0,
+      "width": 198.593994140625,
+      "x": 1433.406005859375,
+      "y": 26.0
+    },
+    "sort_button_1": {
+      "height": 34.0,
+      "width": 113.0,
+      "x": 784.5,
+      "y": 1139.0
+    },
+    "sort_button_2": {
+      "height": 34.0,
+      "width": 113.0,
+      "x": 903.5,
+      "y": 1139.0
+    },
+    "sort_button_3": {
+      "height": 34.0,
+      "width": 113.0,
+      "x": 1022.5,
+      "y": 1139.0
+    },
+    "stage_1": {
+      "height": 134.0,
+      "width": 680.0,
+      "x": 620.0,
+      "y": 839.0
+    },
+    "stage_1_card_1": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 970.0,
+      "y": 874.0
+    },
+    "stage_1_card_10": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1482.9998779296875,
+      "y": 874.0
+    },
+    "stage_1_card_11": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1540.0,
+      "y": 874.0
+    },
+    "stage_1_card_2": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1027.0,
+      "y": 874.0
+    },
+    "stage_1_card_3": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1084.0,
+      "y": 874.0
+    },
+    "stage_1_card_4": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1141.0,
+      "y": 874.0
+    },
+    "stage_1_card_5": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1198.0,
+      "y": 874.0
+    },
+    "stage_1_card_6": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1255.0,
+      "y": 874.0
+    },
+    "stage_1_card_7": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1312.0,
+      "y": 874.0
+    },
+    "stage_1_card_8": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1369.0,
+      "y": 874.0
+    },
+    "stage_1_card_9": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1426.0,
+      "y": 874.0
+    },
+    "stage_1_cards": {
+      "height": 76.0,
+      "width": 660.0,
+      "x": 642.0,
+      "y": 874.0
+    },
+    "stage_1_row_offset": {
+      "height": 1.0,
+      "width": 57.0,
+      "x": 972.0,
+      "y": 874.0
+    },
+    "stage_2": {
+      "height": 134.0,
+      "width": 680.0,
+      "x": 963.0,
+      "y": 839.0
+    },
+    "stage_2_card_1": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1313.0,
+      "y": 874.0
+    },
+    "stage_2_card_12": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1941.0,
+      "y": 874.0
+    },
+    "stage_2_card_2": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1370.0,
+      "y": 874.0
+    },
+    "stage_2_card_3": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1427.0,
+      "y": 874.0
+    },
+    "stage_2_cards": {
+      "height": 76.0,
+      "width": 660.0,
+      "x": 983.0,
+      "y": 874.0
+    },
+    "stage_2_row_offset": {
+      "height": 1.0,
+      "width": 57.0,
+      "x": 1313.0,
+      "y": 874.0
+    },
+    "stage_double_1": {
+      "height": 134.0,
+      "width": 680.0,
+      "x": 279.0,
+      "y": 839.0
+    },
+    "stage_double_1_card_1": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 627.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_10": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1139.9998779296875,
+      "y": 874.0
+    },
+    "stage_double_1_card_11": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1197.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_2": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 684.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_3": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 741.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_4": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 798.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_5": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 855.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_6": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 912.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_7": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 969.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_8": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1026.0,
+      "y": 874.0
+    },
+    "stage_double_1_card_9": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1083.0,
+      "y": 874.0
+    },
+    "stage_double_1_cards": {
+      "height": 76.0,
+      "width": 660.0,
+      "x": 299.0,
+      "y": 874.0
+    },
+    "stage_double_1_row_offset": {
+      "height": 1.0,
+      "width": 57.0,
+      "x": 629.0,
+      "y": 874.0
+    },
+    "stage_double_2": {
+      "height": 134.0,
+      "width": 680.0,
+      "x": 963.0,
+      "y": 839.0
+    },
+    "stage_double_2_card_1": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1313.0,
+      "y": 874.0
+    },
+    "stage_double_2_card_12": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1941.0,
+      "y": 874.0
+    },
+    "stage_double_2_card_2": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1370.0,
+      "y": 874.0
+    },
+    "stage_double_2_card_3": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1427.0,
+      "y": 874.0
+    },
+    "stage_double_2_cards": {
+      "height": 76.0,
+      "width": 660.0,
+      "x": 983.0,
+      "y": 874.0
+    },
+    "stage_double_2_row_offset": {
+      "height": 1.0,
+      "width": 57.0,
+      "x": 1313.0,
+      "y": 874.0
+    },
+    "stage_single_1": {
+      "height": 134.0,
+      "width": 680.0,
+      "x": 620.0,
+      "y": 839.0
+    },
+    "stage_single_1_card_1": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 959.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_10": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1472.4998779296875,
+      "y": 874.0
+    },
+    "stage_single_1_card_11": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1529.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_2": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1016.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_3": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1073.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_4": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1130.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_5": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1187.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_6": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1244.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_7": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1301.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_8": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1358.5,
+      "y": 874.0
+    },
+    "stage_single_1_card_9": {
+      "height": 76.0,
+      "width": 50.0,
+      "x": 1415.5,
+      "y": 874.0
+    },
+    "stage_single_1_cards": {
+      "height": 77.0,
+      "width": 639.0,
+      "x": 642.0,
+      "y": 874.0
+    },
+    "stage_single_1_row_offset": {
+      "height": 1.0,
+      "width": 57.0,
+      "x": 961.5,
+      "y": 874.0
+    },
+    "staging_double_label_1": {
+      "height": 16.0,
+      "width": 127.31199645996094,
+      "x": 324.0,
+      "y": 854.0
+    },
+    "staging_double_label_2": {
+      "height": 16.0,
+      "width": 127.31199645996094,
+      "x": 1008.0,
+      "y": 854.0
+    },
+    "staging_label_1": {
+      "height": 16.0,
+      "width": 127.31199645996094,
+      "x": 902.0,
+      "y": 854.0
+    },
+    "staging_label_2": {
+      "height": 16.0,
+      "width": 127.31199645996094,
+      "x": 1008.0,
+      "y": 854.0
+    },
+    "staging_single_label_1": {
+      "height": 16.0,
+      "width": 127.31199645996094,
+      "x": 870.0,
+      "y": 854.0
+    },
+    "turn_instruction": {
+      "height": 51.0,
+      "width": 770.0,
+      "x": 575.0,
+      "y": 784.0
+    },
+    "turn_instruction_text_1": {
+      "height": 25.0,
+      "width": 407.0,
+      "x": 756.0,
+      "y": 793.0
+    },
     "upper_banner": {
-      "height": 74.0,
-      "width": 1906.0,
-      "x": 6.0,
-      "y": 4.0
+      "height": 90.0,
+      "width": 1911.0,
+      "x": 3.0,
+      "y": -4.0
+    },
+    "version_text_1": {
+      "height": 19.0,
+      "width": 93.0,
+      "x": 1087.0,
+      "y": 29.0
     }
   },
   "schema_version": 1

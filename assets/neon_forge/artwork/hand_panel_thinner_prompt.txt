@@ -1,0 +1,3 @@
+Edit this game hand panel: reduce the thickness of the metallic frame and neon corner bands by approximately 30 percent, keeping the same outside panel dimensions, crisp chamfer angles, blue-gray metal color, cyan lighting and dark navy interior. Expand interior to achieve thinner frame, do not add empty padding to fake thinning. No text, no objects. Clean transparent exterior and corner cutouts, no colored stray pixels outside silhouette. Target canvas 3792x434, very wide shallow panel. Artwork fills canvas with minimal 4pixel transparent margin. Flat front facing UI asset.
+
+Built-in image tool. Assembled exact 3792x434 canvas; uniformly scaled endcaps and extended flat middle. Clean transparent chamfer silhouette. Previous version saved as hand_panel_thick.png.
