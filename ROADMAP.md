@@ -18,7 +18,17 @@ PhaseUP is an offline, ad-free Phase 10-inspired card game built with Rust and M
 - [ ] Add paced CPU turns and subtle animations
 
 ## Planned — v0.5: Polish and settings
-- [ ] Sound effects and volume controls
+Audio work follows the v0.4.0 play-test and release. Track implementation in [issue #6](https://github.com/EtherealProject3D/PhaseUP/issues/6).
+
+- [ ] Add theme-matched sound effects for buttons, card actions, turn cues, phase completion, and round/game results
+- [ ] Add a gameplay music playlist using supplied tracks, with a synthwave/cyberpunk direction for Neon Forge
+- [ ] Add Sound Settings with separate music/SFX volume and mute controls, saved between sessions
+- [ ] Add song selection, a Now Playing display, next/previous controls, shuffle, and repeat
+- [ ] Use separate menu music; opening the menu fades out and pauses gameplay music, then fades in menu music
+- [ ] Resuming gameplay fades out menu music and fades the gameplay track back in from its paused position
+- [ ] Start each new game on a randomly selected track, avoiding the previous game's starting track when multiple tracks are available
+- [ ] Advance through the gameplay playlist automatically and transition smoothly when changing tracks
+- [ ] Confirm bundled music has permission for distribution inside the game
 - [ ] Settings menu
 - [ ] Accessibility and usability improvements
 
