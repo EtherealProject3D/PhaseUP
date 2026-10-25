@@ -61,28 +61,25 @@ impl Game {
     }
     fn cpu_name(&self,i:usize)->String {if i==0 {"You".to_string()}else{self.cpu_names[i-1].clone()}}
     fn log_move(&mut self,event:String){self.move_log.push(event);if self.move_log.len()>8{self.move_log.remove(0);}}
+    fn visible_discards(&self,lifting_top:bool)->&[Card] {
+        let incoming=self.discard.last().is_some_and(|c|
+            self.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id)
+            || self.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id));
+        let hidden=usize::from(incoming || lifting_top);
+        &self.discard[..self.discard.len().saturating_sub(hidden)]
+    }
     fn stage_card(&mut self,id:u32,group:usize) {
         if self.stage!=Stage::Play||self.turn!=0{return;}
         if group>=PHASES[self.players[0].phase].len(){return;}
         if !self.players[0].hand.iter().any(|c|c.id==id){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         self.staged[group].push(id);
-        // Auto-sort newly staged run cards, but leave explicit drag reordering alone.
-        if requirement(self.players[0].phase,group)=="run" && !self.staged[group].iter().any(|card_id|self.players[0].hand.iter().any(|c|c.id==*card_id && c.kind==Kind::Wild)) {
-            let hand=&self.players[0].hand;
-            self.staged[group].sort_by_key(|card_id| {
-                hand.iter().find(|c|c.id==*card_id).map(|c|match c.kind {
-                    Kind::Number(n,_) => (0u8,n),
-                    Kind::Wild => (1u8,0),
-                    Kind::Skip => (2u8,0),
-                }).unwrap_or((3u8,0))
-            });
-        }
+        self.sort_staged_run(group);
         self.selected.retain(|v|*v!=id);
     }
     fn stage_card_at(&mut self,id:u32,group:usize,index:usize) {
         self.stage_card(id,group);
-        // Explicit drops choose a position; only automatic staging sorts Wilds last.
+        // Runs always use numerical order; other groups retain the chosen drop position.
         if self.staged.iter().any(|bucket|bucket.contains(&id)) {
             self.move_staged_card(id,group,index);
         }
@@ -92,6 +89,15 @@ impl Game {
         if !self.staged.iter().any(|bucket|bucket.contains(&id)){return;}
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
         let at=index.min(self.staged[group].len());self.staged[group].insert(at,id);
+        self.sort_staged_run(group);
+    }
+    fn sort_staged_run(&mut self,group:usize) {
+        if requirement(self.players[0].phase,group)!="run" {return;}
+        let mut cards:Vec<Card>=self.staged[group].iter().filter_map(|id|
+            self.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
+        cards.sort_by_key(|c|match c.kind {Kind::Number(n,_) => (0,n),Kind::Wild => (1,0),Kind::Skip => (2,0)});
+        if valid_group(&cards,"run") {order_run(&mut cards);}
+        self.staged[group]=cards.iter().map(|c|c.id).collect();
     }
     fn unstage_card(&mut self,id:u32) {
         for bucket in &mut self.staged {bucket.retain(|v|*v!=id);}
@@ -482,7 +488,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let m=game_mouse();
     if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(deck_x,pile_y,pile_w,pile_h){g.pile_drag=Some((false,m.0,m.1));}
     let discard_hover=g.stage==Stage::Play&&g.drag.is_some()&&inside(discard_x,discard_y,pile_w,pile_h);
-    let discard_layers=g.discard.len().saturating_sub(1).min(2);
+    let lifting_discard=g.pile_drag.is_some_and(|(discard,sx,sy)|discard
+        && is_mouse_button_down(MouseButton::Left)&&(m.0-sx).abs()+(m.1-sy).abs()>12.0);
+    let visible_discards=g.visible_discards(lifting_discard);
+    let discard_layers=visible_discards.len().saturating_sub(1).min(2);
     for layer in (1..=discard_layers).rev() {
         let offset=layer as f32*4.0;
         draw_rectangle(discard_x+offset+3.0,discard_y+offset+4.0,pile_w,pile_h,Color::new(0.035,0.055,0.085,1.0));
@@ -491,14 +500,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     draw_rectangle(discard_x,discard_y,pile_w,pile_h,Color::new(0.10,0.18,0.23,1.0));
     if active_theme()!=Theme::Futuristic {draw_rectangle_lines(discard_x,discard_y,pile_w,pile_h,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});}
-    if let Some(c)=g.discard.last().copied(){
-        if !g.cpu_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id) && !g.human_discard_flight.as_ref().is_some_and(|a|a.card.id==c.id){
-            let _=card_ui(c,discard_x,discard_y,pile_w,pile_h,false);
-        }
-        if g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,discard_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
+    if let Some(c)=visible_discards.last().copied(){
+        let _=card_ui(c,discard_x,discard_y,pile_w,pile_h,false);
     }else{
         editable_label("discard_empty_text","EMPTY",discard_x+20.0+discard_tx,discard_y+82.0+discard_ty,20.0,MUTED);
     }
+    if !g.discard.is_empty() && g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,discard_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
     // Recent CPU actions stay visible after their turns resolve instantly.
     if show_moves {
     let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
@@ -748,30 +755,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     // Clicking a hand card toggles only that card; phase staging still supports multiple cards.
     if let Some(id)=toggle {if g.selected.contains(&id){g.selected.clear();}else{g.selected=vec![id];}}
-    // Draw the dragged card last so it floats above every other UI element.
-    if let Some((id,ox,oy))=g.drag {
-        let (mx,my)=game_mouse();
-        if is_mouse_button_down(MouseButton::Left)&&(mx-ox).abs()+(my-oy).abs()>10.0 {
-            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
-                let drag_w=77.0;
-                let drag_h=110.0;
-                let dx=mx-drag_w/2.0;
-                let dy=my-drag_h/2.0;
-                draw_rectangle(dx+6.0,dy+8.0,drag_w,drag_h,Color::new(0.0,0.0,0.0,0.42));
-                let _=card_ui(card,dx,dy,drag_w,drag_h,false);
-            }
-        }
-    }
-    // Click a pile to draw, or drag its card into the hand.
-    if let Some((from_discard,sx,sy))=g.pile_drag {
-        let (mx,my)=game_mouse();
-        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>12.0 {
-            let x=mx-41.0;let y=my-55.0;
-            draw_rectangle(x,y,82.0,110.0,if from_discard {WHITEISH}else{ACCENT});
-            if active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,y,82.0,110.0,3.0,YELLOW);}
-            editable_label("drag_pile_text",if from_discard {"DISCARD"}else{"DRAW"},x+6.0,y+59.0,17.0,BG);
-        }
-    }
     if is_mouse_button_released(MouseButton::Left) {
         let (mx,my)=game_mouse();
         if let Some((id,ox,oy))=g.drag {
@@ -794,16 +777,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             if g.stage==Stage::Draw&&((!moved&&source)||(moved&&inside(12.0,py-72.0,sw-24.0,247.0))) {g.draw(from_discard,!moved);}
         }
         g.pile_drag=None;
-    }
-    // Render staged-card drags at the end of the game scene, above the hand,
-    // overlays and table, just like cards dragged out of the hand.
-    if let Some((id,sx,sy))=g.staged_drag {
-        let (mx,my)=game_mouse();
-        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0 {
-            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
-                let _=card_ui(card,mx-38.5,my-55.0,77.0,110.0,false);
-            }
-        }
     }
     // Completion banner sits between the staging slots and turn guidance.
     let phase=g.players[0].phase.min(PHASES.len()-1);
@@ -883,6 +856,40 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     // Contextual text is available through the game log; do not paint it
     // over the narrow gap reserved for the turn-status banner.
     if let Some((target,group))=hit_click {g.hit(target,group);}
+    // Click a pile to draw, or drag its card into the hand.
+    if let Some((from_discard,sx,sy))=g.pile_drag {
+        let (mx,my)=game_mouse();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>12.0 {
+            let x=mx-41.0;let y=my-55.0;
+            if from_discard {
+                if let Some(card)=g.discard.last().copied(){let _=card_ui(card,x,y,82.0,110.0,false);}
+            }else{cpu_card_back(x,y,82.0,110.0);}
+        }
+    }
+    // Draw the dragged card last so it floats above every other UI element.
+    if let Some((id,ox,oy))=g.drag {
+        let (mx,my)=game_mouse();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-ox).abs()+(my-oy).abs()>10.0 {
+            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
+                let drag_w=77.0;
+                let drag_h=110.0;
+                let dx=mx-drag_w/2.0;
+                let dy=my-drag_h/2.0;
+                draw_rectangle(dx+6.0,dy+8.0,drag_w,drag_h,Color::new(0.0,0.0,0.0,0.42));
+                let _=card_ui(card,dx,dy,drag_w,drag_h,false);
+            }
+        }
+    }
+    // Render staged-card drags at the end of the game scene, above the hand,
+    // overlays and table, just like cards dragged out of the hand.
+    if let Some((id,sx,sy))=g.staged_drag {
+        let (mx,my)=game_mouse();
+        if is_mouse_button_down(MouseButton::Left)&&(mx-sx).abs()+(my-sy).abs()>10.0 {
+            if let Some(card)=g.players[0].hand.iter().find(|c|c.id==id).copied() {
+                let _=card_ui(card,mx-38.5,my-55.0,77.0,110.0,false);
+            }
+        }
+    }
     // Keep the board visible until the winning discard reaches the pile.
     // The round result is already calculated, but its dialog waits for the flight.
     let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();
@@ -1043,16 +1050,20 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
-        if button("BACK TO MENU",730.0,1070.0,460.0,60.0,true){return Some(MenuScreen::Home);}
+        if button("BACK TO MENU",730.0,1028.0,460.0,60.0,true){return Some(MenuScreen::Home);}
         return None;
     }
-    let (panel_y,panel_h)=(190.0,880.0);
+    let panel_h=880.0;
+    let panel_y=(game_canvas_height()-panel_h)/2.0;
+    let submenu_offset=panel_y-190.0;
     panel_decoration(620.0,panel_y,680.0,panel_h);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::DeveloperTools=>"DEVELOPER TOOLS",MenuScreen::UiWorkshop=>"UI WORKSHOP",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
     // Home layout uses the same panel coordinates for every window preset.
-    let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0,_=>310.0};
+    let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0+submenu_offset,_=>310.0+submenu_offset};
     let w=menu_text_width(title,54);
-    menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
+    if !(screen==MenuScreen::Home && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
+        menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
+    }
     match screen {
         MenuScreen::Home=>{
             // Keep title, buttons and bottom padding balanced on the fixed canvas.
@@ -1082,52 +1093,52 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,323.0,22.0,MUTED);
+            menu_label("WINDOW",750.0,323.0+submenu_offset,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            let preset_button_clicked=menu_button(&window_text,365.0);
+            let preset_button_clicked=menu_button(&window_text,365.0+submenu_offset);
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",455.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,558.0,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},600.0){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",750.0,705.0,22.0,MUTED);
-            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),745.0){
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",455.0+submenu_offset){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",750.0,558.0+submenu_offset,22.0,MUTED);
+            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},600.0+submenu_offset){*show_moves=!*show_moves;}
+            menu_label("APPEARANCE",750.0,705.0+submenu_offset,22.0,MUTED);
+            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),745.0+submenu_offset){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if !*resolution_open && menu_button("DEVELOPER TOOLS",835.0){return Some(MenuScreen::DeveloperTools);}
-            if !*resolution_open && menu_button("BACK",915.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",995.0){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("DEVELOPER TOOLS",835.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("BACK",915.0+submenu_offset){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",995.0+submenu_offset){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
-                if resolution_picker(834.0,426.0) {*resolution_open=false;}
+                if resolution_picker(834.0,426.0+submenu_offset) {*resolution_open=false;}
                 // Do not interpret the click that opened the picker as an outside click.
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=365.0&&my<=429.0;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=426.0&&my<=752.0;
+                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=365.0+submenu_offset&&my<=429.0+submenu_offset;
+                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=426.0+submenu_offset&&my<=752.0+submenu_offset;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
         }
         MenuScreen::DeveloperTools=>{
-            menu_label("Visual previews do not affect gameplay.",720.0,365.0,22.0,MUTED);
-            if menu_button("UI WORKSHOP",475.0){return Some(MenuScreen::UiWorkshop);}
-            if menu_button("BACK TO SETTINGS",575.0){return Some(MenuScreen::Settings);}
+            menu_label("Visual previews do not affect gameplay.",720.0,365.0+submenu_offset,22.0,MUTED);
+            if menu_button("UI WORKSHOP",475.0+submenu_offset){return Some(MenuScreen::UiWorkshop);}
+            if menu_button("BACK TO SETTINGS",575.0+submenu_offset){return Some(MenuScreen::Settings);}
         }
         MenuScreen::UiWorkshop=>{
             // Preview rendering happens in the main loop so it can use the workshop state.
-            if menu_button("BACK TO DEVELOPER TOOLS",950.0){return Some(MenuScreen::DeveloperTools);}
+            if menu_button("BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
         }
         MenuScreen::ConfirmNew=>{
-            label("Start over? Current game progress will be lost.",675.0,310.0,22.0,WHITEISH);
-            if menu_button("YES, NEW GAME",400.0){return Some(MenuScreen::Playing);}
-            if menu_button("CANCEL",500.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",600.0){return Some(MenuScreen::Resume);}
+            label("Start over? Current game progress will be lost.",675.0,310.0+submenu_offset,22.0,WHITEISH);
+            if menu_button("YES, NEW GAME",400.0+submenu_offset){return Some(MenuScreen::Playing);}
+            if menu_button("CANCEL",500.0+submenu_offset){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",600.0+submenu_offset){return Some(MenuScreen::Resume);}
         }
         MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }

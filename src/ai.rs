@@ -1,5 +1,13 @@
 use super::{Card, Kind, card_points};
 
+// Pure run phases need one card per rank. Mixed set/run phases may need duplicates.
+fn duplicate_run_rank(hand:&[Card],top:Card,phase:usize)->bool {
+    matches!(phase,3|4|5) && matches!(top.kind,Kind::Number(n,_) if hand.iter().any(|c|matches!(c.kind,Kind::Number(m,_) if n==m)))
+}
+fn redundant_run_card(hand:&[Card],index:usize,phase:usize)->bool {
+    duplicate_run_rank(&hand[..index],hand[index],phase)
+}
+
 // Reward cards in the strongest achievable run window, not just nearby
 // numbers. Duplicate ranks cannot fill separate positions in a run.
 pub(super) fn cpu_run_window_support(hand:&[Card],index:usize,length:usize)->i32 {
@@ -24,6 +32,7 @@ pub(super) fn cpu_run_window_support(hand:&[Card],index:usize,length:usize)->i32
 // isolated numbers and Skips instead of donating Wilds to the human player.
 pub(super) fn cpu_discard_priority(hand:&[Card], index:usize, phase:usize)->i32 {
     let card=hand[index];
+    if redundant_run_card(hand,index,phase) {return 120+card_points(card) as i32*2;}
     match card.kind {
         Kind::Wild => -1000,
         Kind::Skip => 150,
@@ -95,6 +104,7 @@ pub(super) fn cpu_should_take_discard(hand:&[Card], top:Card, phase:usize, laid:
         return table.iter().enumerate().any(|(group, cards)|
             super::can_hit(cards,top,phase.min(9),group));
     }
+    if duplicate_run_rank(hand,top,phase) {return false;}
     if phase>=super::PHASES.len() {return false;}
     let mut with_top=hand.to_vec();
     with_top.push(top);
@@ -133,6 +143,9 @@ pub(super) fn cpu_discard_opponent_risk(
 // choices, Easy notices basic combinations, and Normal+ use phase strategy.
 pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usize,level:super::Difficulty)->i32 {
     let card=hand[index];
+    if level!=super::Difficulty::Novice && redundant_run_card(hand,index,phase) {
+        return 120+card_points(card) as i32*2;
+    }
     match level {
         super::Difficulty::Novice => match card.kind {
             Kind::Wild => -1000,
@@ -151,7 +164,7 @@ pub(super) fn cpu_discard_priority_for_level(hand:&[Card],index:usize,phase:usiz
                     Kind::Number(n,color) => hand.iter().enumerate().filter(|(j,other)| {
                         if *j==index {return false;}
                         match other.kind {
-                            Kind::Number(m,c) => (matches!(phase,1|2|3|4|5) && (n as i32-m as i32).abs()<=2)
+                            Kind::Number(m,c) => (matches!(phase,1|2|3|4|5) && n!=m && (n as i32-m as i32).abs()<=2)
                                 || (phase==7 && c==color),
                             Kind::Wild => true,
                             Kind::Skip => false,
@@ -171,6 +184,7 @@ pub(super) fn cpu_should_take_discard_for_level(
     if top.kind==Kind::Skip {return false;}
     if top.kind==Kind::Wild {return true;}
     if laid {return cpu_should_take_discard(hand,top,phase,laid,table);}
+    if duplicate_run_rank(hand,top,phase) {return false;}
     if level==super::Difficulty::Novice {return false;}
     if cpu_long_run_discard_improves(hand,top,phase) {return true;}
     if matches!(level,super::Difficulty::Hard|super::Difficulty::Expert) {

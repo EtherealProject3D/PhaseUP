@@ -8,6 +8,115 @@ fn set(start:u32,n:u8,count:usize)->Vec<Card> {(0..count).map(|i|number(start+i 
 fn run(start:u32,first:u8,count:usize)->Vec<Card> {(0..count).map(|i|number(start+i as u32,first+i as u8,(i%4) as u8)).collect()}
 
 #[test]
+fn discard_underlay_remains_until_incoming_card_lands() {
+    let mut g=Game::new();
+    let old=number(4000,7,0);let incoming=number(4001,9,1);
+    g.discard=vec![old,incoming];
+    g.human_discard_flight=Some(HumanDiscardFlight{card:incoming,from_x:0.,from_y:0.,started:0.});
+    assert_eq!(g.visible_discards(false).last().unwrap().id,old.id);
+    g.human_discard_flight=None;
+    assert_eq!(g.visible_discards(false).last().unwrap().id,incoming.id);
+    g.cpu_discard_flight=Some(CpuDiscardFlight{card:incoming,player:1,origin_index:0,origin_count:10,started:0.,duration:1.});
+    assert_eq!(g.visible_discards(false).last().unwrap().id,old.id);
+    g.cpu_discard_flight=None;
+    assert_eq!(g.visible_discards(false).last().unwrap().id,incoming.id);
+}
+
+#[test]
+fn discard_drag_reveals_underlying_card_without_changing_pile() {
+    let mut g=Game::new();
+    let old=number(4010,7,0);let top=number(4011,9,1);
+    g.discard=vec![old,top];
+    assert_eq!(g.visible_discards(true).last().unwrap().id,old.id);
+    assert_eq!(g.visible_discards(false).last().unwrap().id,top.id);
+    assert_eq!(g.discard.len(),2);
+    g.discard=vec![top];
+    assert!(g.visible_discards(true).is_empty());
+    assert_eq!(g.visible_discards(false).len(),1);
+    g.discard.clear();
+    assert!(g.visible_discards(true).is_empty());
+}
+
+#[test]
+fn drawing_discard_leaves_previous_card_visible_for_human_and_cpu() {
+    let mut g=Game::new();
+    let old=number(4020,3,0);let top=wild(4021);
+    g.discard=vec![old,top];
+    g.draw(true,false);
+    assert_eq!(g.visible_discards(false).last().unwrap().id,old.id);
+    assert!(g.players[0].hand.iter().any(|c|c.id==top.id));
+    g.discard=vec![old,top];g.players[1].hand=vec![number(4022,2,0)];
+    g.stage=Stage::Cpu;g.turn=1;g.cpu_step=0;g.cpu_speed=0;
+    g.cpu_action();
+    assert_eq!(g.visible_discards(false).last().unwrap().id,old.id);
+    assert!(g.players[1].hand.iter().any(|c|c.id==top.id));
+}
+
+#[test]
+fn staged_run_sorts_after_drop_and_manual_reordering() {
+    let mut g=Game::new();g.stage=Stage::Play;g.players[0].phase=1;
+    g.players[0].hand=vec![number(4030,8,0),number(4031,5,0),number(4032,6,0),number(4033,7,0)];
+    for id in 4030..=4033 {g.stage_card_at(id,1,0);}
+    assert_eq!(g.staged[1],vec![4031,4032,4033,4030]);
+    g.move_staged_card(4030,1,0);
+    assert_eq!(g.staged[1],vec![4031,4032,4033,4030]);
+}
+
+#[test]
+fn staged_run_places_wilds_in_gaps_without_losing_duplicate_cards() {
+    let mut g=Game::new();g.stage=Stage::Play;g.players[0].phase=4;
+    g.players[0].hand=vec![number(4040,8,0),wild(4041),number(4042,6,0),number(4043,9,0),number(4044,6,1)];
+    for id in 4040..=4043 {g.stage_card_at(id,0,0);}
+    assert_eq!(g.staged[0],vec![4042,4041,4040,4043]);
+    g.stage_card_at(4044,0,0);
+    assert_eq!(g.staged[0].len(),5);
+    assert_eq!(g.staged[0].iter().copied().collect::<HashSet<_>>().len(),5);
+}
+
+#[test]
+fn staged_sets_keep_explicit_drop_order() {
+    let mut g=Game::new();g.stage=Stage::Play;g.players[0].phase=0;
+    g.players[0].hand=vec![number(4050,8,0),number(4051,5,0)];
+    g.stage_card_at(4050,0,0);g.stage_card_at(4051,0,0);
+    assert_eq!(g.staged[0],vec![4051,4050]);
+}
+
+#[test]
+fn pure_run_cpu_rejects_repeated_twelves_at_every_level() {
+    let hand=vec![number(4060,12,0),number(4061,10,1),number(4062,11,2),number(4063,5,0),skip(4064)];
+    for phase in [3,4,5] {for level in [Difficulty::Novice,Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        assert!(!cpu_should_take_discard_for_level(&hand,number(4065,12,1),phase,false,&[],level));
+    }}
+    // Mixed set/run phases still have a use for duplicate ranks.
+    assert!(cpu_should_take_discard_for_level(&hand,number(4065,12,1),1,false,&[],Difficulty::Easy));
+}
+
+#[test]
+fn easy_cpu_sheds_redundant_run_rank_before_useful_natural() {
+    let mut hand=run(4070,5,8);
+    hand.push(number(4080,12,1));hand.push(number(4081,12,2));
+    for level in [Difficulty::Easy,Difficulty::Normal,Difficulty::Hard,Difficulty::Expert] {
+        let extra=cpu_discard_priority_for_level(&hand,8,4,level);
+        assert!(extra>cpu_discard_priority_for_level(&hand,7,4,level));
+        assert!(extra>cpu_discard_priority_for_level(&hand,3,4,level));
+    }
+}
+
+#[test]
+fn easy_aggressive_cpu_draws_stock_instead_of_another_twelve_for_run_of_eight() {
+    let mut g=Game::new();
+    g.stage=Stage::Cpu;g.turn=1;g.cpu_step=0;g.cpu_speed=0;
+    g.cpu_roster[0]=CpuIdentity{name:"Sarah",difficulty:Difficulty::Easy,style:PlayStyle::Aggressive};
+    g.players[1].phase=4;
+    g.players[1].hand=vec![number(4090,12,0),number(4091,10,1),number(4092,11,2),number(4093,5,0)];
+    g.discard=vec![number(4094,12,1)];g.deck=vec![number(4095,6,2)];
+    g.cpu_action();
+    assert_eq!(g.discard.last().unwrap().id,4094);
+    assert!(g.players[1].hand.iter().any(|c|c.id==4095));
+    assert!(!g.players[1].hand.iter().any(|c|c.id==4094));
+}
+
+#[test]
 fn deck_has_correct_distribution_and_unique_ids() {
     let deck=make_deck();
     assert_eq!(deck.len(),108);

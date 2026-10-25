@@ -34,14 +34,7 @@ pub(super) fn panel_decoration(x:f32,y:f32,w:f32,h:f32){
             draw_rectangle_lines(x,y,w,h,1.,Color::new(0.32,0.47,0.55,0.6));
         }
         Theme::Futuristic=>{
-            draw_rectangle(x,y,w,h,t.panel());
-            draw_rectangle_lines(x-3.,y-3.,w+6.,h+6.,1.,Color::new(0.,0.50,0.66,0.6));
-            draw_rectangle_lines(x,y,w,h,2.,a);
-            let s=32.;
-            for (xx,yy,dx,dy) in [(x,y,1.,1.),(x+w,y,-1.,1.),(x,y+h,1.,-1.),(x+w,y+h,-1.,-1.)]{
-                draw_line(xx,yy,xx+dx*s,yy,4.,a);
-                draw_line(xx,yy,xx,yy+dy*s,4.,a);
-            }
+            crate::neon_menu_panel(x,y,w,h);
         }
         Theme::Playful=>{
             draw_rectangle(x+9.,y+12.,w,h,Color::new(0.01,0.06,0.07,0.45));
@@ -65,11 +58,10 @@ pub(super) fn menu_background(){
             draw_circle(110.,1040.,240.,Color::new(0.08,0.25,0.24,0.18));
         }
         Theme::Futuristic=>{
-            let grid=Color::new(0.04,0.22,0.32,0.36);
-            for x in (-160..=2080).step_by(80){draw_line(x as f32,0.,x as f32,canvas_h,1.,grid);}
-            for y in (0..=(canvas_h as i32)).step_by(80){draw_line(-160.,y as f32,2080.,y as f32,1.,grid);}
-            draw_line(-160.,100.,2080.,100.,2.,t.accent());
-            draw_line(-160.,canvas_h-100.,2080.,canvas_h-100.,2.,t.accent());
+            crate::neon_game_background(1920.,canvas_h);
+            draw_rectangle(-160.,0.,2240.,canvas_h,Color::new(0.,0.015,0.035,0.35));
+            crate::neon_menu_rail(100.);
+            crate::neon_menu_rail(canvas_h-100.);
         }
         Theme::Playful=>{
             let dots=[(120.,150.,27.),(1730.,190.,43.),(205.,920.,36.),(1690.,960.,28.),(315.,400.,18.),(1560.,620.,22.)];

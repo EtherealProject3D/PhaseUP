@@ -149,6 +149,40 @@ pub(super) fn neon_hand_panel(x:f32,y:f32,w:f32,h:f32){
     });
     if !painted {neon_frame(x,y,w,h,true);}
 }
+// Keep the authored border and corners at 2x asset scale on taller menu panels.
+pub(super) fn neon_menu_panel(x:f32,y:f32,w:f32,h:f32){
+    let painted=NEON_HAND_PANEL.with(|slot|{
+        let slot=slot.borrow();
+        let Some(texture)=slot.as_ref() else {return false;};
+        let sx=[0.,100.,texture.width()-100.,texture.width()];
+        let sy=[0.,64.,texture.height()-64.,texture.height()];
+        let dx=[x,x+50.,x+w-50.,x+w];
+        let dy=[y,y+32.,y+h-32.,y+h];
+        for row in 0..3 {for col in 0..3 {
+            draw_texture_ex(texture,dx[col],dy[row],WHITE,DrawTextureParams{
+                source:Some(Rect::new(sx[col],sy[row],sx[col+1]-sx[col],sy[row+1]-sy[row])),
+                dest_size:Some(vec2(dx[col+1]-dx[col],dy[row+1]-dy[row])),..Default::default()
+            });
+        }}
+        true
+    });
+    if !painted {neon_frame(x,y,w,h,true);}
+}
+pub(super) fn neon_menu_rail(y:f32){
+    // Sample the straight metal rail; cyan accents remain short and segmented.
+    NEON_HAND_PANEL.with(|slot|{
+        if let Some(texture)=slot.borrow().as_ref(){
+            draw_texture_ex(texture,-160.,y-8.,WHITE,DrawTextureParams{
+                source:Some(Rect::new(400.,7.,texture.width()-800.,28.)),
+                dest_size:Some(vec2(2240.,14.)),..Default::default()
+            });
+        }
+    });
+    for x in [180.,480.,1360.,1660.] {
+        draw_line(x,y+7.,x+80.,y+7.,6.,Color::new(0.,0.7,0.9,0.12));
+        draw_line(x,y+7.,x+80.,y+7.,2.,ACCENT);
+    }
+}
 pub(super) fn neon_staging_slot(x:f32,y:f32,w:f32,h:f32,single:bool)->bool {
     NEON_STAGING.with(|slots|{
         if let Some(texture)=slots.borrow()[if single {0}else{1}].as_ref(){
