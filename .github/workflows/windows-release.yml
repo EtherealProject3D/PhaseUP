@@ -1,8 +1,6 @@
 name: Build Windows release
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -43,12 +41,12 @@ jobs:
       - name: Compile release executable
         run: cargo build --release
 
-      - name: Rename versioned executable
+      - name: Package executable and runtime assets
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.tag }}"
-          $file = "PhaseUP-$tag-windows-x64.exe"
-          Copy-Item "target/release/phaseup.exe" $file
+          ./scripts/package-windows.ps1 -Tag $tag
+          $file = "PhaseUP-$tag-Windows.zip"
           "ASSET_FILE=$file" >> $env:GITHUB_ENV
 
       - name: Upload executable to GitHub Release
