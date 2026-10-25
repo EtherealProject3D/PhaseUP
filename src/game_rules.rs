@@ -41,10 +41,22 @@ impl Game {
         self.log_move(format!("{} went out!",self.cpu_name(winner)));
         if self.players.iter().any(|p|p.phase>=10) {
             self.stage=Stage::GameOver;
-            self.message=format!("Game complete! {} finished all 10 phases",self.cpu_name(winner));
+            self.message=self.result_announcement();
         } else {
             self.stage=Stage::RoundOver;
             self.message=format!("{} went out! Scores updated. Continue for next round.",self.cpu_name(winner));
         }
+    }
+    pub(super) fn result_winner(&self)->usize {
+        if self.stage==Stage::GameOver {
+            self.players.iter().enumerate().filter(|(_,p)|p.phase>=10)
+                .min_by_key(|(_,p)|p.score).map(|(i,_)|i).unwrap_or(self.turn)
+        }else{self.turn}
+    }
+    pub(super) fn result_announcement(&self)->String {
+        let winner=self.result_winner();
+        if self.stage==Stage::GameOver {
+            if winner==0 {"YOU WON THE GAME!".into()}else{format!("{} WON THE GAME!",self.cpu_name(winner).to_uppercase())}
+        }else if winner==0 {"YOU WIN THE ROUND!".into()}else{format!("{} WINS THE ROUND!",self.cpu_name(winner).to_uppercase())}
     }
 }

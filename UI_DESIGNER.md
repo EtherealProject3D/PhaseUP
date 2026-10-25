@@ -1,5 +1,12 @@
 # PhaseUP UI Designer (Windows)
 
+Official 0.4.0 game builds use Neon Forge and hide Developer Tools and diagnostic
+shortcuts. To run the game with the UI Workshop, diagnostics, and theme switching:
+
+```powershell
+cargo run --release --features developer-tools --bin phaseup
+```
+
 This is the new standalone layout editing application. It runs separately from the Macroquad game and does not change the game's default build.
 
 From the repository root:

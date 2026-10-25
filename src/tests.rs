@@ -176,6 +176,56 @@ fn changing_speed_preserves_animation_progress_and_landing_handoff_gap() {
 }
 
 #[test]
+fn official_build_locks_theme_while_developer_build_allows_switching() {
+    set_theme(Theme::Modern);
+    assert_eq!(active_theme().key(),if cfg!(feature="developer-tools") {"modern"}else{"futuristic"});
+    set_theme(Theme::Playful);
+    assert_eq!(active_theme().key(),if cfg!(feature="developer-tools") {"playful"}else{"futuristic"});
+    set_theme(Theme::Futuristic);
+}
+
+#[test]
+fn game_victory_message_names_human_or_cpu_winner() {
+    for winner in [0,2] {
+        let mut g=Game::new();
+        for p in &mut g.players {p.hand.clear();p.phase=0;p.laid=false;}
+        g.players[winner].phase=9;g.players[winner].laid=true;
+        g.end_round(winner);
+        assert_eq!(g.stage,Stage::GameOver);
+        assert_eq!(g.result_winner(),winner);
+        let expected=if winner==0 {"YOU WON THE GAME!".to_string()}else{format!("{} WON THE GAME!",g.cpu_name(winner).to_uppercase())};
+        assert_eq!(g.result_announcement(),expected);
+        assert_eq!(g.message,expected);
+    }
+}
+
+#[test]
+fn final_round_winner_is_not_automatically_the_game_winner() {
+    let mut g=Game::new();
+    for p in &mut g.players {p.hand.clear();p.phase=0;p.laid=false;}
+    g.players[0].phase=9;g.players[0].laid=true;
+    g.players[0].hand=vec![number(4200,3,0)];
+    g.players[1].phase=4;g.players[1].laid=true;
+    g.end_round(1);
+    assert_eq!(g.turn,1); // Preserve who went OUT in the final round.
+    assert_eq!(g.result_winner(),0);
+    assert_eq!(g.result_announcement(),"YOU WON THE GAME!");
+}
+
+#[test]
+fn multiple_phase_ten_finishers_use_final_scores_to_select_game_winner() {
+    let mut g=Game::new();
+    for p in &mut g.players {p.hand.clear();p.phase=0;p.laid=false;}
+    g.players[0].phase=9;g.players[0].laid=true;g.players[0].score=100;
+    g.players[2].phase=9;g.players[2].laid=true;g.players[2].score=90;
+    g.players[2].hand=vec![number(4201,3,0)];
+    g.end_round(0);
+    assert_eq!(g.players[2].score,95);
+    assert_eq!(g.result_winner(),2);
+    assert_eq!(g.result_announcement(),format!("{} WON THE GAME!",g.cpu_name(2).to_uppercase()));
+}
+
+#[test]
 fn deck_has_correct_distribution_and_unique_ids() {
     let deck=make_deck();
     assert_eq!(deck.len(),108);

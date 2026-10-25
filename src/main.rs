@@ -261,7 +261,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if active_theme()!=Theme::Futuristic || !neon_logo(logo.x,logo.y,logo.w,logo.h) {
         editable_label("logo_text","PHASEUP",logo.x,logo.y+logo.h-10.,32.,ACCENT);
     }
-    let version="v0.3.2-dev";
+    let version=if cfg!(feature="developer-tools") {concat!("v",env!("CARGO_PKG_VERSION"),"-dev")}else{concat!("v",env!("CARGO_PKG_VERSION"))};
     let version_rect=layout::rect("game_version",layout::Rect{x:270.,y:21.,w:140.,h:25.});
     editable_label("version_text",version,version_rect.x,version_rect.y+19.,19.,MUTED);
     let menu_button=layout::rect("menu_button",layout::Rect{x:1710.,y:8.,w:100.,h:40.});
@@ -910,8 +910,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
         let title_w=menu_text_width(&title,32);
         editable_heading("round_result_title",&title,x+(530.0-title_w)/2.0,y+58.,32.);
-        let winner_name=g.cpu_name(g.turn).to_uppercase();
-        let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
+        let result_winner=g.result_winner();
+        let announcement=g.result_announcement();
         let announce_w=menu_text_width(&announcement,27);
         editable_label("round_result_message",&announcement,x+(530.0-announce_w)/2.0,y+91.,27.,YELLOW);
         editable_label("score_heading","TOTAL SCORES",x+29.,y+128.,18.,MUTED);
@@ -919,7 +919,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let p=&g.players[i];
             let name=g.cpu_name(i);
             let line=format!("{}{}  |  Phase {}  |  {} pts",name,if i==g.turn {"  (OUT)"}else{""},p.phase.min(10),p.score);
-            editable_label("score_row",&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
+            editable_label("score_row",&line,x+29.,y+159.+i as f32*29.,20.,if i==result_winner {YELLOW}else{WHITEISH});
         }
         if game_over {
             if editable_button("new_game_button","NEW GAME",x+60.,y+257.,190.,40.,true){*g=Game::new();}
@@ -1053,6 +1053,7 @@ fn menu_button(title:&str,y:f32)->bool {
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
+    let screen=if !cfg!(feature="developer-tools") && matches!(screen,MenuScreen::DeveloperTools|MenuScreen::UiWorkshop) {MenuScreen::Settings}else{screen};
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
@@ -1122,10 +1123,20 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                 let next=active_game_speed().next();set_game_speed(next);save_game_speed(next);
             }
             menu_label("APPEARANCE",750.0,panel_y+515.0,22.0,MUTED);
-            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
-                let next=active_theme().next();set_theme(next);save_theme(next);
+            if !*resolution_open {
+                if cfg!(feature="developer-tools") {
+                    if menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
+                        let next=active_theme().next();set_theme(next);save_theme(next);
+                    }
+                }else{
+                    neon_metal_button(730.,panel_y+538.,460.,64.,false,false);
+                    let text="THEME: NEON FORGE";
+                    menu_label(text,960.-menu_text_width(text,28)/2.,panel_y+580.,28.,MUTED);
+                    let note="Theme changes are planned in a future version";
+                    menu_label(note,960.-menu_text_width(note,16)/2.,panel_y+625.,16.,MUTED);
+                }
             }
-            if !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
+            if cfg!(feature="developer-tools") && !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
             if !*resolution_open && menu_button("BACK",panel_y+682.0){return Some(MenuScreen::Home);}
             if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
@@ -1255,14 +1266,14 @@ async fn main(){
             }
             previous_fullscreen=fullscreen;
         }
-        if is_key_pressed(KeyCode::F5) {layout::reload();}
+        if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F5) {layout::reload();}
         #[cfg(not(target_os="android"))]
-        if is_key_pressed(KeyCode::F6) {
+        if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F6) {
             if let Err(error)=layout::clear_all(){eprintln!("Failed to reset layout overrides: {error}");}
         }
-        if is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
-        if is_key_pressed(KeyCode::F7) {wireframe=!wireframe;}
-        if menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
+        if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F4) {show_bounds=!show_bounds;}
+        if cfg!(feature="developer-tools") && is_key_pressed(KeyCode::F7) {wireframe=!wireframe;}
+        if cfg!(feature="developer-tools") && menu==MenuScreen::Playing && is_key_pressed(KeyCode::F3){show_debug=!show_debug;}
         if is_key_pressed(KeyCode::Escape){layout_editor.close();menu=if menu==MenuScreen::Playing {MenuScreen::Home} else if matches!(menu,MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Settings|MenuScreen::DeveloperTools|MenuScreen::UiWorkshop|MenuScreen::ConfirmNew) {MenuScreen::Home} else if has_game {MenuScreen::Playing} else {MenuScreen::Home};}
         // Right-click the in-game PHASEUP header or press Ctrl+0 to restore
         // the default window dimensions. The existing persistence loop saves it.

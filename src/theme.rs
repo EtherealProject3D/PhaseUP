@@ -14,7 +14,10 @@ impl Theme {
 }
 thread_local! {static ACTIVE:Cell<Theme>=const {Cell::new(Theme::Modern)};}
 pub(super) fn active_theme()->Theme {ACTIVE.with(|v|v.get())}
-pub(super) fn set_theme(theme:Theme) {ACTIVE.with(|v|v.set(theme));}
+pub(super) fn set_theme(theme:Theme) {
+    let theme=if cfg!(feature="developer-tools") {theme}else{Theme::Futuristic};
+    ACTIVE.with(|v|v.set(theme));
+}
 pub(super) fn themed_color(color:Color)->Color {
     let theme=active_theme();
     if theme==Theme::Modern {return color;}
