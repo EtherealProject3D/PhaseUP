@@ -35,11 +35,9 @@ The game now has the foundation for a fixed roster of named CPU identities, each
 
 | Difficulty | Planned behavior |
 | --- | --- |
-| **Novice** | Learning-level decisions, occasional missed opportunities |
 | **Easy** | Basic phase building and straightforward discards |
 | **Normal** | Competent general play, the baseline for current CPU behavior |
 | **Hard** | More deliberate phase planning, defensive discards, and opponent awareness |
-| **Expert** | Advanced card tracking, inference, flexible hand building, and situational defense |
 
 The planned matchmaking system keeps opponents within a narrow difficulty range, avoiding combinations such as Expert and Novice at the same table. A difficulty selector and mixed-difficulty options are planned; they are **not yet available in the game**.
 
