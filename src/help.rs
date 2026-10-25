@@ -6,7 +6,10 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     // Center the heading on the 1920-wide canvas, below the background
     // accent stripe at y=100 and above the help content panel.
     let tw=menu_text_width(heading,45);
-    menu_heading(heading,960.0-tw/2.0,153.0+offset,45.0);
+    let metrics=menu_text_dimensions(heading,45);
+    let heading_center=(108.0+185.0+offset)/2.0;
+    let heading_baseline=heading_center+metrics.offset_y-metrics.height/2.0;
+    menu_heading(heading,960.0-tw/2.0,heading_baseline,45.0);
     // Center the 1190px panel on the 1920px logical canvas.
     let panel_x=(1920.0-1190.0)/2.0;
     let content_x=panel_x+50.0;

@@ -516,21 +516,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if show_moves {
         let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
         let (log_x,log_y)=(log.x,log.y);
-        panel_decoration(log_x,log_y,log.w,log.h);
-        let inset=24.0;
+        if active_theme()==Theme::Futuristic {neon_compact_panel(log_x,log_y,log.w,log.h);}
+        else {panel_decoration(log_x,log_y,log.w,log.h);}
+        let inset=28.0;
         let inner_w=(log.w-2.0*inset).max(1.0);
-        editable_heading("moves_title","RECENT MOVES",log_x+inset,log_y+36.0,20.0);
-        draw_line(log_x+inset,log_y+50.0,log_x+log.w-inset,log_y+50.0,1.0,Color::new(0.12,0.40,0.48,1.));
+        let title_width=menu_text_width("RECENT MOVES",20);
+        editable_heading("moves_title","RECENT MOVES",log_x+(log.w-title_width)/2.0,log_y+46.0,20.0);
+        draw_line(log_x+inset,log_y+60.0,log_x+log.w-inset,log_y+60.0,1.0,Color::new(0.12,0.40,0.48,1.));
         let events_y=if g.stage==Stage::Cpu {
             let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
             let notice=format!("{} - {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
-            themed_button(log_x+inset,log_y+60.0,inner_w,32.0,false);
+            themed_button(log_x+inset,log_y+70.0,inner_w,30.0,false);
             let notice_size=16;
             let width=menu_text_width(&notice,notice_size);
-            editable_label("cpu_action_notice",&notice,log_x+(log.w-width)/2.0,log_y+82.0,notice_size as f32,YELLOW);
-            log_y+120.0
-        }else{log_y+80.0};
-        let max_events=(((log_y+log.h-inset-events_y)/23.0).floor()+1.0).clamp(0.0,8.0) as usize;
+            editable_label("cpu_action_notice",&notice,log_x+(log.w-width)/2.0,log_y+91.0,notice_size as f32,YELLOW);
+            log_y+128.0
+        }else{log_y+95.0};
+        let max_events=(((log_y+log.h-34.0-events_y)/23.0).floor()+1.0).clamp(0.0,8.0) as usize;
         for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
             let entry_y=events_y+j as f32*23.0;
             if j==0 {
@@ -900,11 +902,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();
     if (g.stage==Stage::RoundOver||g.stage==Stage::GameOver)&&!discard_in_motion {
         draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;
-        panel_decoration(x,y,530.,328.);
+        if active_theme()==Theme::Futuristic {neon_compact_panel(x,y,530.,328.);}
+        else {panel_decoration(x,y,530.,328.);}
         let game_over=g.stage==Stage::GameOver;
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
         let title_w=menu_text_width(&title,32);
-        editable_heading("round_result_title",&title,x+(530.0-title_w)/2.0,y+47.,32.);
+        editable_heading("round_result_title",&title,x+(530.0-title_w)/2.0,y+58.,32.);
         let winner_name=g.cpu_name(g.turn).to_uppercase();
         let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
         let announce_w=menu_text_width(&announcement,27);
@@ -917,9 +920,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             editable_label("score_row",&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
         if game_over {
-            if editable_button("new_game_button","NEW GAME",x+60.,y+267.,190.,40.,true){*g=Game::new();}
-            let _=editable_button("main_menu_button","MAIN MENU",x+280.,y+267.,190.,40.,true);
-        } else if editable_button("next_round_button","NEXT ROUND",x+170.,y+267.,190.,40.,true){g.deal();}
+            if editable_button("new_game_button","NEW GAME",x+60.,y+257.,190.,40.,true){*g=Game::new();}
+            let _=editable_button("main_menu_button","MAIN MENU",x+280.,y+257.,190.,40.,true);
+        } else if editable_button("next_round_button","NEXT ROUND",x+170.,y+257.,190.,40.,true){g.deal();}
     }
     draw_card_flights(g,sw,sh);
     if show_bounds {draw_cpu_bounds(g);}
@@ -1095,7 +1098,8 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                 save_cpu_difficulty(*cpu_difficulty);
             }
             if has_game {
-                menu_label("Difficulty applies to new games",794.0,first_y+step*(row+1.0)+12.0,18.0,MUTED);
+                let note="Difficulty applies to new games";
+                menu_label(note,960.0-menu_text_width(note,18)/2.0,first_y+step*(row+1.0)+12.0,18.0,MUTED);
             }
         }
         MenuScreen::Settings=>{
@@ -1320,7 +1324,7 @@ async fn main(){
             let menu_button=layout::rect("menu_button",layout::Rect{x:1710.,y:8.,w:100.,h:40.});
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=menu_button.x&&mx<=menu_button.x+menu_button.w&&my>=menu_button.y&&my<=menu_button.y+menu_button.h {menu=MenuScreen::Home;}
             if game.stage==Stage::GameOver && game.human_discard_flight.is_none() && game.cpu_discard_flight.is_none() && !layout_editor::editing() {
-                let back=layout::rect("main_menu_button_1",layout::Rect{x:975.0,y:game_canvas_height()/2.0-164.0+267.0,w:190.0,h:40.0});
+                let back=layout::rect("main_menu_button_1",layout::Rect{x:975.0,y:game_canvas_height()/2.0-164.0+257.0,w:190.0,h:40.0});
                 if is_mouse_button_pressed(MouseButton::Left) && mx>=back.x && mx<=back.x+back.w && my>=back.y && my<=back.y+back.h {menu=MenuScreen::Home;}
             }
         } else {

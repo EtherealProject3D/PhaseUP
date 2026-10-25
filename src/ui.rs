@@ -166,6 +166,9 @@ pub(super) fn neon_hand_panel(x:f32,y:f32,w:f32,h:f32){
 pub(super) fn neon_menu_panel(x:f32,y:f32,w:f32,h:f32){
     neon_panel_scaled(x,y,w,h,1.0,WHITE);
 }
+pub(super) fn neon_compact_panel(x:f32,y:f32,w:f32,h:f32){
+    neon_panel_scaled(x,y,w,h,0.65,WHITE);
+}
 fn neon_panel_scaled(x:f32,y:f32,w:f32,h:f32,border_scale:f32,tint:Color){
     let painted=NEON_HAND_PANEL.with(|slot|{
         let slot=slot.borrow();
