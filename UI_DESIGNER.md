@@ -76,3 +76,10 @@ separate labels, card rows and slot positions. Human laid-phase frame positions
 are also separate. The single CLEAR button and its text do not share overrides
 with CLEAR ALL / CLEAR 1 / CLEAR 2. Legacy staging overrides import only into the
 double layout and never overwrite explicitly saved mode-specific positions.
+
+Normal staging labels keep `staging_single_label_1` and
+`staging_double_label_1` / `_2`. READY labels have independent
+`staging_single_ready_label_1` and `staging_double_ready_label_1` / `_2`
+positions. Adjust each label while its state is visible; changing another
+slot's readiness does not renumber the selected label. New labels default to
+horizontal centering in their panel.

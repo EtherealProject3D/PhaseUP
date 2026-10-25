@@ -420,6 +420,9 @@ mod centered_staging_tests {
 pub(super) fn stage_key(group:usize,requirements:usize,suffix:&str)->String {
     format!("stage_{}_{}{suffix}",if requirements==1 {"single"}else{"double"},group+1)
 }
+pub(super) fn staging_label_key(group:usize,requirements:usize,ready:bool)->String {
+    format!("staging_{}_{}label_{}",if requirements==1 {"single"}else{"double"},if ready {"ready_"}else{""},group+1)
+}
 
 fn migrate_mode_layouts(values:&mut HashMap<String,Rect>){
     let old=values.clone();

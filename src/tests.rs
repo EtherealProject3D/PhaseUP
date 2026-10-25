@@ -117,6 +117,18 @@ fn easy_aggressive_cpu_draws_stock_instead_of_another_twelve_for_run_of_eight() 
 }
 
 #[test]
+fn staging_label_positions_are_independent_by_group_mode_and_readiness() {
+    let mut keys=HashSet::new();
+    for groups in [1,2] {for group in 0..groups {for ready in [false,true] {
+        assert!(keys.insert(layout::staging_label_key(group,groups,ready)));
+    }}}
+    // Keep the existing normal-label IDs so prior Workshop adjustments survive.
+    assert_eq!(layout::staging_label_key(0,1,false),"staging_single_label_1");
+    assert_eq!(layout::staging_label_key(1,2,false),"staging_double_label_2");
+    assert_eq!(layout::staging_label_key(1,2,true),"staging_double_ready_label_2");
+}
+
+#[test]
 fn deck_has_correct_distribution_and_unique_ids() {
     let deck=make_deck();
     assert_eq!(deck.len(),108);

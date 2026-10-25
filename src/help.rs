@@ -10,8 +10,11 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
     // Center the 1190px panel on the 1920px logical canvas.
     let panel_x=(1920.0-1190.0)/2.0;
     let content_x=panel_x+50.0;
-    let scrollbar_x=panel_x+1145.0;
+    let scrollbar_x=panel_x+1110.0;
     panel_decoration(panel_x,185.0+offset,1190.0,860.0);
+    let content_top=245.0+offset;
+    let content_bottom=975.0+offset;
+    let viewport_height=content_bottom-content_top;
 
     let mut rows:Vec<(bool,String)>=Vec::new();
     if rules {
@@ -76,22 +79,25 @@ pub(super) fn help_page(rules:bool, scroll:&mut f32) {
         }
         height+=if is_heading {13.0}else{21.0};
     }
-    let viewport_height=795.0;
-    let max_scroll=(height-viewport_height+25.0).max(0.0);
+    let content_height=height+28.0;
+    let max_scroll=(content_height-viewport_height).max(0.0);
     let (_,wheel)=mouse_wheel();
     *scroll=(*scroll-wheel*50.0).clamp(0.0,max_scroll);
     if is_key_down(KeyCode::Down){*scroll=(*scroll+7.0).min(max_scroll);}
     if is_key_down(KeyCode::Up){*scroll=(*scroll-7.0).max(0.0);}
     for (is_heading,line,y) in laid_out {
-        let screen_y=222.0+offset+y-*scroll;
-        if screen_y>=210.0+offset && screen_y<=997.0+offset {
-            menu_label(&line,content_x,screen_y,if is_heading {25.0}else{23.0},if is_heading {ACCENT}else{WHITEISH});
+        let screen_y=content_top+28.0+y-*scroll;
+        let font=if is_heading {25}else{23};
+        let metrics=menu_text_dimensions(&line,font);
+        let glyph_top=screen_y-metrics.offset_y;
+        if glyph_top>=content_top && glyph_top+metrics.height<=content_bottom {
+            menu_label(&line,content_x,screen_y,font as f32,if is_heading {ACCENT}else{WHITEISH});
         }
     }
-    menu_label("Mouse wheel / Up-Down arrows to scroll",content_x,1030.0+offset,17.0,MUTED);
+    menu_label("Mouse wheel / Up-Down arrows to scroll",content_x,1010.0+offset,17.0,MUTED);
     if max_scroll>0.0 {
-        let track_y=195.0+offset;let track_h=790.0;
-        let thumb_h=(viewport_height/(height+25.0)*track_h).clamp(50.0,track_h);
+        let track_y=content_top;let track_h=viewport_height;
+        let thumb_h=(viewport_height/content_height*track_h).clamp(50.0,track_h);
         let thumb_y=track_y+(*scroll/max_scroll)*(track_h-thumb_h);
         draw_rectangle(scrollbar_x,track_y,9.0,track_h,BG);
         draw_rectangle(scrollbar_x,thumb_y,9.0,thumb_h,ACCENT);

@@ -578,7 +578,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        editable_label(if groups.len()==1 {"staging_single_label"}else{"staging_double_label"},&format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""}),x+10.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
+        let label=format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""});
+        let label_key=layout::staging_label_key(group,groups.len(),ready);
+        editable_label_id(&label_key,&label,x+(stage_w-menu_text_width(&label,16))/2.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         let dragged_id=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
             let (mx,my)=game_mouse();
             (is_mouse_button_down(MouseButton::Left) && (mx-sx).abs()+(my-sy).abs()>10.
@@ -1093,34 +1095,34 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,323.0+submenu_offset,22.0,MUTED);
+            menu_label("WINDOW",750.0,panel_y+145.0,22.0,MUTED);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            let preset_button_clicked=menu_button(&window_text,365.0+submenu_offset);
+            let preset_button_clicked=menu_button(&window_text,panel_y+178.0);
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",455.0+submenu_offset){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,558.0+submenu_offset,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},600.0+submenu_offset){*show_moves=!*show_moves;}
-            menu_label("APPEARANCE",750.0,705.0+submenu_offset,22.0,MUTED);
-            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),745.0+submenu_offset){
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+258.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_label("INTERFACE",750.0,panel_y+355.0,22.0,MUTED);
+            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+382.0){*show_moves=!*show_moves;}
+            menu_label("APPEARANCE",750.0,panel_y+475.0,22.0,MUTED);
+            if !*resolution_open && menu_button(&format!("THEME: {}",active_theme().name()),panel_y+502.0){
                 let next=active_theme().next();set_theme(next);save_theme(next);
             }
-            if !*resolution_open && menu_button("DEVELOPER TOOLS",835.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
-            if !*resolution_open && menu_button("BACK",915.0+submenu_offset){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",995.0+submenu_offset){return Some(MenuScreen::Resume);}
+            if !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+582.0){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("BACK",panel_y+662.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+742.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
-                if resolution_picker(834.0,426.0+submenu_offset) {*resolution_open=false;}
+                if resolution_picker(834.0,panel_y+242.0) {*resolution_open=false;}
                 // Do not interpret the click that opened the picker as an outside click.
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=365.0+submenu_offset&&my<=429.0+submenu_offset;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=426.0+submenu_offset&&my<=752.0+submenu_offset;
+                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+178.0&&my<=panel_y+242.0;
+                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+242.0&&my<=panel_y+568.0;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
@@ -1135,10 +1137,11 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if menu_button("BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
         }
         MenuScreen::ConfirmNew=>{
-            label("Start over? Current game progress will be lost.",675.0,310.0+submenu_offset,22.0,WHITEISH);
-            if menu_button("YES, NEW GAME",400.0+submenu_offset){return Some(MenuScreen::Playing);}
-            if menu_button("CANCEL",500.0+submenu_offset){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",600.0+submenu_offset){return Some(MenuScreen::Resume);}
+            let warning="Start over? Current game progress will be lost.";
+            menu_label(warning,960.0-menu_text_width(warning,22)/2.0,panel_y+185.0,22.0,WHITEISH);
+            if menu_button("YES, NEW GAME",panel_y+245.0){return Some(MenuScreen::Playing);}
+            if menu_button("CANCEL",panel_y+345.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("RESUME GAME",panel_y+445.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }

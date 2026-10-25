@@ -35,6 +35,9 @@ fn with_menu_font<R>(size:u16,f:impl FnOnce(Option<&Font>)->R)->R {
 pub(super) fn menu_text_width(text:&str,size:u16)->f32{
     with_menu_font(size,|font|measure_text(text,font,size,1.0).width)
 }
+pub(super) fn menu_text_dimensions(text:&str,size:u16)->TextDimensions {
+    with_menu_font(size,|font|measure_text(text,font,size,1.0))
+}
 pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
     with_menu_font(size as u16,|font|{
         draw_text_ex(text,x,y,TextParams{font,font_size:size as u16,font_scale:1.0,color:themed_color(color),..Default::default()});
@@ -372,10 +375,10 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         // Special cards share the Neon Forge texture family until dedicated art is available.
         let symbol=card_text(card.kind);
         let size=if w<45.0 {22_u16}else{35_u16};
-        let tw=menu_text_width(&symbol,size);
-        let tx=x+(w-tw)/2.0;
-        // Center the visible glyph vertically on the face instead of using the numbered-card baseline.
-        let ty=yy+h*0.63;
+        let metrics=menu_text_dimensions(&symbol,size);
+        let tx=x+(w-metrics.width)/2.0;
+        // Font ascent differs between W and S: center the actual glyph bounds.
+        let ty=yy+(h-metrics.height)/2.0+metrics.offset_y;
         menu_label(&symbol,tx+1.5,ty+2.0,size as f32,BLACK);
         menu_label(&symbol,tx,ty,size as f32,WHITEISH);
         if selected && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
@@ -464,7 +467,11 @@ pub(super) fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
 // Explicit persistent IDs keep layout edits independent of changing text.
 pub(super) fn editable_label(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){
     let key=layout::scene_key(key);
-    let r=layout::rect(&key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
+    editable_label_id(&key,text,x,y,size,color);
+}
+// Use explicit IDs when a state change can alter which group is drawn first.
+pub(super) fn editable_label_id(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){
+    let r=layout::rect(key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
     menu_label(text,r.x,r.y+r.h,r.h,color);
 }
 pub(super) fn editable_button(key:&str,text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool {
