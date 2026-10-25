@@ -4,14 +4,18 @@ thread_local! {static EDITING:Cell<bool>=const {Cell::new(false)}; static ZOOM:C
 pub(super) fn editing()->bool{EDITING.with(|v|v.get())}
 pub(super) fn zoom()->f32{ZOOM.with(|z|z.get())}
 pub(super) fn pan()->(f32,f32){PAN.with(|p|p.get())}
+thread_local! {static TOOL_BOUNDS:Cell<Option<(f32,f32)>>=const {Cell::new(None)};}
+pub(super) fn pointer_over_tools()->bool {
+    editing() && TOOL_BOUNDS.with(|b|b.get().is_some_and(|(x,y)|tool_contains(x,y,470.,620.)))
+}
 
 
 #[derive(Clone)]
 struct SelectionDrag {resize:bool,start:Vec2,originals:Vec<(String,layout::Rect)>,recorded:bool}
 
-pub(super) struct Editor {selection:Vec<String>, panel_position:Vec2, panel_drag:Option<Vec2>, selected:usize, selected_name:String, resize_mode:bool, panel_visible:bool, show_all_bounds:bool, step:f32, next_repeat:f64, drag:Option<SelectionDrag>, status:String, undo:Vec<Vec<(String,layout::Rect)>>}
+pub(super) struct Editor {cards_mode:bool,preview_player:usize,preview_target:usize,preview_value:u8,preview_color:u8,selection:Vec<String>, panel_position:Vec2, panel_drag:Option<Vec2>, selected:usize, selected_name:String, resize_mode:bool, panel_visible:bool, show_all_bounds:bool, step:f32, next_repeat:f64, drag:Option<SelectionDrag>, status:String, undo:Vec<Vec<(String,layout::Rect)>>}
 impl Editor {
-    pub fn new()->Self {Self{selection:Vec::new(),panel_position:vec2(1430.,480.),panel_drag:None,selected:0,selected_name:String::new(),resize_mode:false,panel_visible:true,show_all_bounds:false,step:1.,next_repeat:0.,drag:None,status:"Select an element | Arrows: nudge | Ctrl+S: save".into(),undo:Vec::new()}}
+    pub fn new()->Self {Self{cards_mode:false,preview_player:0,preview_target:1,preview_value:5,preview_color:0,selection:Vec::new(),panel_position:vec2(1430.,480.),panel_drag:None,selected:0,selected_name:String::new(),resize_mode:false,panel_visible:true,show_all_bounds:false,step:1.,next_repeat:0.,drag:None,status:"Select an element | Arrows: nudge | Ctrl+S: save".into(),undo:Vec::new()}}
     #[cfg(not(target_os="android"))]
     fn save_layout(&mut self){
         self.status=match layout::save(){
@@ -41,8 +45,8 @@ impl Editor {
         let changes:Vec<_>=originals.into_iter().map(|(name,r)|(name,layout::adjusted(r,dx,dy,resize))).collect();
         layout::set_many(&changes);
     }
-    pub fn open(&mut self){EDITING.with(|v|v.set(true));}
-    pub fn close(&mut self){EDITING.with(|v|v.set(false));self.drag=None;self.panel_drag=None;ZOOM.with(|z|z.set(1.0));PAN.with(|p|p.set((0.0,0.0)));}
+    pub fn open(&mut self){EDITING.with(|v|v.set(true));TOOL_BOUNDS.with(|b|b.set(self.panel_visible.then_some((self.panel_position.x,self.panel_position.y))));}
+    pub fn close(&mut self){EDITING.with(|v|v.set(false));TOOL_BOUNDS.with(|b|b.set(None));self.drag=None;self.panel_drag=None;ZOOM.with(|z|z.set(1.0));PAN.with(|p|p.set((0.0,0.0)));}
     pub fn draw(&mut self,preview:&mut Game,wireframe:&mut bool){
         self.open();
         if is_key_pressed(KeyCode::F8){self.panel_visible=!self.panel_visible;self.panel_drag=None;}
@@ -81,7 +85,7 @@ impl Editor {
         let (mx,my)=game_mouse();
         let pointer=tool_mouse();
         if self.panel_visible && is_mouse_button_pressed(MouseButton::Left)
-            && tool_contains(self.panel_position.x,self.panel_position.y,470.,30.) {
+            && tool_contains(self.panel_position.x,self.panel_position.y,334.,30.) {
             self.panel_drag=Some(pointer-self.panel_position);
             self.drag=None;
         }
@@ -89,6 +93,7 @@ impl Editor {
             self.panel_position=tool_panel_position(pointer-offset);
             if !is_mouse_button_down(MouseButton::Left){self.panel_drag=None;}
         }
+        TOOL_BOUNDS.with(|b|b.set(self.panel_visible.then_some((self.panel_position.x,self.panel_position.y))));
         let on_controls=self.panel_visible && (self.panel_drag.is_some()
             || tool_contains(self.panel_position.x,self.panel_position.y,470.,620.));
         if is_mouse_button_pressed(MouseButton::Left) && !on_controls {
@@ -141,11 +146,22 @@ impl Editor {
         set_camera(&Camera2D{target:vec2(960.,game_canvas_height()/2.),zoom:vec2(2.*hud_scale/pw,2.*hud_scale/ph),..Default::default()});
         let tx=self.panel_position.x;
         let ty=self.panel_position.y;
+        if self.panel_visible {
+            draw_rectangle(tx,ty,470.,620.,Color::new(0.01,0.025,0.045,0.97));
+            draw_rectangle(tx,ty,470.,30.,Color::new(0.08,0.23,0.30,1.));
+            menu_label("WORKSHOP - DRAG HERE",tx+12.,ty+21.,17.,WHITEISH);
+        }
+        if self.panel_visible && tool_button(if self.cards_mode {"LAYOUT"}else{"CARDS"},tx+344.,ty+2.,116.,26.,true){
+            self.cards_mode=!self.cards_mode;self.drag=None;
+        }
+        if self.panel_visible && self.cards_mode {
+            self.draw_cards(preview,tx,ty);
+            #[cfg(not(target_os="android"))]
+            if is_key_pressed(KeyCode::S) && (is_key_down(KeyCode::LeftControl)||is_key_down(KeyCode::RightControl)){self.save_layout();}
+            return;
+        }
         let mut dx=0.;let mut dy=0.;
         if self.panel_visible {
-        draw_rectangle(tx,ty,470.,620.,Color::new(0.01,0.025,0.045,0.97));
-        draw_rectangle(tx,ty,470.,30.,Color::new(0.08,0.23,0.30,1.));
-        menu_label("WORKSHOP TOOLS - DRAG HERE",tx+12.,ty+21.,17.,WHITEISH);
         if tool_button("PREVIOUS",tx+10.,ty+42.,218.,32.,true){self.selected=(self.selected+items.len()-1)%items.len();self.selection=vec![items[self.selected].0.clone()];}
         if tool_button("NEXT",tx+238.,ty+42.,218.,32.,true){self.selected=(self.selected+1)%items.len();self.selection=vec![items[self.selected].0.clone()];}
         let selected=layout::rect(&items[self.selected].0,items[self.selected].1);
@@ -218,6 +234,62 @@ impl Editor {
             let summary=if self.status.starts_with("SAVED") {"Saved"}else{self.status.as_str()};
             menu_label(&summary.chars().take(58).collect::<String>(),tx+10.,ty+608.,14.,MUTED);
         }
+    }
+    fn draw_cards(&mut self,preview:&mut Game,tx:f32,ty:f32){
+        use crate::workshop::{self,PreviewTarget};
+        let player=self.preview_player;
+        let phase=preview.players[player].phase.min(9);
+        if tool_button(&format!("PHASE {}: {}",phase+1,phase_name(phase)),tx+10.,ty+42.,446.,36.,true){
+            workshop::choose_phase(preview,player,(phase+1)%10);
+        }
+        if tool_button(&format!("PLAYER: {}",if player==0 {"YOU".into()}else{format!("CPU {player}")}),tx+10.,ty+86.,446.,36.,true){
+            self.preview_player=(player+1)%4;
+            if self.preview_player!=0 && matches!(self.preview_target,1|2){self.preview_target=0;}
+        }
+        let target=match self.preview_target {1=>PreviewTarget::Stage(0),2=>PreviewTarget::Stage(1),3=>PreviewTarget::Laid(0),4=>PreviewTarget::Laid(1),_=>PreviewTarget::Hand};
+        let target_name=match self.preview_target {1=>"STAGE 1",2=>"STAGE 2",3=>"LAID 1",4=>"LAID 2",_=>"HAND"};
+        if tool_button(&format!("TARGET: {target_name}"),tx+10.,ty+130.,446.,36.,true){
+            self.preview_target=(self.preview_target+1)%5;
+            if self.preview_player!=0 && self.preview_target==1 {self.preview_target=3;}
+        }
+        menu_label("COLOR",tx+10.,ty+191.,17.,MUTED);
+        for (i,name) in ["RED","BLUE","GOLD","GREEN"].iter().enumerate(){
+            let label=if self.preview_color==i as u8 {format!("[{name}]")}else{name.to_string()};
+            if tool_button(&label,tx+10.+i as f32*114.,ty+200.,104.,32.,true){self.preview_color=i as u8;}
+        }
+        menu_label("CARD VALUE",tx+10.,ty+262.,17.,MUTED);
+        for n in 1..=12u8 {
+            let label=if self.preview_value==n {format!("[{n}]")}else{n.to_string()};
+            if tool_button(&label,tx+10.+((n-1)%6) as f32*75.,ty+274.+((n-1)/6) as f32*40.,68.,32.,true){self.preview_value=n;}
+        }
+        for (value,x,name) in [(13,tx+10.,"WILD"),(14,tx+238.,"SKIP")] {
+            let label=if self.preview_value==value {format!("[{name}]")}else{name.to_string()};
+            if tool_button(&label,x,ty+356.,218.,36.,true){self.preview_value=value;}
+        }
+        let kind=match self.preview_value {13=>Kind::Wild,14=>Kind::Skip,n=>Kind::Number(n,self.preview_color)};
+        let available=workshop::target_available(preview,player,target);
+        let cards=workshop::target_cards(preview,player,target);
+        let matching=cards.iter().filter(|c|c.kind==kind).count();
+        menu_label(&format!("{target_name}: {} cards | Matching: {matching}",cards.len()),tx+10.,ty+420.,18.,WHITEISH);
+        if tool_button("ADD CARD",tx+10.,ty+440.,218.,40.,available && cards.len()<40){
+            workshop::add_card(preview,player,target,kind);self.status="Added preview card".into();
+        }
+        if tool_button("REMOVE CARD",tx+238.,ty+440.,218.,40.,available && matching>0){
+            workshop::remove_card(preview,player,target,kind);self.status="Removed matching preview card".into();
+        }
+        if tool_button("CLEAR TARGET",tx+10.,ty+490.,218.,36.,available){
+            workshop::clear_target(preview,player,target);self.status="Cleared preview target".into();
+        }
+        if tool_button("SAVE LAYOUT",tx+238.,ty+490.,218.,36.,true){
+            #[cfg(not(target_os="android"))]
+            self.save_layout();
+        }
+        if tool_button("FILL VALID STAGED PHASE",tx+10.,ty+536.,446.,36.,player==0){
+            workshop::fill_staged_phase(preview,self.preview_value.min(12),self.preview_color);
+            self.status="Ready phase filled; remove a card for normal text".into();
+        }
+        let footer=if !available {"This phase has no second group"}else{self.status.as_str()};
+        menu_label(&footer.chars().take(58).collect::<String>(),tx+10.,ty+608.,14.,MUTED);
     }
 }
 

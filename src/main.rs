@@ -19,6 +19,7 @@ enum Stage { Draw, Play, Cpu, RoundOver, GameOver }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SortMode { Runs, Colors, Sets }
 fn inside(x:f32,y:f32,w:f32,h:f32)->bool {
+    if layout_editor::pointer_over_tools(){return false;}
     let (mx,my)=game_mouse();mx>=x&&mx<=x+w&&my>=y&&my<=y+h
 }
 struct Game { players: Vec<Player>, deck: Vec<Card>, discard: Vec<Card>, turn: usize, stage: Stage, selected: Vec<u32>, message: String, round: u32, sort: SortMode, staged: [Vec<u32>;2], drag: Option<(u32,f32,f32)>, pile_drag: Option<(bool,f32,f32)>, drawn_card: Option<u32>, cpu_names: [String;3], cpu_roster: [CpuIdentity;3], move_log: Vec<String>, turn_count:u32, staged_drag: Option<(u32,f32,f32)>, cpu_step:u8, cpu_skip:Option<usize>, cpu_next_at:f64, cpu_speed:u8, cpu_draw_flight:Option<CpuDrawFlight>, cpu_phase_flight:Option<CpuPhaseFlight>, cpu_hit_flight:Option<CpuHitFlight>, human_draw_flight:Option<HumanDrawFlight>, human_phase_flight:Option<HumanPhaseFlight>, cpu_discard_flight:Option<CpuDiscardFlight>, human_discard_flight:Option<HumanDiscardFlight>, hover_lifts:Vec<(u32,f32,f32,f64)> }
@@ -41,6 +42,7 @@ mod ui;
 use ui::*;
 mod layout;
 mod layout_editor;
+mod workshop;
 mod theme;
 use theme::*;
 mod help;
@@ -1357,7 +1359,7 @@ async fn main(){
             let action=if menu==MenuScreen::UiWorkshop && workshop_board {
                 layout_editor.open();
                 draw_game(&mut workshop_preview,false,false,show_bounds,wireframe);
-                // Board preview is intentionally clean: testing controls live in the gallery.
+                // Layout and card-fixture controls share the draggable workshop window.
                 if button("BACK TO TOOLS",24.0,1120.0,240.0,54.0,true){
                     workshop_board=false;
                     layout_editor.close();

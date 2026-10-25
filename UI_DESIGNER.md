@@ -90,3 +90,12 @@ Normal staging labels keep `staging_single_label_1` and
 positions. Adjust each label while its state is visible; changing another
 slot's readiness does not renumber the selected label. New labels default to
 horizontal centering in their panel.
+
+In Full Board Preview, use the **CARDS** tab on the draggable tools window to
+choose the player, phase, target (hand, staging slot, or laid group), color,
+number, Wild, or Skip. **ADD CARD** adds the chosen card; **REMOVE CARD** removes
+one matching that exact value/color. **CLEAR TARGET** clears that preview area.
+**FILL VALID STAGED PHASE** instantly fills the human's current requirements so
+READY labels appear; remove a matching card to return to the incomplete state.
+Switch to **LAYOUT** to adjust the visible labels. Ctrl+S / Save Layout saves
+positions; the preview cards themselves do not change or save the live game.

@@ -226,6 +226,72 @@ fn multiple_phase_ten_finishers_use_final_scores_to_select_game_winner() {
 }
 
 #[test]
+fn workshop_fill_creates_ready_staging_for_every_phase() {
+    use workshop::{PreviewTarget,choose_phase,fill_staged_phase,target_cards};
+    let mut g=Game::new();
+    for phase in 0..10 {
+        choose_phase(&mut g,0,phase);
+        fill_staged_phase(&mut g,12,2);
+        assert_eq!(g.stage,Stage::Play);
+        assert!(!g.players[0].laid);
+        for (group,&count) in PHASES[phase].iter().enumerate(){
+            let cards=target_cards(&g,0,PreviewTarget::Stage(group));
+            assert_eq!(cards.len(),count);
+            assert!(valid_group(&cards,requirement(phase,group)),"phase {phase}, group {group}");
+        }
+        let ids:Vec<_>=g.staged.iter().flatten().copied().collect();
+        assert_eq!(ids.iter().collect::<HashSet<_>>().len(),ids.len());
+        assert!(ids.iter().all(|id|g.players[0].hand.iter().filter(|c|c.id==*id).count()==1));
+    }
+}
+
+#[test]
+fn workshop_removes_exact_card_choice_and_updates_staging_membership() {
+    use workshop::{PreviewTarget,choose_phase,add_card,remove_card,target_cards};
+    let mut g=Game::new();choose_phase(&mut g,0,0);
+    for kind in [Kind::Number(5,0),Kind::Number(5,1),Kind::Wild,Kind::Skip] {
+        assert!(add_card(&mut g,0,PreviewTarget::Stage(0),kind));
+    }
+    let removed=target_cards(&g,0,PreviewTarget::Stage(0)).iter().find(|c|c.kind==Kind::Number(5,0)).unwrap().id;
+    assert!(remove_card(&mut g,0,PreviewTarget::Stage(0),Kind::Number(5,0)));
+    assert!(!g.players[0].hand.iter().any(|c|c.id==removed));
+    let cards=target_cards(&g,0,PreviewTarget::Stage(0));
+    assert_eq!(cards.len(),3);
+    assert!(cards.iter().any(|c|c.kind==Kind::Number(5,1)));
+    assert!(cards.iter().any(|c|c.kind==Kind::Wild));
+    assert!(cards.iter().any(|c|c.kind==Kind::Skip));
+    assert!(!remove_card(&mut g,0,PreviewTarget::Stage(0),Kind::Number(5,0)));
+}
+
+#[test]
+fn workshop_phase_change_cleans_staging_but_retains_other_cards() {
+    use workshop::{PreviewTarget,choose_phase,add_card,fill_staged_phase};
+    let mut g=Game::new();choose_phase(&mut g,0,0);
+    fill_staged_phase(&mut g,5,0);
+    let staged:Vec<_>=g.staged.iter().flatten().copied().collect();
+    add_card(&mut g,0,PreviewTarget::Hand,Kind::Wild);
+    let hand_count=g.players[0].hand.len();
+    choose_phase(&mut g,0,4);
+    assert!(g.staged.iter().all(|cards|cards.is_empty()));
+    assert_eq!(g.players[0].hand.len(),hand_count-staged.len());
+    assert!(g.players[0].hand.iter().all(|c|!staged.contains(&c.id)));
+}
+
+#[test]
+fn workshop_respects_group_availability_and_supports_cpu_card_choices() {
+    use workshop::{PreviewTarget,choose_phase,add_card,remove_card,target_cards};
+    let mut g=Game::new();choose_phase(&mut g,0,4);
+    assert!(!add_card(&mut g,0,PreviewTarget::Stage(1),Kind::Wild));
+    assert!(!add_card(&mut g,1,PreviewTarget::Stage(0),Kind::Wild));
+    choose_phase(&mut g,1,0);
+    assert!(add_card(&mut g,1,PreviewTarget::Laid(1),Kind::Number(7,3)));
+    assert!(g.players[1].laid);
+    assert_eq!(target_cards(&g,1,PreviewTarget::Laid(1))[0].kind,Kind::Number(7,3));
+    assert!(remove_card(&mut g,1,PreviewTarget::Laid(1),Kind::Number(7,3)));
+    assert!(target_cards(&g,1,PreviewTarget::Laid(1)).is_empty());
+}
+
+#[test]
 fn deck_has_correct_distribution_and_unique_ids() {
     let deck=make_deck();
     assert_eq!(deck.len(),108);
