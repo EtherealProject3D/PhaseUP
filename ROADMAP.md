@@ -7,15 +7,15 @@ PhaseUP is an offline, ad-free Phase 10-inspired card game built with Rust and M
 ## In progress — v0.3: Usability
 - [x] Scale the game canvas to fit resized windows (initial implementation)
 - [x] Show prominent draw/play/discard turn guidance (initial implementation)
-- [ ] Refine responsive layouts for different aspect ratios and avoid unused space
-- [ ] Remember window size and position where supported
-- [ ] Add an F3 debug overlay with dimensions, FPS and turn state
-- [ ] Continue gameplay testing and fix drag/drop or table interaction issues
+- [x] Refine responsive layouts for different aspect ratios and avoid unused space
+- [x] Remember window size and position where supported
+- [x] Add an F3 debug overlay with dimensions, FPS and turn state
+- [x] Continue gameplay testing and fix drag/drop or table interaction issues
 
 ## Planned — v0.4: Modern digital presentation
-- [ ] Polish cards, panels, typography and selection states
-- [ ] Improve CPU player areas and visible laid cards
-- [ ] Add paced CPU turns and subtle animations
+- [x] Polish cards, panels, typography and selection states
+- [x] Improve CPU player areas and visible laid cards
+- [x] Add paced CPU turns and subtle animations
 
 ## Planned — v0.5: Polish and settings
 Audio work follows the v0.4.0 play-test and release. Track implementation in [issue #6](https://github.com/EtherealProject3D/PhaseUP/issues/6).
