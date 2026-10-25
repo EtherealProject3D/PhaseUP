@@ -463,6 +463,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let (discard_tx,discard_ty)=layout::pile_offset(true,true);
     editable_label("draw_title","DRAW",deck_x+draw_tx,pile_y-17.0+draw_ty,19.0,MUTED);
     editable_label("discard_title","DISCARD",discard_x+discard_tx,discard_y-17.0+discard_ty,19.0,MUTED);
+    if active_theme()==Theme::Futuristic {neon_pile_layers(&g.deck,deck_x,pile_y,pile_w,pile_h,true);}
     if active_theme()==Theme::Futuristic && neon_draw_back(deck_x,pile_y,pile_w,pile_h) {
         let count_text=format!("{} left",g.deck.len());
         editable_label("draw_remaining_count",&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+pile_h+22.0+count_ty,17.0,WHITEISH);
@@ -491,6 +492,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let lifting_discard=g.pile_drag.is_some_and(|(discard,sx,sy)|discard
         && is_mouse_button_down(MouseButton::Left)&&(m.0-sx).abs()+(m.1-sy).abs()>12.0);
     let visible_discards=g.visible_discards(lifting_discard);
+    if active_theme()==Theme::Futuristic {
+        neon_pile_layers(visible_discards,discard_x,discard_y,pile_w,pile_h,false);
+        if visible_discards.is_empty(){neon_empty_pile(discard_x,discard_y,pile_w,pile_h);}
+    }else{
     let discard_layers=visible_discards.len().saturating_sub(1).min(2);
     for layer in (1..=discard_layers).rev() {
         let offset=layer as f32*4.0;
@@ -500,54 +505,52 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     draw_rectangle(discard_x,discard_y,pile_w,pile_h,Color::new(0.10,0.18,0.23,1.0));
     if active_theme()!=Theme::Futuristic {draw_rectangle_lines(discard_x,discard_y,pile_w,pile_h,if discard_hover||g.stage==Stage::Draw {3.0}else{2.0},if discard_hover {GREEN}else if g.stage==Stage::Draw {YELLOW}else{ACCENT});}
+    }
     if let Some(c)=visible_discards.last().copied(){
         let _=card_ui(c,discard_x,discard_y,pile_w,pile_h,false);
     }else{
-        editable_label("discard_empty_text","EMPTY",discard_x+20.0+discard_tx,discard_y+82.0+discard_ty,20.0,MUTED);
+        editable_label("discard_empty_text","EMPTY",discard_x+(pile_w-menu_text_width("EMPTY",17))/2.0+discard_tx,discard_y+pile_h*0.68+discard_ty,17.0,MUTED);
     }
     if !g.discard.is_empty() && g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,discard_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
-    // Recent CPU actions stay visible after their turns resolve instantly.
+    // Match the board artwork while keeping history inside the frame's safe area.
     if show_moves {
-    let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
-    let log_x=log.x;let log_y=log.y;
-    draw_rectangle(log_x,log_y,log.w,log.h,active_theme().panel());
-    draw_rectangle_lines(log_x,log_y,log.w,log.h,1.5,active_theme().accent());
-    editable_label("moves_title","RECENT MOVES",log_x+12.0,log_y+27.0,20.0,ACCENT);
-    // Separate the panel heading from the history, including the newest-move highlight.
-    draw_line(log_x+10.0,log_y+39.0,log_x+364.0,log_y+39.0,1.0,active_theme().accent());
-    // Put the live action *inside* the panel so laid phases cannot cover it.
-    let events_y=if g.stage==Stage::Cpu {
-        let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
-        let notice=format!("{} - {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
-        draw_rectangle(log_x+9.0,log_y+34.0,356.0,36.0,BG);
-        draw_rectangle_lines(log_x+9.0,log_y+34.0,356.0,36.0,1.5,YELLOW);
-        let notice_size=17;
-        let width=menu_text_width(&notice,notice_size);
-        editable_label("cpu_action_notice",&notice,log_x+187.0-width/2.0,log_y+59.0,notice_size as f32,YELLOW);
-        log_y+113.0
-    }else{log_y+69.0};
-    let max_events=8;
-    for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
-        // Highlight the newest completed move, while retaining the live CPU action above.
-        let entry_y=events_y+j as f32*23.0;
-        if j==0 {
-            draw_rectangle(log_x+7.0,entry_y-17.0,360.0,23.0,Color::new(0.14,0.27,0.35,1.0));
-            draw_rectangle(log_x+7.0,entry_y-17.0,3.0,23.0,active_theme().accent());
+        let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
+        let (log_x,log_y)=(log.x,log.y);
+        panel_decoration(log_x,log_y,log.w,log.h);
+        let inset=24.0;
+        let inner_w=(log.w-2.0*inset).max(1.0);
+        editable_heading("moves_title","RECENT MOVES",log_x+inset,log_y+36.0,20.0);
+        draw_line(log_x+inset,log_y+50.0,log_x+log.w-inset,log_y+50.0,1.0,Color::new(0.12,0.40,0.48,1.));
+        let events_y=if g.stage==Stage::Cpu {
+            let action=match g.cpu_step {0=>"DRAWING",1=>"CHECKING PHASE",2=>"HITTING TABLE",_=>"DISCARDING"};
+            let notice=format!("{} - {}",g.cpu_name(g.turn.min(3)).to_uppercase(),action);
+            themed_button(log_x+inset,log_y+60.0,inner_w,32.0,false);
+            let notice_size=16;
+            let width=menu_text_width(&notice,notice_size);
+            editable_label("cpu_action_notice",&notice,log_x+(log.w-width)/2.0,log_y+82.0,notice_size as f32,YELLOW);
+            log_y+120.0
+        }else{log_y+80.0};
+        let max_events=(((log_y+log.h-inset-events_y)/23.0).floor()+1.0).clamp(0.0,8.0) as usize;
+        for (j,event) in g.move_log.iter().rev().take(max_events).enumerate(){
+            let entry_y=events_y+j as f32*23.0;
+            if j==0 {
+                draw_rectangle(log_x+inset-4.0,entry_y-17.0,inner_w+8.0,23.0,Color::new(0.09,0.20,0.27,0.8));
+                draw_rectangle(log_x+inset-4.0,entry_y-17.0,2.0,23.0,Color::new(0.1,0.62,0.72,1.));
+            }
+            let size=(18.0*(inner_w/menu_text_width(event,18).max(1.0)).min(1.0)).floor().max(12.0);
+            let actor=(0..4).find_map(|i|{
+                let name=g.cpu_name(i);
+                let is_actor=event==&name || event.starts_with(&format!("{} ",name));
+                if is_actor {Some((i,name))}else{None}
+            });
+            if let Some((i,name))=actor {
+                editable_label("move_player_name",&name,log_x+inset,entry_y,size,player_color(i));
+                let rest=&event[name.len()..];
+                editable_label("move_description",rest,log_x+inset+menu_text_width(&name,size as u16),entry_y,size,WHITEISH);
+            }else{
+                editable_label("move_event",event,log_x+inset,entry_y,size,WHITEISH);
+            }
         }
-        // Color the actor's name, or the skipped player's name for passive skip events.
-        let actor=(0..4).find_map(|i|{
-            let name=g.cpu_name(i);
-            let is_actor=event==&name || event.starts_with(&format!("{} ",name));
-            if is_actor {Some((i,name))}else{None}
-        });
-        if let Some((i,name))=actor {
-            editable_label("move_player_name",&name,log_x+14.0,entry_y,18.0,player_color(i));
-            let rest=&event[name.len()..];
-            editable_label("move_description",rest,log_x+14.0+menu_text_width(&name,18),entry_y,18.0,WHITEISH);
-        }else{
-            editable_label("move_event",event,log_x+14.0,entry_y,18.0,WHITEISH);
-        }
-    }
     }
     // Phase staging: cards remain in the player's actual hand until played.
     let stage_y=sh-347.0;
@@ -896,11 +899,12 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     // The round result is already calculated, but its dialog waits for the flight.
     let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();
     if (g.stage==Stage::RoundOver||g.stage==Stage::GameOver)&&!discard_in_motion {
-        draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;draw_rectangle(x,y,530.,328.,PANEL);
+        draw_rectangle(0.,0.,sw,sh,Color::new(0.,0.,0.,0.77));let x=sw/2.-265.;let y=sh/2.-164.;
+        panel_decoration(x,y,530.,328.);
         let game_over=g.stage==Stage::GameOver;
         let title=if game_over {"GAME COMPLETE".to_string()}else{format!("ROUND {} COMPLETE",g.round)};
         let title_w=menu_text_width(&title,32);
-        editable_label("round_result_title",&title,x+(530.0-title_w)/2.0,y+47.,32.,ACCENT);
+        editable_heading("round_result_title",&title,x+(530.0-title_w)/2.0,y+47.,32.);
         let winner_name=g.cpu_name(g.turn).to_uppercase();
         let announcement=if game_over {if g.turn==0 {"YOU FINISHED THE GAME!".to_string()}else{format!("{} FINISHED THE GAME!",winner_name)}}else if g.turn==0 {"YOU WIN THE ROUND!".to_string()}else{format!("{} WINS THE ROUND!",winner_name)};
         let announce_w=menu_text_width(&announcement,27);
@@ -913,9 +917,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             editable_label("score_row",&line,x+29.,y+159.+i as f32*29.,20.,if i==g.turn {YELLOW}else{WHITEISH});
         }
         if game_over {
-            if editable_button("new_game_button","NEW GAME",x+60.,y+277.,190.,40.,true){*g=Game::new();}
-            let _=editable_button("main_menu_button","MAIN MENU",x+280.,y+277.,190.,40.,true);
-        } else if editable_button("next_round_button","NEXT ROUND",x+170.,y+277.,190.,40.,true){g.deal();}
+            if editable_button("new_game_button","NEW GAME",x+60.,y+267.,190.,40.,true){*g=Game::new();}
+            let _=editable_button("main_menu_button","MAIN MENU",x+280.,y+267.,190.,40.,true);
+        } else if editable_button("next_round_button","NEXT ROUND",x+170.,y+267.,190.,40.,true){g.deal();}
     }
     draw_card_flights(g,sw,sh);
     if show_bounds {draw_cpu_bounds(g);}
@@ -1064,7 +1068,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0+submenu_offset,_=>310.0+submenu_offset};
     let w=menu_text_width(title,54);
     if !(screen==MenuScreen::Home && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
-        menu_label(title,960.0-w/2.0,title_y,54.0,ACCENT);
+        menu_heading(title,960.0-w/2.0,title_y,54.0);
     }
     match screen {
         MenuScreen::Home=>{
@@ -1315,7 +1319,10 @@ async fn main(){
             let (mx,my)=game_mouse();
             let menu_button=layout::rect("menu_button",layout::Rect{x:1710.,y:8.,w:100.,h:40.});
             if is_mouse_button_pressed(MouseButton::Left)&&mx>=menu_button.x&&mx<=menu_button.x+menu_button.w&&my>=menu_button.y&&my<=menu_button.y+menu_button.h {menu=MenuScreen::Home;}
-            if game.stage==Stage::GameOver && is_mouse_button_pressed(MouseButton::Left) && mx>=815.0 && mx<=1005.0 && my>=613.0 && my<=653.0 {menu=MenuScreen::Home;}
+            if game.stage==Stage::GameOver && game.human_discard_flight.is_none() && game.cpu_discard_flight.is_none() && !layout_editor::editing() {
+                let back=layout::rect("main_menu_button_1",layout::Rect{x:975.0,y:game_canvas_height()/2.0-164.0+267.0,w:190.0,h:40.0});
+                if is_mouse_button_pressed(MouseButton::Left) && mx>=back.x && mx<=back.x+back.w && my>=back.y && my<=back.y+back.h {menu=MenuScreen::Home;}
+            }
         } else {
             if menu==MenuScreen::UiWorkshop {
                 // Tab cycles the unified Workshop selection.

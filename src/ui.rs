@@ -43,6 +43,13 @@ pub(super) fn menu_label(text:&str,x:f32,y:f32,size:f32,color:Color){
         draw_text_ex(text,x,y,TextParams{font,font_size:size as u16,font_scale:1.0,color:themed_color(color),..Default::default()});
     });
 }
+pub(super) fn menu_heading(text:&str,x:f32,y:f32,size:f32){
+    if active_theme()!=Theme::Futuristic {menu_label(text,x,y,size,ACCENT);return;}
+    // A quiet machined-metal bevel complements the brighter logo artwork.
+    menu_label(text,x+1.5,y+2.0,size,Color::new(0.005,0.025,0.045,1.));
+    menu_label(text,x,y-0.8,size,Color::new(0.64,0.80,0.85,1.));
+    menu_label(text,x,y,size,Color::new(0.29,0.64,0.72,1.));
+}
 use crate::*;
 thread_local! {static NEON_CARDS:RefCell<[Option<Texture2D>;7]>=RefCell::new([None,None,None,None,None,None,None]);}
 pub(super) async fn load_neon_cards(){
@@ -55,10 +62,13 @@ pub(super) async fn load_neon_cards(){
     }
 }
 fn neon_card_texture(index:usize,x:f32,y:f32,w:f32,h:f32)->bool {
+    neon_card_texture_tinted(index,x,y,w,h,WHITE)
+}
+fn neon_card_texture_tinted(index:usize,x:f32,y:f32,w:f32,h:f32,tint:Color)->bool {
     NEON_CARDS.with(|cards|{
         let cards=cards.borrow();
         if let Some(tex)=cards.get(index).and_then(|v|v.as_ref()){
-            draw_texture_ex(tex,x,y,WHITE,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
+            draw_texture_ex(tex,x,y,tint,DrawTextureParams{dest_size:Some(vec2(w,h)),..Default::default()});
             true
         }else{false}
     })
@@ -154,15 +164,20 @@ pub(super) fn neon_hand_panel(x:f32,y:f32,w:f32,h:f32){
 }
 // Keep the authored border and corners at 2x asset scale on taller menu panels.
 pub(super) fn neon_menu_panel(x:f32,y:f32,w:f32,h:f32){
+    neon_panel_scaled(x,y,w,h,1.0,WHITE);
+}
+fn neon_panel_scaled(x:f32,y:f32,w:f32,h:f32,border_scale:f32,tint:Color){
     let painted=NEON_HAND_PANEL.with(|slot|{
         let slot=slot.borrow();
         let Some(texture)=slot.as_ref() else {return false;};
         let sx=[0.,100.,texture.width()-100.,texture.width()];
         let sy=[0.,64.,texture.height()-64.,texture.height()];
-        let dx=[x,x+50.,x+w-50.,x+w];
-        let dy=[y,y+32.,y+h-32.,y+h];
+        let cap_x=(50.*border_scale).min(w/2.);
+        let cap_y=(32.*border_scale).min(h/2.);
+        let dx=[x,x+cap_x,x+w-cap_x,x+w];
+        let dy=[y,y+cap_y,y+h-cap_y,y+h];
         for row in 0..3 {for col in 0..3 {
-            draw_texture_ex(texture,dx[col],dy[row],WHITE,DrawTextureParams{
+            draw_texture_ex(texture,dx[col],dy[row],tint,DrawTextureParams{
                 source:Some(Rect::new(sx[col],sy[row],sx[col+1]-sx[col],sy[row+1]-sy[row])),
                 dest_size:Some(vec2(dx[col+1]-dx[col],dy[row+1]-dy[row])),..Default::default()
             });
@@ -170,6 +185,27 @@ pub(super) fn neon_menu_panel(x:f32,y:f32,w:f32,h:f32){
         true
     });
     if !painted {neon_frame(x,y,w,h,true);}
+}
+pub(super) fn neon_empty_pile(x:f32,y:f32,w:f32,h:f32){
+    neon_panel_scaled(x,y,w,h,0.36,Color::new(0.62,0.72,0.78,1.));
+    // Recessed card silhouette: muted enough to distinguish it from a live card.
+    let (cx,cy)=(x+w/2.,y+h*0.40);
+    let ink=Color::new(0.16,0.34,0.40,1.);
+    let (iw,ih,cut)=(28.,38.,5.);
+    let points=[vec2(cx-iw/2.+cut,cy-ih/2.),vec2(cx+iw/2.-cut,cy-ih/2.),
+        vec2(cx+iw/2.,cy-ih/2.+cut),vec2(cx+iw/2.,cy+ih/2.-cut),
+        vec2(cx+iw/2.-cut,cy+ih/2.),vec2(cx-iw/2.+cut,cy+ih/2.),
+        vec2(cx-iw/2.,cy+ih/2.-cut),vec2(cx-iw/2.,cy-ih/2.+cut)];
+    for i in 0..8 {let a=points[i];let b=points[(i+1)%8];draw_line(a.x,a.y,b.x,b.y,1.,ink);}
+}
+pub(super) fn neon_pile_layers(cards:&[Card],x:f32,y:f32,w:f32,h:f32,face_down:bool){
+    for layer in (1..=cards.len().saturating_sub(1).min(2)).rev(){
+        let card=cards[cards.len()-1-layer];
+        let index=if face_down {4}else{match card.kind {Kind::Number(_,color)=>color as usize,Kind::Wild=>5,Kind::Skip=>6}};
+        let offset=layer as f32*2.5;
+        neon_card_texture_tinted(index,x+offset+1.,y+offset+2.,w,h,Color::new(0.,0.,0.,0.5));
+        neon_card_texture_tinted(index,x+offset,y+offset,w,h,Color::new(0.52,0.58,0.64,1.));
+    }
 }
 pub(super) fn neon_menu_rail(y:f32){
     // Sample the straight metal rail; cyan accents remain short and segmented.
@@ -473,6 +509,11 @@ pub(super) fn editable_label(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color
 pub(super) fn editable_label_id(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){
     let r=layout::rect(key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
     menu_label(text,r.x,r.y+r.h,r.h,color);
+}
+pub(super) fn editable_heading(key:&str,text:&str,x:f32,y:f32,size:f32){
+    let key=layout::scene_key(key);
+    let r=layout::rect(&key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
+    menu_heading(text,r.x,r.y+r.h,r.h);
 }
 pub(super) fn editable_button(key:&str,text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool {
     let key=layout::scene_key(key);

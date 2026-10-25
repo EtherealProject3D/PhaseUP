@@ -451,67 +451,67 @@
     "stage_single_1_card_1": {
       "height": 76.0,
       "width": 50.0,
-      "x": 959.5,
+      "x": 792.0,
       "y": 874.0
     },
     "stage_single_1_card_10": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1472.4998779296875,
+      "x": 1304.9998779296875,
       "y": 874.0
     },
     "stage_single_1_card_11": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1529.5,
+      "x": 1362.0,
       "y": 874.0
     },
     "stage_single_1_card_2": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1016.5,
+      "x": 849.0,
       "y": 874.0
     },
     "stage_single_1_card_3": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1073.5,
+      "x": 906.0,
       "y": 874.0
     },
     "stage_single_1_card_4": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1130.5,
+      "x": 963.0,
       "y": 874.0
     },
     "stage_single_1_card_5": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1187.5,
+      "x": 1020.0,
       "y": 874.0
     },
     "stage_single_1_card_6": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1244.5,
+      "x": 1077.0,
       "y": 874.0
     },
     "stage_single_1_card_7": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1301.5,
+      "x": 1134.0,
       "y": 874.0
     },
     "stage_single_1_card_8": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1358.5,
+      "x": 1191.0,
       "y": 874.0
     },
     "stage_single_1_card_9": {
       "height": 76.0,
       "width": 50.0,
-      "x": 1415.5,
+      "x": 1248.0,
       "y": 874.0
     },
     "stage_single_1_cards": {
@@ -523,7 +523,7 @@
     "stage_single_1_row_offset": {
       "height": 1.0,
       "width": 57.0,
-      "x": 961.5,
+      "x": 794.0,
       "y": 874.0
     },
     "staging_double_label_1": {
@@ -553,8 +553,14 @@
     "staging_single_label_1": {
       "height": 16.0,
       "width": 127.31199645996094,
-      "x": 870.0,
+      "x": 899.0,
       "y": 854.0
+    },
+    "staging_single_ready_label_1": {
+      "height": 16.0,
+      "width": 180.63999938964844,
+      "x": 869.6799926757812,
+      "y": 853.0
     },
     "turn_instruction": {
       "height": 51.0,
