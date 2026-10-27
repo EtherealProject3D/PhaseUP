@@ -54,6 +54,12 @@ fn wheel_drag_value(
         0.0
     };
     if wheel.abs() > 0.0 {
+        // Consume the wheel before the parent ScrollArea handles it.
+        // Otherwise changing a number also moves the Properties sidebar.
+        ui.input_mut(|i| {
+            i.raw_scroll_delta = egui::Vec2::ZERO;
+            i.smooth_scroll_delta = egui::Vec2::ZERO;
+        });
         let step = if wheel > 0.0 { 1.0 } else { -1.0 };
         *value = (original.round() + step).clamp(min, max);
         (*value - original).abs() > 0.001
