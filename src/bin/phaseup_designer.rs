@@ -371,7 +371,7 @@ impl eframe::App for Designer{
   ctx.data_mut(|data|data.insert_temp(numeric_id,Vec::<Rect>::new()));
   egui::SidePanel::right("properties").default_width(255.).min_width(210.).show(ctx,|ui|{
    egui::ScrollArea::vertical()
-    .scroll_source(egui::scroll_area::ScrollSource{mouse_wheel:!over_numeric,..Default::default()})
+    .enable_scrolling(!over_numeric)
     .show(ui,|ui|{
    if self.desktop {let mut show=self.show_cpu;
     if ui.checkbox(&mut show,"Show CPU hand cards").changed(){self.toggle_cpu_cards(show);}
