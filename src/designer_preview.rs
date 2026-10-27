@@ -218,7 +218,7 @@ impl Preview {
             for g in 1..=2 {
                 let key=format!("cpu_{i}_laid_{g}");let r=area(&key);
                 let count=*cpu_counts.get(&key).unwrap_or(&3);
-                label(ui,&key,Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("SET — {count} cards"),18.);
+                label(ui,&key,Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("{} OF {}",requirement(self.phase,(g-1).min(PHASES[self.phase].len()-1)).to_uppercase(),PHASES[self.phase][(g-1).min(PHASES[self.phase].len()-1)]),18.);
                 if cpu_laid {
                     let cards:Vec<_>=(0..count as u32).map(|id|Card{id,kind:Kind::Number((i+g) as u8,(id%4) as u8)}).collect();
                     let content=Rect::from_min_max(
@@ -268,7 +268,7 @@ for (card,card_rect) in laid_cards {
         let mut slots:Vec<(Card,Rect)>=vec![];
         for (g,r) in groups.iter().enumerate(){
             ui.painter().rect_stroke(*r,2.,Stroke::new(1.0_f32,if self.laid{Color32::LIGHT_GREEN}else{Color32::GRAY}));
-            label(ui,&group_keys[g],Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("{}  {} / {}",requirement(self.phase,g).to_uppercase(),self.groups[g].len(),PHASES[self.phase][g]),18.);
+            label(ui,&group_keys[g],Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("{} OF {}",requirement(self.phase,g).to_uppercase(),PHASES[self.phase][g]),18.);
             slots.extend(styled_row(&self.groups[g],Rect::from_min_max(r.min+Vec2::new(8.*z,28.*z),r.max-Vec2::splat(6.*z)),z,&self.selected,styles.get(&group_keys[g]).copied().unwrap_or_default()));
         }
         let hand=area("hand");
