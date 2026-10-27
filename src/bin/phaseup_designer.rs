@@ -530,7 +530,7 @@ impl eframe::App for Designer{
    if self.selected.len()==1 {
     let name=self.selected.iter().next().unwrap().clone();
     let label=self.texts.entry(name).or_default();
-    ui.heading("Text");ui.label("Blank = live game label. {value} inserts the live label.");
+    ui.heading("Text");ui.label("Blank = live game label. {value} = live label, {phase_number} = current phase number, {phase_name} = current phase name.");
     ui.text_edit_singleline(&mut label.text);
     let mut size=label.size.unwrap_or(22.);
     if wheel_drag_value(ui,&mut size,8.0,80.0){label.size=Some(size);}
