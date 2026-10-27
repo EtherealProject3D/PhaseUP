@@ -482,7 +482,7 @@ impl eframe::App for Designer{
     });
     if resized {let anchored=anchored_resize(old,b.w,b.h,self.resize_anchor);b.x+=anchored.x-old.x;b.y+=anchored.y-old.y;}
     if b.x!=old.x||b.y!=old.y||b.w!=old.w||b.h!=old.h{self.checkpoint();self.elements.insert(name.clone(),b);self.carry_children();
-     if b.w!=old.w||b.h!=old.h{self.queue_size_sync(SizeSync::Elements(vec![(name,b.w,b.h)]),ctx.input(|i|i.time));}}
+     if resized && (b.w-old.w).abs()>0.001 || resized && (b.h-old.h).abs()>0.001 {self.queue_size_sync(SizeSync::Elements(vec![(name,b.w,b.h)]),ctx.input(|i|i.time));}}
    }
    if self.selected.len()==1 {
     let name=self.selected.iter().next().unwrap().clone();
@@ -642,9 +642,11 @@ impl eframe::App for Designer{
       let mut style=original;designer_preview::resize_hand(&mut style,height,new_height,self.resize_anchor);self.hand_styles.insert(key.clone(),style);
      }}
      if resize.drag_stopped(){
-       if let Some((key,_))=&self.selected_card{
+       if let (Some((original_height,_)),Some((key,_)))=(self.card_resize,&self.selected_card){
         if let Some(height)=self.hand_styles.get(key).and_then(|s|s.height){
-         self.queue_size_sync(SizeSync::Hand(key.clone(),height),ctx.input(|i|i.time));
+         if (height-original_height).abs()>0.5 {
+          self.queue_size_sync(SizeSync::Hand(key.clone(),height),ctx.input(|i|i.time));
+         }
         }
        }
        self.card_resize=None;
