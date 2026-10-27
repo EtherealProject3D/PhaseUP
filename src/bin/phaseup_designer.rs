@@ -670,7 +670,7 @@ impl eframe::App for Designer{
     if response.clicked_by(egui::PointerButton::Primary)||response.drag_started_by(egui::PointerButton::Primary){
     self.selected_card=card_hit.clone();if card_hit.is_some(){self.selected.clear();}
    }
-   if let (Some((start,original)),Some(pos),Some((key,index)))=
+   if let (Some((start,original)),Some(pos),Some((key,_index)))=
      (&self.card_move,pointer,&self.selected_card) {
      if ctx.input(|i|i.pointer.button_down(egui::PointerButton::Primary)) && key=="hand" {
       let delta=(pos-*start)/self.zoom;
