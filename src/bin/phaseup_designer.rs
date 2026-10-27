@@ -542,6 +542,23 @@ impl eframe::App for Designer{
     if ui.button("Center horizontally").clicked(){self.checkpoint();for n in &self.selected{let b=self.elements.get_mut(n).unwrap();b.x=(canvas(self.desktop,self.aspect).x-b.w)/2.;}self.carry_children();}
     if ui.button("Center vertically").clicked(){self.checkpoint();for n in &self.selected{let b=self.elements.get_mut(n).unwrap();b.y=(canvas(self.desktop,self.aspect).y-b.h)/2.;}self.carry_children();}
    }
+   // Arrow keys nudge the whole player's hand when a hand card is selected.
+   if !self.play && self.selected_card.as_ref().is_some_and(|(key,_)|key=="hand")
+      && !ctx.wants_keyboard_input() {
+    let mut delta=Vec2::ZERO;
+    ctx.input(|i|{
+     let step=if i.modifiers.shift{10.}else{1.};
+     for (key,d) in [(egui::Key::ArrowLeft,Vec2::new(-step,0.)),(egui::Key::ArrowRight,Vec2::new(step,0.)),(egui::Key::ArrowUp,Vec2::new(0.,-step)),(egui::Key::ArrowDown,Vec2::new(0.,step))] {
+      if i.key_pressed(key){delta+=d;}
+     }
+    });
+    if delta!=Vec2::ZERO {
+     self.hand_undo.push(self.hand_styles.clone());
+     self.hand_redo.clear();
+     let style=self.hand_styles.entry("hand".to_owned()).or_default();
+     style.dx+=delta.x;style.dy+=delta.y;
+    }
+   }
    if !self.play && !self.selected.is_empty() {
     let mut delta=Vec2::ZERO;
     ui.horizontal(|ui|{if ui.button("Left").clicked(){delta.x-=1.;}if ui.button("Right").clicked(){delta.x+=1.;}if ui.button("Up").clicked(){delta.y-=1.;}if ui.button("Down").clicked(){delta.y+=1.;}});
@@ -626,7 +643,10 @@ impl eframe::App for Designer{
    let hand_items=self.preview.hand_items(&self.elements,&self.hand_styles,self.show_cpu);
    let pointer=ctx.input(|i|i.pointer.interact_pos());
    let card_hit=pointer.and_then(|pos|{let world=self.world(pos,board);hand_items.iter().rev().find(|(_,_,r)|r.contains(world)).map(|(key,index,_)|(key.clone(),*index))});
-   if response.drag_started_by(egui::PointerButton::Primary) {
+   // Track the hand from the initial press, even when the canvas drag
+   // response does not become active over a painted card.
+   if ctx.input(|i|i.pointer.button_pressed(egui::PointerButton::Primary))
+      && response.rect.contains(pointer.unwrap_or(Pos2::ZERO)) {
      if let (Some(pos),Some((key,index)))=(pointer,card_hit.as_ref()) {
       if key=="hand" {
        self.hand_undo.push(self.hand_styles.clone());
@@ -642,7 +662,7 @@ impl eframe::App for Designer{
    }
    if let (Some((start,original)),Some(pos),Some((key,index)))=
      (&self.card_move,pointer,&self.selected_card) {
-     if response.dragged_by(egui::PointerButton::Primary) && key=="hand" {
+     if ctx.input(|i|i.pointer.button_down(egui::PointerButton::Primary)) && key=="hand" {
       let delta=(pos-*start)/self.zoom;
       // Dragging any card in the player's hand moves the entire hand
       // together. Individual card offsets remain available in Properties.
@@ -652,7 +672,7 @@ impl eframe::App for Designer{
       style.dy=(base.dy+delta.y).round();
      }
     }
-    if response.drag_stopped_by(egui::PointerButton::Primary){
+    if ctx.input(|i|i.pointer.button_released(egui::PointerButton::Primary)){
      self.card_move=None;
     }
     if let Some((key,index))=&self.selected_card {
