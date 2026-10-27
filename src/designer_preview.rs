@@ -20,9 +20,20 @@ pub(super) fn resize_hand(style:&mut HandStyle,old_height:f32,height:f32,anchor:
     style.height=Some(height);
 }
 fn styled_row(cards:&[Card],r:Rect,z:f32,selected:&BTreeSet<u32>,style:HandStyle)->Vec<(Card,Rect)>{
-    row(cards,r,z,selected).into_iter().map(|(c,r)|{
-        let size=style.height.map(|h|Vec2::new(h*CARD_ASPECT,h)*z).unwrap_or(r.size());
-        (c,Rect::from_center_size(r.center()+Vec2::new(style.dx,style.dy)*z,size))
+    if cards.is_empty(){return vec![];}
+    let default_height=card_size(Vec2::new(r.width(),r.height().min(136.*z))).y;
+    let height=style.height.map(|h|h*z).unwrap_or(default_height);
+    let width=height*CARD_ASPECT;
+    let count=cards.len();
+    let gap=style.gap.unwrap_or(12.).clamp(0.,200.)*z;
+    let ideal_step=width+gap;
+    let available_step=if count>1 {(r.width()-width).max(0.)/(count-1) as f32}else{0.};
+    let step=if count>1 {ideal_step.min(available_step)}else{0.};
+    let total=width+step*(count-1) as f32;
+    let left=r.center().x-total/2.+style.dx*z;
+    cards.iter().enumerate().map(|(i,c)|{
+        let y=r.center().y-height/2.+style.dy*z-if selected.contains(&c.id){12.*z}else{0.};
+        (*c,Rect::from_min_size(Pos2::new(left+i as f32*step,y),Vec2::new(width,height)))
     }).collect()
 }
 fn card_size(bounds:Vec2)->Vec2 {
