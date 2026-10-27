@@ -211,23 +211,10 @@ impl Designer {
   rescale(&mut self.cpu_expanded,source_size,target);
   rescale(&mut self.cpu_collapsed,source_size,target);
   if !self.desktop {
-    // Remove the mobile-only header. Existing desktop layouts are untouched.
-    // On the first load, reclaim its vertical band for the CPU panels.
-    if let Some(header)=self.elements.remove("header"){
-     let shift=header.h.min(72.);
-     for (name,b) in self.elements.iter_mut(){
-      if name.starts_with("cpu_"){
-       b.y=(b.y-shift).max(0.);
-      }
-     }
-     for map in [&mut self.cpu_expanded,&mut self.cpu_collapsed]{
-      for (name,b) in map.iter_mut(){
-       if name.starts_with("cpu_"){
-        b.y=(b.y-shift).max(0.);
-       }
-      }
-     }
-    }
+    // Hide the mobile header without modifying saved CPU coordinates.
+    // Older layouts may contain a header entry, but their element positions
+    // must remain exactly as authored by the user.
+    self.elements.remove("header");
     self.toggle_cpu_cards(false);
    }
  }
