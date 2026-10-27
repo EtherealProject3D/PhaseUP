@@ -215,29 +215,27 @@ impl Preview {
     r.max-Vec2::splat(6.*z)
 );
 let style=styles.get(&key).copied().unwrap_or_default();
-let mut laid_cards=styled_row(
-    &cards,content,z,&BTreeSet::new(),style
-);
-if let Some(height)=style.height {
-    let card_h=height*z;
-    let card_w=card_h*CARD_ASPECT;
-    let count=laid_cards.len();
-    if count>0 {
-        let available=(content.width()-card_w).max(0.);
-        let step=if count>1 {
-            (available/(count-1) as f32).min(card_w*0.85)
-        }else{0.};
-        let total=card_w+step*(count.saturating_sub(1)) as f32;
-        let left=content.center().x-total/2.;
-        let top=content.center().y-card_h/2.;
-        for (index,(_,card_rect)) in laid_cards.iter_mut().enumerate(){
-            *card_rect=Rect::from_min_size(
-                Pos2::new(left+index as f32*step,top),
-                Vec2::new(card_w,card_h)
-            );
-        }
-    }
-}
+// Lay every CPU preview group out with the same centering and spacing
+// rules. Preserve its configured card height and offset, but only
+// overlap cards when the available width makes it unavoidable.
+let natural_height=content.height().max(0.).min(content.width().max(0.)/CARD_ASPECT);
+let card_h=style.height.unwrap_or(natural_height/z)*z;
+let card_w=card_h*CARD_ASPECT;
+let n=cards.len();
+let gap=4.*z;
+let available=(content.width()-card_w).max(0.);
+let step=if n>1 {
+    (available/(n-1) as f32).min(card_w+gap)
+}else{0.};
+let total=if n>0 {card_w+step*(n-1) as f32}else{0.};
+let left=content.center().x-total/2.+style.dx*z;
+let top=content.center().y-card_h/2.+style.dy*z;
+let laid_cards:Vec<_>=cards.into_iter().enumerate().map(|(index,card)|{
+    (card,Rect::from_min_size(
+        Pos2::new(left+index as f32*step,top),
+        Vec2::new(card_w,card_h)
+    ))
+}).collect();
 for (card,card_rect) in laid_cards {
     paint_card(ui,card,card_rect,z,false);
 }
