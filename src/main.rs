@@ -9,10 +9,8 @@ const ACCENT: Color = Color::new(0.25, 0.81, 0.72, 1.);
 const WHITEISH: Color = Color::new(0.92, 0.96, 1., 1.);
 const MUTED: Color = Color::new(0.60, 0.68, 0.78, 1.);
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Kind { Number(u8, u8), Wild, Skip }
-#[derive(Clone, Copy)]
-struct Card { id: u32, kind: Kind }
+mod card_model;
+use card_model::{Card, Kind};
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Stage { Draw, Play, Cpu, RoundOver, GameOver }

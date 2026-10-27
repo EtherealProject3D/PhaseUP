@@ -1,0 +1,186 @@
+{
+  "canvas": {
+    "height": 1200,
+    "width": 1920
+  },
+  "elements": {
+    "cpu_1": {
+      "height": 280.0,
+      "width": 608.0,
+      "x": 24.0,
+      "y": 112.0
+    },
+    "cpu_1_hand": {
+      "height": 90.0,
+      "width": 584.0,
+      "x": 36.0,
+      "y": 152.0
+    },
+    "cpu_1_laid_1": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 36.0,
+      "y": 254.0
+    },
+    "cpu_1_laid_2": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 332.0,
+      "y": 254.0
+    },
+    "cpu_2": {
+      "height": 280.0,
+      "width": 608.0,
+      "x": 656.0,
+      "y": 112.0
+    },
+    "cpu_2_hand": {
+      "height": 90.0,
+      "width": 584.0,
+      "x": 668.0,
+      "y": 152.0
+    },
+    "cpu_2_laid_1": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 668.0,
+      "y": 254.0
+    },
+    "cpu_2_laid_2": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 964.0,
+      "y": 254.0
+    },
+    "cpu_3": {
+      "height": 280.0,
+      "width": 608.0,
+      "x": 1288.0,
+      "y": 112.0
+    },
+    "cpu_3_hand": {
+      "height": 90.0,
+      "width": 584.0,
+      "x": 1300.0,
+      "y": 152.0
+    },
+    "cpu_3_laid_1": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 1300.0,
+      "y": 254.0
+    },
+    "cpu_3_laid_2": {
+      "height": 126.0,
+      "width": 288.0,
+      "x": 1596.0,
+      "y": 254.0
+    },
+    "discard": {
+      "height": 155.0,
+      "width": 120.0,
+      "x": 1000.0,
+      "y": 420.0
+    },
+    "discard_action": {
+      "height": 40.0,
+      "width": 300.0,
+      "x": 1460.0,
+      "y": 1140.0
+    },
+    "draw": {
+      "height": 155.0,
+      "width": 120.0,
+      "x": 800.0,
+      "y": 420.0
+    },
+    "hand": {
+      "height": 130.0,
+      "width": 1872.0,
+      "x": 24.0,
+      "y": 1000.0
+    },
+    "header": {
+      "height": 64.0,
+      "width": 1872.0,
+      "x": 24.0,
+      "y": 24.0
+    },
+    "phase": {
+      "height": 155.0,
+      "width": 1360.0,
+      "x": 280.0,
+      "y": 610.0
+    },
+    "phase_1_group_1": {
+      "height": 111.0,
+      "width": 1336.0,
+      "x": 292.0,
+      "y": 646.0
+    },
+    "phase_2_group_1": {
+      "height": 111.0,
+      "width": 664.0,
+      "x": 292.0,
+      "y": 646.0
+    },
+    "phase_2_group_2": {
+      "height": 111.0,
+      "width": 664.0,
+      "x": 964.0,
+      "y": 646.0
+    },
+    "phase_action": {
+      "height": 54.0,
+      "width": 400.0,
+      "x": 760.0,
+      "y": 780.0
+    },
+    "sort_colors": {
+      "height": 40.0,
+      "width": 180.0,
+      "x": 850.0,
+      "y": 1140.0
+    },
+    "sort_runs": {
+      "height": 40.0,
+      "width": 180.0,
+      "x": 650.0,
+      "y": 1140.0
+    },
+    "sort_sets": {
+      "height": 40.0,
+      "width": 180.0,
+      "x": 1050.0,
+      "y": 1140.0
+    },
+    "staging": {
+      "height": 150.0,
+      "width": 1360.0,
+      "x": 280.0,
+      "y": 840.0
+    },
+    "staging_1_group_1": {
+      "height": 106.0,
+      "width": 1336.0,
+      "x": 292.0,
+      "y": 876.0
+    },
+    "staging_2_group_1": {
+      "height": 106.0,
+      "width": 664.0,
+      "x": 292.0,
+      "y": 876.0
+    },
+    "staging_2_group_2": {
+      "height": 106.0,
+      "width": 664.0,
+      "x": 964.0,
+      "y": 876.0
+    }
+  },
+  "labels": {},
+  "profile": "mobile",
+  "schema_version": 1,
+  "show_cpu_cards": true
+}
