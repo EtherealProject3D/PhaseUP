@@ -196,7 +196,7 @@ impl Preview {
         let text=|ui:&egui::Ui,r:Rect,s:&str,size:f32|{ui.painter().text(r.center(),Align2::CENTER_CENTER,s,FontId::proportional((size*z).max(9.)),Color32::WHITE);};
         let label=|ui:&egui::Ui,key:&str,r:Rect,s:&str,size:f32|{
             let style=texts.get(key).cloned().unwrap_or_default();
-            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{value}",s)};
+            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{phase_number}",&(self.phase+1).to_string()).replace("{phase_name}",phase_name(self.phase)).replace("{value}",s)};
             text(ui,r.translate(Vec2::new(style.dx,style.dy)*z),&content,style.size.unwrap_or(size));
         };
         let mut panels:Vec<_>=elements.iter().filter(|(n,_)|self.visible(n,show_cpu,separate)).collect();
