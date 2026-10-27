@@ -181,7 +181,7 @@ impl Designer {
      if let Some(map)=root["elements"].as_object(){for (name,v) in map{if let Some(b)=Box2::from_json(v){self.elements.insert(name.clone(),b);}}}
      if let Some(map)=root["labels"].as_object(){for (key,v) in map{self.texts.insert(key.clone(),LabelStyle{text:v["text"].as_str().unwrap_or("").into(),size:v["size"].as_f64().map(|n|n as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32});}}
      if let Some(map)=root["hand_card_styles"].as_object(){for (key,v) in map {
-      self.hand_styles.insert(key.clone(),designer_preview::HandStyle{height:v["height"].as_f64().filter(|h|h.is_finite()&&*h>=10.&&*h<=1000.).map(|h|h as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32});
+      self.hand_styles.insert(key.clone(),designer_preview::HandStyle{height:v["height"].as_f64().filter(|h|h.is_finite()&&*h>=10.&&*h<=1000.).map(|h|h as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32,gap:v["gap"].as_f64().filter(|g|g.is_finite()&&*g>=0.&&*g<=200.).map(|g|g as f32)});
      }}
      if root["guides"].is_object(){self.grid_vertical=root["guides"]["vertical"].as_bool().unwrap_or(false);self.grid_horizontal=root["guides"]["horizontal"].as_bool().unwrap_or(false);self.grid_columns=(root["guides"]["columns"].as_u64().unwrap_or(4) as usize).clamp(1,32);self.grid_rows=(root["guides"]["rows"].as_u64().unwrap_or(2) as usize).clamp(1,32);}
      self.show_cpu=root["show_cpu_cards"].as_bool().unwrap_or(true);
@@ -243,7 +243,7 @@ impl Designer {
      map.remove("header");
     }
    }
-  root["hand_card_styles"]=serde_json::Value::Object(self.hand_styles.iter().map(|(key,s)|(key.clone(),serde_json::json!({"height":s.height.map(|v|v.round()),"dx":s.dx.round(),"dy":s.dy.round()}))).collect());
+  root["hand_card_styles"]=serde_json::Value::Object(self.hand_styles.iter().map(|(key,s)|(key.clone(),serde_json::json!({"height":s.height.map(|v|v.round()),"dx":s.dx.round(),"dy":s.dy.round(),"gap":s.gap}))).collect());
   root["guides"]=serde_json::json!({"vertical":self.grid_vertical,"horizontal":self.grid_horizontal,"columns":self.grid_columns,"rows":self.grid_rows});
   root["labels"]=serde_json::Value::Object(self.texts.iter().map(|(k,v)|(k.clone(),serde_json::json!({"text":v.text,"size":v.size.map(|n|n.round()),"dx":v.dx.round(),"dy":v.dy.round()}))).collect());
   root["show_cpu_cards"]=self.show_cpu.into();
@@ -485,6 +485,20 @@ impl eframe::App for Designer{
             );
         }
 
+        if name.starts_with("cpu_") {
+            let original_gap=self.hand_styles.get(&name).and_then(|style|style.gap).unwrap_or(16.);
+            let mut gap=original_gap;
+            ui.horizontal(|ui|{
+                ui.label("Card gap (px)");
+                wheel_drag_value(ui,&mut gap,0.,200.);
+            });
+            if (gap-original_gap).abs()>0.001 {
+                self.hand_undo.push(self.hand_styles.clone());
+                self.hand_redo.clear();
+                self.hand_styles.entry(name.clone()).or_default().gap=Some(gap);
+            }
+            ui.label("Cards overlap automatically when the group is too narrow.");
+        }
         if ui.button("Reset laid-phase card size").clicked(){
             self.hand_undo.push(self.hand_styles.clone());
             self.hand_redo.clear();
