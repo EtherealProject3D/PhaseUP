@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 // One aspect ratio for hand, phase, CPU and dragged cards.
 const CARD_ASPECT:f32=0.68;
 #[derive(Clone,Copy,Debug,Default)]
-pub(super) struct HandStyle {pub height:Option<f32>,pub dx:f32,pub dy:f32}
+pub(super) struct HandStyle {pub height:Option<f32>,pub dx:f32,pub dy:f32,pub gap:Option<f32>}
 pub(super) type HandStyles=std::collections::BTreeMap<String,HandStyle>;
 
 pub(super) fn card_offset(styles:&HandStyles,key:&str,index:usize)->Vec2 {
@@ -222,7 +222,7 @@ let natural_height=content.height().max(0.).min(content.width().max(0.)/CARD_ASP
 let card_h=style.height.unwrap_or(natural_height/z)*z;
 let card_w=card_h*CARD_ASPECT;
 let n=cards.len();
-let gap=4.*z;
+let gap=style.gap.unwrap_or(16.).clamp(0.,200.)*z;
 let available=(content.width()-card_w).max(0.);
 let step=if n>1 {
     (available/(n-1) as f32).min(card_w+gap)
