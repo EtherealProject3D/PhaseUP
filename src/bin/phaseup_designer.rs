@@ -94,19 +94,21 @@ struct Designer {
  zoom:f32,pan:Vec2,grid:f32,snap_grid:bool,snap_edges:bool,snap_objects:bool,
  drag_start:Option<(Pos2,Snapshot)>,marquee:Option<Pos2>,status:String,
  path:PathBuf, preview:designer_preview::Preview, play:bool, separate:bool, center_guides:bool, desktop:bool,show_cpu:bool,cpu_laid:bool,texts:BTreeMap<String,LabelStyle>,cpu_expanded:Snapshot,cpu_collapsed:Snapshot,aspect:usize,hand_styles:designer_preview::HandStyles,selected_card:Option<(String,usize)>,resize_anchor:usize,hand_undo:Vec<designer_preview::HandStyles>,hand_redo:Vec<designer_preview::HandStyles>,card_resize:Option<(f32,designer_preview::HandStyle)>,card_move:Option<(Pos2,designer_preview::HandStyles)>,cpu_counts:BTreeMap<String,usize>,grid_vertical:bool,grid_horizontal:bool,grid_columns:usize,grid_rows:usize,
- sync_draft:Option<SizeSync>,sync_last_change:f64,sync_prompt:Option<SizeSync>
+ sync_draft:Option<SizeSync>,sync_last_change:f64,sync_prompt:Option<SizeSync>,sync_owner:Option<String>
 }
 impl Designer {
  fn new()->Self{
   let mut app=Self{elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
    zoom:0.0,pan:Vec2::ZERO,grid:8.,snap_grid:true,snap_edges:true,snap_objects:true,
-   drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None};
+   drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None,sync_owner:None};
   app.load();app
  }
  fn board_size(&self)->Vec2{canvas(self.desktop,self.aspect)}
  fn queue_size_sync(&mut self,change:SizeSync,now:f64){
   if self.desktop{return;}
   self.sync_last_change=now;
+  self.sync_owner=self.selected_card.as_ref().map(|(key,_)|key.clone())
+   .or_else(||self.selected.iter().next().cloned());
   match (&mut self.sync_draft,change){
    (Some(SizeSync::Elements(existing)),SizeSync::Elements(changes))=>{
     for (name,w,h) in changes{
@@ -150,7 +152,7 @@ impl Designer {
 
  fn load(&mut self){
   if !self.desktop {self.separate=false;self.path=profile_path(false,false,self.aspect);}
-  self.sync_draft=None;self.sync_prompt=None;self.sync_last_change=0.0;
+  self.sync_draft=None;self.sync_prompt=None;self.sync_last_change=0.0;self.sync_owner=None;
   self.hand_styles.clear();self.selected_card=None;self.card_move=None;self.hand_undo.clear();self.hand_redo.clear();self.cpu_counts.clear();
    for cpu in 1..=3 {
     for group in 1..=2 {
@@ -566,14 +568,7 @@ impl eframe::App for Designer{
    ui.separator();ui.label(&self.status);
    });
   });
-   if !self.desktop && self.sync_prompt.is_none() && self.sync_draft.is_some(){
-    if ctx.input(|i|i.time)-self.sync_last_change>=0.7{
-     if self.sync_draft.is_some() && self.sync_last_change > 0.0 {
-    self.sync_prompt = self.sync_draft.take();
-    self.sync_last_change = 0.0;
-}
-    }else{ctx.request_repaint_after(std::time::Duration::from_millis(120));}
-   }
+   // Sync is shown only when the edited item loses selection.
    if let Some(change)=self.sync_prompt.clone(){
     let other=if self.aspect==0{"19.5:9"}else{"20:9"};
     egui::Window::new("Sync mobile item size?")
@@ -761,6 +756,14 @@ impl eframe::App for Designer{
     }
    }
   });
+  if !self.desktop && self.sync_prompt.is_none() && self.sync_draft.is_some(){
+   let active=self.selected_card.as_ref().map(|(key,_)|key.clone())
+    .or_else(||self.selected.iter().next().cloned());
+   if active!=self.sync_owner {
+    self.sync_prompt=self.sync_draft.take();
+    self.sync_owner=None;
+   }
+  }
  }
 }
 fn main()->eframe::Result<()>{
