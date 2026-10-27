@@ -46,7 +46,18 @@ fn wheel_drag_value(
             .fixed_decimals(0)
     );
 
-    if response.changed() {
+    // A wheel over this control is an intentional one-pixel adjustment.
+    // Merely displaying a rounded number must not modify the stored value.
+    let wheel = if response.hovered() {
+        ui.input(|i| i.raw_scroll_delta.y)
+    } else {
+        0.0
+    };
+    if wheel.abs() > 0.0 {
+        let step = if wheel > 0.0 { 1.0 } else { -1.0 };
+        *value = (original.round() + step).clamp(min, max);
+        (*value - original).abs() > 0.001
+    } else if response.changed() {
         *value = displayed;
         (*value - original).abs() > 0.001
     } else {
