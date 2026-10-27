@@ -509,6 +509,30 @@ impl eframe::App for Designer{
             }
             ui.label("Cards overlap automatically when the group is too narrow.");
         }
+        ui.label("Card group position inside laid-phase area (px)");
+        let current=self.hand_styles.get(&name).copied().unwrap_or_default();
+        let mut dx=current.dx;
+        let mut dy=current.dy;
+        ui.horizontal(|ui|{
+            ui.label("Card X");
+            wheel_drag_value(ui,&mut dx,-10000.,10000.);
+            ui.label("Card Y");
+            wheel_drag_value(ui,&mut dy,-10000.,10000.);
+        });
+        if (dx-current.dx).abs()>0.001 || (dy-current.dy).abs()>0.001 {
+            self.hand_undo.push(self.hand_styles.clone());
+            self.hand_redo.clear();
+            let style=self.hand_styles.entry(name.clone()).or_default();
+            style.dx=dx;
+            style.dy=dy;
+        }
+        if ui.button("Center cards in laid-phase area").clicked(){
+            self.hand_undo.push(self.hand_styles.clone());
+            self.hand_redo.clear();
+            let style=self.hand_styles.entry(name.clone()).or_default();
+            style.dx=0.;
+            style.dy=0.;
+        }
         if ui.button("Reset laid-phase card size").clicked(){
             self.hand_undo.push(self.hand_styles.clone());
             self.hand_redo.clear();
