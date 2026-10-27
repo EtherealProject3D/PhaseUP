@@ -194,9 +194,10 @@ impl Preview {
         let screen=|b:Box2|Rect::from_min_size(board.min+Vec2::new(b.x,b.y)*z,Vec2::new(b.w,b.h)*z);
         let area=|name:&str|screen(elements[name]);
         let text=|ui:&egui::Ui,r:Rect,s:&str,size:f32|{ui.painter().text(r.center(),Align2::CENTER_CENTER,s,FontId::proportional((size*z).max(9.)),Color32::WHITE);};
+        let label_phase=self.phase;
         let label=|ui:&egui::Ui,key:&str,r:Rect,s:&str,size:f32|{
             let style=texts.get(key).cloned().unwrap_or_default();
-            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{phase_number}",&(self.phase+1).to_string()).replace("{phase_name}",phase_name(self.phase)).replace("{value}",s)};
+            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{phase_number}",&(label_phase+1).to_string()).replace("{phase_name}",phase_name(label_phase)).replace("{value}",s)};
             text(ui,r.translate(Vec2::new(style.dx,style.dy)*z),&content,style.size.unwrap_or(size));
         };
         let mut panels:Vec<_>=elements.iter().filter(|(n,_)|self.visible(n,show_cpu,separate)).collect();
