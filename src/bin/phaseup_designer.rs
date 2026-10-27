@@ -46,6 +46,15 @@ fn wheel_drag_value(
             .fixed_decimals(0)
     );
 
+    // Record the numeric control's screen rectangle for the Properties
+    // ScrollArea to test against the pointer on the next frame.
+    ui.ctx().data_mut(|data| {
+        let id = egui::Id::new("phaseup_numeric_rects");
+        let mut rects = data.get_temp::<Vec<Rect>>(id).unwrap_or_default();
+        rects.push(response.rect);
+        data.insert_temp(id, rects);
+    });
+
     // A wheel over this control is an intentional one-pixel adjustment.
     // Merely displaying a rounded number must not modify the stored value.
     let wheel = if response.hovered() {
@@ -54,12 +63,6 @@ fn wheel_drag_value(
         0.0
     };
     if wheel.abs() > 0.0 {
-        // Consume the wheel before the parent ScrollArea handles it.
-        // Otherwise changing a number also moves the Properties sidebar.
-        ui.input_mut(|i| {
-            i.raw_scroll_delta = egui::Vec2::ZERO;
-            i.smooth_scroll_delta = egui::Vec2::ZERO;
-        });
         let step = if wheel > 0.0 { 1.0 } else { -1.0 };
         *value = (original.round() + step).clamp(min, max);
         (*value - original).abs() > 0.001
@@ -358,8 +361,18 @@ impl eframe::App for Designer{
     }
    });
   });
+  // Disable wheel scrolling only when the pointer is over a numeric editor.
+  // Use rectangles from the previous frame so the ScrollArea knows its wheel
+  // policy before it processes the current frame's content.
+  let numeric_id=egui::Id::new("phaseup_numeric_rects");
+  let numeric_rects=ctx.data(|data|data.get_temp::<Vec<Rect>>(numeric_id).unwrap_or_default());
+  let over_numeric=ctx.input(|i|i.pointer.hover_pos())
+   .is_some_and(|pos|numeric_rects.iter().any(|rect|rect.contains(pos)));
+  ctx.data_mut(|data|data.insert_temp(numeric_id,Vec::<Rect>::new()));
   egui::SidePanel::right("properties").default_width(255.).min_width(210.).show(ctx,|ui|{
-   egui::ScrollArea::vertical().show(ui,|ui|{
+   egui::ScrollArea::vertical()
+    .scroll_source(egui::scroll_area::ScrollSource{mouse_wheel:!over_numeric,..Default::default()})
+    .show(ui,|ui|{
    if self.desktop {let mut show=self.show_cpu;
     if ui.checkbox(&mut show,"Show CPU hand cards").changed(){self.toggle_cpu_cards(show);}
    }else{ui.label("Mobile: compact phase area | CPU hand cards hidden");}
