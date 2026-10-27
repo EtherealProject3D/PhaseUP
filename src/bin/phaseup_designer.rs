@@ -428,6 +428,16 @@ impl eframe::App for Designer{
     }
     if ui.button("Reset this hand's card size").clicked(){self.hand_undo.push(self.hand_styles.clone());self.hand_redo.clear();self.hand_styles.remove(&key);}
    }
+   if self.selected_card.as_ref().is_some_and(|(key,_)|key=="hand") {
+    let original_gap=self.hand_styles.get("hand").and_then(|style|style.gap).unwrap_or(12.);
+    let mut gap=original_gap;
+    ui.horizontal(|ui|{ui.label("Hand card gap (px)");wheel_drag_value(ui,&mut gap,0.,200.);});
+    if (gap-original_gap).abs()>0.001 {
+     self.hand_undo.push(self.hand_styles.clone());self.hand_redo.clear();
+     self.hand_styles.entry("hand".to_owned()).or_default().gap=Some(gap);
+    }
+    ui.label("Hand cards overlap automatically when they do not fit.");
+   }
    if self.selected.len()==1{
     let name=self.selected.iter().next().unwrap().clone();
     ui.label(&name);
@@ -485,7 +495,7 @@ impl eframe::App for Designer{
             );
         }
 
-        if name.starts_with("cpu_") {
+        {
             let original_gap=self.hand_styles.get(&name).and_then(|style|style.gap).unwrap_or(16.);
             let mut gap=original_gap;
             ui.horizontal(|ui|{
