@@ -644,9 +644,10 @@ impl eframe::App for Designer{
      (&self.card_move,pointer,&self.selected_card) {
      if response.dragged_by(egui::PointerButton::Primary) && key=="hand" {
       let delta=(pos-*start)/self.zoom;
-      let card_key=format!("{key}_card_{index}");
-      let base=original.get(&card_key).copied().unwrap_or_default();
-      let style=self.hand_styles.entry(card_key).or_default();
+      // Dragging any card in the player's hand moves the entire hand
+      // together. Individual card offsets remain available in Properties.
+      let base=original.get(key).copied().unwrap_or_default();
+      let style=self.hand_styles.entry(key.clone()).or_default();
       style.dx=(base.dx+delta.x).round();
       style.dy=(base.dy+delta.y).round();
      }
