@@ -45,7 +45,7 @@ impl HumanPhaseFlight {
 pub(super) struct HumanDrawFlight { pub(super) card_id:u32, pub(super) from_discard:bool, pub(super) started:f64, pub(super) duration:f64 }
 pub(super) struct HumanDiscardFlight { pub(super) card:Card, pub(super) from_x:f32, pub(super) from_y:f32, pub(super) started:f64, pub(super) duration:f64 }
 
-pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) {
+pub(super) fn draw_card_flights(g:&Game,sw:f32,_sh:f32) { if layout::designer::active(){crate::designer_flights::draw(g);return;}
     // Reveal CPU phase cards in sequence, flying from their former hand area.
     if let Some(flight)=&g.cpu_phase_flight {
         let elapsed=get_time()-flight.started;

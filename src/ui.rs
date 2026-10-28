@@ -343,12 +343,12 @@ pub(super) fn has_neon_cpu_panel()->bool {
 }
 
 // One fixed 16:10 design canvas for all window presets.
-pub(super) fn game_canvas_height()->f32 {1200.0}
+pub(super) fn game_canvas_height()->f32 {if GAME_VIEW.with(|v|v.get()){if let Some((_,h))=layout::designer::canvas(){return h;}}1200.0}
 thread_local! {static GAME_VIEW:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
 pub(super) fn set_game_view(value:bool){GAME_VIEW.with(|v|v.set(value));}
 pub(super) fn game_canvas_width()->f32 {
     if !GAME_VIEW.with(|v|v.get()){return 1920.0;}
-    let mode=crate::read_display_layout();
+    if let Some((w,_))=layout::designer::canvas(){return w;} let mode=crate::read_display_layout();
     let (w,h)=crate::read_selected_resolution().unwrap_or(if mode==crate::DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)});
     1200.0*w as f32/h as f32
 }
@@ -520,7 +520,7 @@ pub(super) fn editable_label(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color
     editable_label_id(&key,text,x,y,size,color);
 }
 // Use explicit IDs when a state change can alter which group is drawn first.
-pub(super) fn editable_label_id(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){
+pub(super) fn editable_label_id(key:&str,text:&str,x:f32,y:f32,size:f32,color:Color){ if layout::designer::runtime_label(key,text,size,color){return;}
     let r=layout::rect(key,layout::Rect{x,y:y-size,w:menu_text_width(text,size as u16).max(20.),h:size});
     menu_label(text,r.x,r.y+r.h,r.h,color);
 }
