@@ -1139,7 +1139,18 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+236.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            if !*resolution_open && menu_button(&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) {
+                let mode=read_display_layout().next();
+                save_display_layout(mode);
+                let (w,h)=if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)};
+                save_selected_resolution(w,h);
+                let fitted=fit_window_to_desktop(w,h);
+                request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                save_window_size(fitted.0,fitted.1);
+                if active_theme()==Theme::Futuristic {set_theme(Theme::Modern);save_theme(Theme::Modern);}
+                layout::reload();
+            }
+            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+308.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
             menu_label("INTERFACE",750.0,panel_y+329.0,22.0,MUTED);
             if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
             if !*resolution_open && menu_button(&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
@@ -1149,7 +1160,10 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if !*resolution_open {
                 if cfg!(feature="developer-tools") {
                     if menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
-                        let next=active_theme().next();set_theme(next);save_theme(next);
+                        let allowed=read_display_layout()==DisplayLayout::Desktop && read_selected_resolution().is_some_and(|(w,h)|read_display_layout().aspect(w,h)=="16_10");
+                        let mut next=active_theme().next();
+                        if !allowed && next==Theme::Futuristic {next=Theme::Playful;}
+                        set_theme(next);save_theme(next);
                     }
                 }else{
                     neon_metal_button(730.,panel_y+538.,460.,64.,false,false);
@@ -1169,7 +1183,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
                     let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+164.0&&my<=panel_y+228.0;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+228.0&&my<=panel_y+554.0;
+                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+228.0&&my<=panel_y+228.0+39.0+read_display_layout().presets().len() as f32*54.0+8.0;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
@@ -1194,26 +1208,32 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
     }
     None
 }
-// 16:10 resolution presets for the fixed 1920x1200 design canvas.
+// Presets are restricted to the selected display layout.
 fn resolution_picker(x:f32,y:f32)->bool {
-    let presets=[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600)];
-    draw_rectangle(x,y,252.0,326.0,active_theme().background());
-    draw_rectangle_lines(x,y,252.0,326.0,2.0,ACCENT);
-    menu_label("16:10 RESOLUTIONS",x+19.0,y+27.0,19.0,ACCENT);
+    let mode=read_display_layout();
+    let presets=mode.presets();
+    let height=39.0+presets.len() as f32*54.0+8.0;
+    draw_rectangle(x,y,252.0,height,active_theme().background());
+    draw_rectangle_lines(x,y,252.0,height,2.0,ACCENT);
+    menu_label(if mode==DisplayLayout::Mobile {"MOBILE RESOLUTIONS"}else{"DESKTOP RESOLUTIONS"},x+12.0,y+27.0,17.0,ACCENT);
     let (mx,my)=game_mouse();
     for (index,(w,h)) in presets.iter().enumerate() {
         let bx=x+12.0;
         let by=y+39.0+index as f32*54.0;
         let hover=mx>=bx&&mx<=bx+228.0&&my>=by&&my<=by+48.0;
         themed_button(bx,by,228.0,48.0,hover);
-        let text=format!("{} x {}",w,h);
-        let tw=menu_text_width(&text,19);
-        menu_label(&text,bx+(228.0-tw)/2.0,by+31.0,19.0,WHITEISH);
+        let label=format!("{} x {} ({})",w,h,mode.aspect(*w,*h).replace('_',":"));
+        let tw=menu_text_width(&label,17);
+        menu_label(&label,bx+(228.0-tw)/2.0,by+31.0,17.0,WHITEISH);
         if hover&&is_mouse_button_pressed(MouseButton::Left) {
             let fitted=fit_window_to_desktop(*w,*h);
             request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
             save_window_size(fitted.0,fitted.1);
             save_selected_resolution(*w,*h);
+            if active_theme()==Theme::Futuristic && (mode!=DisplayLayout::Desktop || mode.aspect(*w,*h)!="16_10") {
+                set_theme(Theme::Modern);save_theme(Theme::Modern);
+            }
+            layout::reload();
             return true;
         }
     }
@@ -1231,6 +1251,9 @@ async fn main(){
         .unwrap_or(0x50484153455550);
     macroquad::rand::srand(seed);
     set_theme(read_theme());
+    if active_theme()==Theme::Futuristic && (read_display_layout()!=DisplayLayout::Desktop || !read_selected_resolution().is_some_and(|(w,h)|read_display_layout().aspect(w,h)=="16_10")) {
+        set_theme(Theme::Modern);
+    }
     layout::reload();
     load_menu_fonts().await;
     load_neon_cards().await;
