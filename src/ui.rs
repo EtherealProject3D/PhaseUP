@@ -344,13 +344,21 @@ pub(super) fn has_neon_cpu_panel()->bool {
 
 // One fixed 16:10 design canvas for all window presets.
 pub(super) fn game_canvas_height()->f32 {1200.0}
+thread_local! {static GAME_VIEW:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
+pub(super) fn set_game_view(value:bool){GAME_VIEW.with(|v|v.set(value));}
+pub(super) fn game_canvas_width()->f32 {
+    if !GAME_VIEW.with(|v|v.get()){return 1920.0;}
+    let mode=crate::read_display_layout();
+    let (w,h)=crate::read_selected_resolution().unwrap_or(if mode==crate::DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)});
+    1200.0*w as f32/h as f32
+}
 pub(super) fn game_mouse()->(f32,f32) {
     let (pw,ph)=(screen_width(),screen_height());
-    let sh=game_canvas_height();
-    let scale=(pw/1920.0).min(ph/sh);
+    let sw=game_canvas_width();let sh=game_canvas_height();
+    let scale=(pw/sw).min(ph/sh);
     let (mx,my)=mouse_position();
     let zoom=crate::layout_editor::zoom();
-    (960.0+crate::layout_editor::pan().0+((mx-pw/2.0)/scale)/zoom,sh/2.0+crate::layout_editor::pan().1+((my-ph/2.0)/scale)/zoom)
+    (sw/2.0+crate::layout_editor::pan().0+((mx-pw/2.0)/scale)/zoom,sh/2.0+crate::layout_editor::pan().1+((my-ph/2.0)/scale)/zoom)
 }
 pub(super) fn label(text:&str,x:f32,y:f32,size:f32,color:Color){draw_text(text,x,y,size,crate::theme::themed_color(color));}
 pub(super) fn button(text:&str,x:f32,y:f32,w:f32,h:f32,enabled:bool)->bool{
