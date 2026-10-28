@@ -689,14 +689,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    if g.stage==Stage::Draw && g.turn_count==1 {
-        for group in 0..groups.len(){
-            let slot=layout::rect(&layout::stage_key(group,groups.len(),""),layout::Rect{x:stage_left+group as f32*(stage_w+6.),y:stage_y,w:stage_w,h:117.});
-            if active_theme()!=Theme::Futuristic {draw_rectangle(slot.x,slot.y,slot.w,117.,Color::new(0.04,0.07,0.10,0.72));}
-            let t="DRAW FIRST";let tw=menu_text_width(t,24);
-            editable_label(if groups.len()==1 {"staging_single_draw_first"}else{"staging_double_draw_first"},t,slot.x+(slot.w-tw)/2.,slot.y+67.,24.,MUTED);
-        }
-    }
     let hand_panel=layout::rect("hand_panel",layout::Rect{x:12.,y:sh-229.,w:sw-24.,h:217.});
     let py=hand_panel.y+72.0;
     if active_theme()==Theme::Futuristic {
