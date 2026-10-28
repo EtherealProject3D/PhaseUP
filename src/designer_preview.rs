@@ -75,7 +75,7 @@ pub(super) fn collapse_cpu_rows(elements:&mut Snapshot) {
 pub(super) fn layout(separate: bool) -> Snapshot {
     let mut result = Snapshot::new();
     for (name,x,y,w,h) in [
-        ("header",24.,24.,1872.,64.),
+        ("header",24.,24.,1872.,64.),("menu_button",1770.,20.,120.,48.),
         ("cpu_1",24.,112.,608.,280.),("cpu_2",656.,112.,608.,280.),("cpu_3",1288.,112.,608.,280.),
         ("draw",800.,420.,120.,155.),("discard",1000.,420.,120.,155.),
         ("phase",280.,610.,1360.,220.),
@@ -209,6 +209,7 @@ impl Preview {
             ui.painter().rect_stroke(r,3.,Stroke::new(1.0_f32,Color32::from_gray(110)));
             if name.starts_with("cpu_") && parent(name).is_none(){label(ui,name,Rect::from_min_size(r.min,Vec2::new(r.width(),32.*z)),&format!("{}  |  Phase 1  |  10 cards",name.to_uppercase()),22.);}
         }
+        if elements.contains_key("menu_button") { label(ui,"menu_button",area("menu_button"),"MENU",22.); }
         for i in 1..=3 {
             let key=format!("cpu_{i}_hand");let r=area(&key);
             if show_cpu {
