@@ -176,3 +176,38 @@ pub(super) fn save_cpu_difficulty(level:crate::Difficulty) {
     if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
     let _=std::fs::write(path,level.key());
 }
+
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
+pub(super) enum DisplayLayout { Desktop, Mobile }
+impl DisplayLayout {
+    pub(super) fn name(self)->&'static str {match self {Self::Desktop=>"DESKTOP",Self::Mobile=>"MOBILE"}}
+    pub(super) fn next(self)->Self {match self {Self::Desktop=>Self::Mobile,Self::Mobile=>Self::Desktop}}
+    pub(super) fn presets(self)->&'static [(i32,i32)] {
+        match self {
+            Self::Desktop=>&[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600),(1280,720),(1600,900),(1920,1080),(2560,1440)],
+            Self::Mobile=>&[(2000,900),(2400,1080),(2600,1170),(2340,1080),(2535,1170)]
+        }
+    }
+    pub(super) fn aspect(self,w:i32,h:i32)->&'static str {
+        if self==Self::Mobile {if (w as f32/h as f32-20.0/9.0).abs()<0.03 {"20_9"}else{"19_5_9"}}
+        else if (w as f32/h as f32-16.0/9.0).abs()<0.03 {"16_9"}else{"16_10"}
+    }
+    pub(super) fn layout_file(self,w:i32,h:i32)->String {
+        let kind=if self==Self::Mobile {"mobile"}else{"desktop"};
+        format!("assets/layouts/prototype_{}_compact_{}.json",kind,self.aspect(w,h))
+    }
+}
+pub(super) fn display_layout_path()->std::path::PathBuf {window_size_path().with_file_name("display_layout.txt")}
+pub(super) fn read_display_layout()->DisplayLayout {
+    if std::fs::read_to_string(display_layout_path()).is_ok_and(|s|s.trim()=="mobile"){DisplayLayout::Mobile}else{DisplayLayout::Desktop}
+}
+pub(super) fn save_display_layout(mode:DisplayLayout){
+    let path=display_layout_path();
+    if let Some(parent)=path.parent(){let _=std::fs::create_dir_all(parent);}
+    let _=std::fs::write(path,if mode==DisplayLayout::Mobile {"mobile"}else{"desktop"});
+}
+pub(super) fn selected_layout_file()->String {
+    let mode=read_display_layout();
+    let (w,h)=read_selected_resolution().unwrap_or(if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)});
+    mode.layout_file(w,h)
+}
