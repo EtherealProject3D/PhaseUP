@@ -1,4 +1,6 @@
 // Desktop reads editable layout overrides; Android embeds the saved build layout.
+#[path = "designer_gameplay.rs"]
+pub(super) mod designer;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -137,13 +139,8 @@ pub(super) fn editor_items_for(g:&crate::Game)->Vec<(String,Rect)>{
     }
     items
 }
-pub(super) fn default_rect(name:&str)->Option<Rect>{
-    editor_items().into_iter().find(|(key,_)|*key==name).map(|(_,r)|r)
-}
-pub(super) fn at(name:&str,default:Rect)->Rect{rect(name,default)}
-
 pub(super) fn rect(name:&str, default:Rect)->Rect {
-    record(name,default);
+    let default=designer::mapped(name).unwrap_or(default); record(name,default);
     OVERRIDES.with(|m|m.borrow().get(name).copied().unwrap_or(default))
 }
 
@@ -185,7 +182,7 @@ fn staging_descendant(parent:&str,child:&str)->bool {
 }
 
 #[cfg(not(target_os="android"))]
-pub(super) fn save()->Result<(),String>{
+pub(super) fn save()->Result<(),String>{ if designer::active(){return Err("Save this layout in the standalone UI Designer".into());}
     let path="assets/layouts/game_16_10.json";
     let mut root=std::fs::read_to_string(path).ok()
         .and_then(|s|parse_layout(&s))
@@ -200,7 +197,7 @@ pub(super) fn save()->Result<(),String>{
 
 // Remove every saved and in-memory layout override, retaining only renderer defaults.
 #[cfg(not(target_os="android"))]
-pub(super) fn clear_all()->Result<(),String>{
+pub(super) fn clear_all()->Result<(),String>{ if designer::active(){return Err("Reset this layout in the standalone UI Designer".into());}
     let path="assets/layouts/game_16_10.json";
     let root=serde_json::json!({"schema_version":1,"canvas":{"width":1920,"height":1200},"elements":{}});
     std::fs::create_dir_all("assets/layouts").map_err(|e|e.to_string())?;
@@ -220,19 +217,25 @@ fn parse_layout(data:&str)->Option<serde_json::Value>{
 }
 
 pub(super) fn reload(){
-    let mut values=HashMap::new();
+    crate::menu_runtime::reload();
+    let mut values=HashMap::new(); designer::load(None);
     #[cfg(not(target_os="android"))]
-    let data=std::fs::read_to_string("assets/layouts/game_16_10.json").ok();
+    let data=std::fs::read_to_string(crate::selected_layout_file()).ok()
+        .or_else(||std::fs::read_to_string("assets/layouts/game_16_10.json").ok());
     #[cfg(target_os="android")]
-    let data=Some(include_str!("../assets/layouts/game_16_10.json").to_owned());
+    let data=Some(match crate::selected_layout_file().as_str(){
+"assets/layouts/prototype_mobile_compact_20_9.json"=>include_str!("../assets/layouts/prototype_mobile_compact_20_9.json"),
+"assets/layouts/prototype_mobile_compact_19_5_9.json"=>include_str!("../assets/layouts/prototype_mobile_compact_19_5_9.json"),
+_=>include_str!("../assets/layouts/game_16_10.json")}.to_owned());
     if let Some(data)=data {
-        if let Some(json)=parse_layout(&data) {
+        if let Some(json)=parse_layout(&data) { designer::load(Some(&json));
             if let Some(elements)=json.get("elements").and_then(|v|v.as_object()) {
                 for (name,element) in elements {
                     let read=|field:&str| element.get(field).and_then(|v|v.as_f64()).map(|n|n as f32);
                     if let (Some(x),Some(y),Some(w),Some(h))=(read("x"),read("y"),read("width"),read("height")) {
                         if [x,y,w,h].iter().all(|n|n.is_finite()) && w>0.0 && h>0.0 {
                             values.insert(name.clone(),Rect{x,y,w,h});
+
                         }
                     }
                 }
@@ -254,7 +257,7 @@ pub(super) fn pile_offset(discard:bool,label:bool)->(f32,f32) {
     (r.x,r.y)
 }
 // Shared by rendering, click/drag hitboxes, and card animation endpoints.
-pub(super) fn pile_position(discard:bool)->(f32,f32) {
+pub(super) fn pile_position(discard:bool)->(f32,f32) { if let Some(r)=designer::element(if discard{"discard"}else{"draw"}){let h=r.h.min(r.w/0.68);return (r.x+(r.w-h*0.68)/2.,r.y+(r.h-h)/2.);}
     let (dx,dy)=pile_offset(discard,false);
     let y=if crate::active_theme()==crate::Theme::Futuristic {460.}else{485.};
     let r=rect(if discard {"discard_pile"}else{"draw_pile"},Rect{x:if discard {1048.+dx}else{760.+dx},y:y+dy,w:112.,h:150.});
@@ -299,7 +302,7 @@ pub(super) fn compact_hand(count:usize,area:Rect)->(f32,f32,f32){
     let row_width=if count==0 {0.}else{width+step*(count-1) as f32};
     (area.x+(area.w-row_width)/2.,width,step)
 }
-pub(super) fn hand_layout(count:usize)->(Rect,f32){
+pub(super) fn hand_layout(count:usize)->(Rect,f32){ if let Some(row)=designer::hand(count){return row;}
     let panel=rect("hand_panel",Rect{x:12.,y:971.,w:1896.,h:217.});
     let width=(1872./count.max(1) as f32).min(75.);
     let step=if count>1 {((1872.-width)/(count-1) as f32).min(81.)}else{0.};
@@ -315,7 +318,7 @@ pub(super) fn centered_staging(count:usize,area:Rect)->(f32,f32){
     (area.x+(area.w-row_width).max(0.)/2.,step)
 }
 pub(super) fn staging_row(group:usize,count:usize,area:Rect,requirements:usize)->(f32,f32){
-    let (start,step)=centered_staging(count,area);
+    if designer::active(){let key=format!("{}_{}_group_{}",if designer::separate(){"staging"}else{"phase"},requirements,group+1);let (r,step)=designer::row(&key,area,count);return (r.x,step);} let (start,step)=centered_staging(count,area);
     let key=stage_key(group,requirements,"_row_offset");
     // Older saved individual cards were anchored to the left of the area.
     let old=rect(&key,Rect{x:area.x,y:area.y,w:57.,h:1.});
@@ -332,7 +335,7 @@ pub(super) fn staging_row(group:usize,count:usize,area:Rect,requirements:usize)-
     (start,step)
 }
 pub(super) fn staging_card(group:usize,index:usize,count:usize,amount:usize)->Rect {
-    let width=if count==1 {800.}else{680.};
+    if designer::active(){let key=format!("{}_{}_group_{}",if designer::separate(){"staging"}else{"phase"},count,group+1); if let Some(area)=designer::element(&key){let (r,step)=designer::row(&key,designer::content(area),amount);return Rect{x:r.x+index as f32*step,..r};}} let width=if count==1 {800.}else{680.};
     let left=(1920.-(count as f32*width+count.saturating_sub(1) as f32*6.))/2.;
     let panel=rect(&stage_key(group,count,""),Rect{x:left+group as f32*(width+6.),y:853.,w:width,h:117.});
     let area=rect(&stage_key(group,count,"_cards"),Rect{x:panel.x+10.,y:panel.y+29.,w:panel.w-20.,h:76.});

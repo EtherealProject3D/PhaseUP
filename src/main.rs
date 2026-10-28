@@ -10,6 +10,9 @@ const WHITEISH: Color = Color::new(0.92, 0.96, 1., 1.);
 const MUTED: Color = Color::new(0.60, 0.68, 0.78, 1.);
 
 mod card_model;
+mod clean_cards;
+mod menu_model;
+mod menu_runtime;
 use card_model::{Card, Kind};
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -39,6 +42,8 @@ use animations::*;
 mod ui;
 use ui::*;
 mod layout;
+mod designer_flights;
+#[cfg(feature="developer-tools")] mod layout_smoke;
 mod layout_editor;
 mod workshop;
 mod theme;
@@ -190,8 +195,8 @@ impl Game {
         sorted.sort_by_key(|c|sort_key(*c,self.sort));
         let (hand_slot,spacing)=layout::hand_layout(sorted.len());
         let index=sorted.iter().position(|c|c.id==id).unwrap_or(sorted.len().saturating_sub(1));
-        let from_x=hand_slot.x+index as f32*spacing;
-        let from_y=hand_slot.y;
+        let from_x=layout::designer::hand_card(sorted.len(),index).map(|r|r.x).unwrap_or(hand_slot.x+index as f32*spacing);
+        let from_y=layout::designer::hand_card(sorted.len(),index).map(|r|r.y).unwrap_or(hand_slot.y);
         let card=Self::remove_ids(&mut self.players[0].hand,&[id]);
         if card.is_empty(){return;}
         let c=card[0];
@@ -235,11 +240,13 @@ fn player_color(i:usize)->Color {
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wireframe:bool){
+    set_game_view(true);
+    layout::designer::set_phase(g.players[0].phase);
     set_board_input_blocked(g.pending_discard.is_some());
     if !wireframe {layout::begin_scene();}
     set_default_camera();
     clear_background(active_theme().background());
-    let sw=1920.0;let sh=game_canvas_height();
+    let sw=game_canvas_width();let sh=game_canvas_height();
     if wireframe {
         // Isolate logical geometry: no card art, neon textures, or game labels.
         // Use the exact same F4 geometry renderer for a direct comparison.
@@ -269,6 +276,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     set_camera(&camera);
     if active_theme()==Theme::Futuristic {neon_game_background(sw,sh);}
     expire_human_flights(g);
+    layout::designer::draw_panel_backgrounds();
+    layout::designer::draw_phase_status(g.players[0].laid,g.staged_phase_ready());
     if active_theme()==Theme::Futuristic {
         let header=layout::rect("upper_banner",layout::Rect{x:12.0,y:8.0,w:sw-24.0,h:48.0});
         neon_upper_banner(header.x,header.y,header.w,header.h);
@@ -300,23 +309,23 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if active_theme()==Theme::Futuristic {
         for i in 0..3 {let panel=layout::cpu_panel(i+1);neon_cpu_panel(panel.x,panel.y,panel.w,panel.h,if g.stage==Stage::Cpu && g.turn==i+1 {1.0}else{0.0},PHASES[g.players[i+1].phase.min(PHASES.len()-1)].len()==1);}
     }
-    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {layout::cpu_panel(i).x+20.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
+    for i in 1..4 {let x=if active_theme()==Theme::Futuristic {layout::cpu_panel(i).x+20.0}else{28.+(i-1) as f32*(sw-50.)/3.};let p=&g.players[i];if g.stage==Stage::Cpu&&g.turn==i && !layout::designer::active() && !(active_theme()==Theme::Futuristic && has_neon_cpu_panel()){draw_rectangle_lines(16.0+(i-1) as f32*632.0,72.0,626.0,376.0,3.0,YELLOW);}let cpu_status=format!("Score {}{}  |  {} / {}",p.score,if p.laid{"  - LAID"}else{""},g.cpu_roster[i-1].difficulty.name(),g.cpu_roster[i-1].style.name());
         let status_x=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&cpu_status,16))/2.0}else{x+12.0};
-        editable_label("cpu_score_text",&cpu_status,status_x,124.,16.,MUTED);
+        if !layout::designer::active(){editable_label("cpu_score_text",&cpu_status,status_x,124.,16.,MUTED);}
         // Face-down fanned hand: the visible backs represent the actual hand count.
-        let count=p.hand.len();
+        let count=if layout::designer::show_cpu(){p.hand.len()}else{0};
         let card_w=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){72.6}else{54.0};let card_h=if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){90.2}else{70.0};
         let step=if count>1 {if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){26.0}else{column_hand_width(count,card_w)/(count-1) as f32}}else{0.0};
         for k in 0..count {
             if g.cpu_draw_flight.as_ref().is_some_and(|a|a.player==i && a.card_id==p.hand[k].id) {continue;}
             let back=layout::rect(&format!("cpu_{i}_hand_card_{}",k+1),layout::Rect{x:x+10.+k as f32*step,y:if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){153.}else{162.},w:card_w,h:card_h});
-            cpu_card_back(back.x,back.y,back.w,back.h);
+            let back=if let Some(area)=layout::designer::element(&format!("cpu_{i}_hand")){let (r,step)=layout::designer::row(&format!("cpu_{i}_hand"),area,count);layout::Rect{x:r.x+k as f32*step,..r}}else{back}; cpu_card_back(back.x,back.y,back.w,back.h);
         }
         // Identify the player directly beneath their face-down hand.
         let name=g.cpu_name(i);
-        editable_label("cpu_name_text",&name,x+12.0,146.,18.,player_color(i));
+        if !layout::designer::label(&format!("cpu_{i}"),&format!("{name} | Phase {} | {} cards | Score {}",p.phase.min(9)+1,p.hand.len(),p.score),22.,player_color(i)){editable_label("cpu_name_text",&name,x+12.0,146.,18.,player_color(i));}
         let name_width=menu_text_width(&name,18);
-        editable_label("cpu_hand_status_text",&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+12.0+name_width,146.,18.,WHITEISH);
+        if !layout::designer::active(){editable_label("cpu_hand_status_text",&format!("  |  Phase {}  |  {} cards",p.phase.min(9)+1,p.hand.len()),x+12.0+name_width,146.,18.,WHITEISH);}
     }
     let table_y=241.;
     let mut hit_click=None;
@@ -325,7 +334,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         // Unlaid phases retain dim silhouettes for every player, including you.
         // The human placeholder is separate from the interactive staging area.
         // These placeholders are decorative, not valid hit targets.
-        if !p.laid {
+        if !p.laid { if i==0 && layout::designer::active() && !layout::designer::separate(){continue;}
             let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
             let y=if i==0 {sh-532.0}else{table_y+22.0};
             if i==0 {editable_label(if PHASES[p.phase.min(9)].len()==1 {"human_single_unlaid_title"}else{"human_double_unlaid_title"},"YOUR LAID PHASE",x,sh-544.0,17.0,player_color(i));}
@@ -333,18 +342,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let group_count=PHASES[phase].len();
             let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(group_count).x,layout::human_phase_panel(group_count).y,layout::human_phase_panel(group_count).w,layout::human_phase_panel(group_count).h,group_count==1);
             for j in 0..group_count {
-                let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-                let base_x=x+j as f32*if i==0 {403.0}else{312.0};
                 let group_rect=if i==0 {layout::human_phase_group(j,group_count)}else{layout::cpu_group(i,j,group_count,y)};
                 let gx=group_rect.x;
                 let y=group_rect.y;
                 let width=group_rect.w;
                 if !player_art && !(active_theme()==Theme::Futuristic && i>0 && has_neon_cpu_panel()) {
-                    draw_rectangle(gx,y,width,116.0,Color::new(0.075,0.105,0.145,1.0));
-                    draw_rectangle_lines(gx,y,width,116.0,1.0,Color::new(0.22,0.29,0.35,1.0));
+                    draw_rectangle(gx,y,width,group_rect.h,Color::new(0.075,0.105,0.145,1.0));
+                    draw_rectangle_lines(gx,y,width,group_rect.h,1.0,Color::new(0.22,0.29,0.35,1.0));
                 }
                 if !player_art && active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
-                let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
+                let desc=requirement_label(phase,j);
                 // Single-requirement phases occupy the full CPU frame: center
                 // their labels across both decorative lower panels.
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
@@ -365,8 +372,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(p.table.len()).x,layout::human_phase_panel(p.table.len()).y,layout::human_phase_panel(p.table.len()).w,layout::human_phase_panel(p.table.len()).h,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
-            let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-            let base_x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let group_rect=if i==0 {layout::human_phase_group(j,p.table.len())}else{layout::cpu_group(i,j,p.table.len(),yy)};
             let x=group_rect.x;
             let yy=group_rect.y;
@@ -374,10 +379,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let selected_card=if g.selected.len()==1 {g.players[0].hand.iter().find(|c|c.id==g.selected[0]).copied()}else{None};
             let can_place=g.stage==Stage::Play&&g.players[0].laid&&selected_card.is_some_and(|c|can_hit(group,c,p.phase,j));
             if !player_art && !(i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel()) {
-                draw_rectangle(x,yy,width,116.0,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
-                draw_rectangle_lines(x,yy,width,116.0,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
+                draw_rectangle(x,yy,width,group_rect.h,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
+                draw_rectangle_lines(x,yy,width,group_rect.h,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             }
-            let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
+            let desc=requirement_label(p.phase,j);
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 {let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
@@ -394,7 +399,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let (mx,my)=game_mouse();
                 if !is_mouse_button_down(MouseButton::Left)
                     || (mx-sx).abs()+(my-sy).abs()<=12.0
-                    || !inside(x,yy,width,116.0) || !g.players[0].laid
+                    || !inside(x,yy,width,group_rect.h) || !g.players[0].laid
                     || g.stage!=Stage::Play {return None;}
                 let card=g.players[0].hand.iter().find(|c|c.id==id).copied()?;
                 if !can_hit(group,card,p.phase,j){return None;}
@@ -409,17 +414,18 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // Keep card artwork at its normal size. As the group grows, reduce
             // the horizontal stride rather than shrinking the cards. The final
             // card always fits inside the group frame.
-            let inset=if i==0 && player_art {16.0}
-                else if i>0 && has_neon_cpu_panel(){if j==0 {6.0}else{2.0}}
-                else {6.0};
             // The neon panel has a thick decorative frame and the card artwork
             // visually extends beyond its nominal 55px hitbox. Reserve equal
             // safe margins on both sides before distributing the stack.
             let card_area=if i>0 {layout::cpu_card_area(group_rect,has_neon_cpu_panel())}else{layout::human_card_area(group_rect,p.table.len())};
+            let style_key=if i==0{format!("phase_{}_group_{}",p.table.len(),j+1)}else{format!("cpu_{i}_laid_{}",j+1)};
+            let styled=layout::designer::row(&style_key,layout::designer::content(group_rect),shown_len);
+            let (card_w,card_h)=if layout::designer::active(){(styled.0.w,styled.0.h)}else{(card_w,card_h)};
+            let card_area=if layout::designer::active(){layout::Rect{x:styled.0.x,y:styled.0.y,w:card_w+styled.1*shown_len.saturating_sub(1) as f32,h:card_h}}else{card_area};
             let usable_w=card_area.w.max(card_w);
             let available=(usable_w-card_w).max(0.0);
             let step=if shown_len>1 {
-                (available/(shown_len-1) as f32).min(card_w+1.0)
+                if layout::designer::active(){styled.1}else{(available/(shown_len-1) as f32).min(card_w+1.0)}
             }else{0.0};
             let stack_w=card_w+shown_len.saturating_sub(1) as f32*step;
             // Center CPU stacks against the actual group/artwork center, not
@@ -444,7 +450,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let cy=card_area.y;
                 let card_pos=layout::rect(&format!("player_{i}_{}_laid_{}_card_{}",if p.table.len()==1 {"single"}else{"double"},j+1,k+1),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
                 let (cx,cy)=(card_pos.x,card_pos.y);
-                if active_theme()==Theme::Futuristic {
+                if active_theme()==Theme::Modern {
+                    clean_card_face(*card,cx,cy,card_pos.w,card_pos.h,true,false);
+                } else if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_pos.w,card_pos.h,false);
                 } else {
                     let color=color_for(card.kind);
@@ -452,15 +460,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
                     draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
                     let value=card_text(card.kind);
-                    editable_label("plain_card_value",&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                    let number_size=layout::designer::card_number_size(28.);
+                    editable_label("plain_card_value",&value,cx+8.0,cy+8.0+number_size,number_size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
                 }
             }
             if can_place && active_theme()!=Theme::Futuristic {editable_label("hit_instruction","CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}
-            if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,116.0) {
+            if is_mouse_button_pressed(MouseButton::Left)&&inside(x,yy,width,group_rect.h) {
                 hit_click=Some((i,j));
             }
             // Dropping a dragged hand card on a laid group plays it directly.
-            if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,116.0) {
+            if is_mouse_button_released(MouseButton::Left)&&inside(x,yy,width,group_rect.h) {
                 if let Some((id,sx,sy))=g.drag {
                     let (mx,my)=game_mouse();
                     if (mx-sx).abs()+(my-sy).abs()>12.0 {
@@ -474,8 +483,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     // Larger, layered piles share a stable hitbox with drag/drop and animations.
     let (deck_x,pile_y)=layout::pile_position(false);
     let (discard_x,discard_y)=layout::pile_position(true);
-    let pile_w=112.0;
-    let pile_h=150.0;
+    let pile_w=layout::designer::element("draw").map(|r|r.w.min(r.h*0.68)).unwrap_or(112.0);
+    let pile_h=layout::designer::element("draw").map(|r|r.h.min(r.w/0.68)).unwrap_or(150.0);
     let (draw_tx,draw_ty)=layout::pile_offset(false,true);
     let (count_tx,count_ty)=layout::draw_count_offset();
     let (discard_tx,discard_ty)=layout::pile_offset(true,true);
@@ -485,6 +494,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if active_theme()==Theme::Futuristic && neon_draw_back(deck_x,pile_y,pile_w,pile_h) {
         let count_text=format!("{} left",g.deck.len());
         editable_label("draw_remaining_count",&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+pile_h+22.0+count_ty,17.0,WHITEISH);
+    } else if active_theme()==Theme::Modern {
+        for layer in (0..g.deck.len().clamp(1,3)).rev(){let offset=layer as f32*3.;clean_card_back(deck_x+offset,pile_y+offset,pile_w,pile_h,true);}
+        if g.stage==Stage::Draw {draw_rectangle_lines(deck_x,pile_y,pile_w,pile_h,2.,YELLOW);}
+        editable_label("draw_card_text","DRAW",deck_x,pile_y+pile_h*0.55,22.,WHITEISH);
+        editable_label("draw_count_text",&format!("{} left",g.deck.len()),deck_x,pile_y+pile_h*0.7,17.,WHITEISH);
     } else {
     // Offset layers expose the thickness of the remaining draw deck.
     let layers=g.deck.len().min(3);
@@ -531,7 +545,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     if !g.discard.is_empty() && g.stage==Stage::Draw&&is_mouse_button_pressed(MouseButton::Left)&&inside(discard_x,discard_y,pile_w,pile_h){g.pile_drag=Some((true,m.0,m.1));}
     // Match the board artwork while keeping history inside the frame's safe area.
-    if show_moves {
+    if show_moves && !layout::designer::active() {
         let log=layout::rect("recent_moves_panel",layout::Rect{x:1538.,y:480.,w:374.,h:300.});
         let (log_x,log_y)=(log.x,log.y);
         if active_theme()==Theme::Futuristic {neon_compact_panel(log_x,log_y,log.w,log.h);}
@@ -582,7 +596,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let mut staged_click=None;
     let mut stage_drop=None;
     let mut staged_reorder=None;
-    for group in 0..groups.len() {
+    for group in 0..if layout::designer::active() && !layout::designer::separate() && g.players[0].laid {0}else{groups.len()} {
         let slot=layout::rect(&layout::stage_key(group,groups.len(),""),layout::Rect{x:stage_left+group as f32*(stage_w+6.0),y:stage_y,w:stage_w,h:117.});
         let x=slot.x;
         let y=slot.y;
@@ -601,7 +615,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        let label=format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""});
+        let label=requirement_label(g.players[0].phase,group);
         let label_key=layout::staging_label_key(group,groups.len(),ready);
         editable_label_id(&label_key,&label,x+(stage_w-menu_text_width(&label,16))/2.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         let dragged_id=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
@@ -622,7 +636,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         for (i,card) in visible_cards.iter().enumerate() {
             let shifted=i+usize::from(insert_at.is_some_and(|slot|i>=slot));
             let cx=row_start+shifted as f32*card_step;
-            let card_pos=layout::rect(&layout::stage_key(group,groups.len(),&format!("_card_{}",shifted+1)),layout::Rect{x:cx,y:cards_area.y,w:50.0,h:cards_area.h});
+            let card_pos=if layout::designer::active(){layout::staging_card(group,shifted,groups.len(),shown_count)}else{layout::rect(&layout::stage_key(group,groups.len(),&format!("_card_{}",shifted+1)),layout::Rect{x:cx,y:cards_area.y,w:50.0,h:cards_area.h})};
             let cx=card_pos.x;
             if cx+51.0<x+stage_w {
                 let floating=g.staged_drag.is_some_and(|(id,sx,sy)|{
@@ -638,7 +652,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         }
         if g.stage==Stage::Play&&is_mouse_button_released(MouseButton::Left) && inside(x,y,stage_w,stage_h) {
             let incoming=g.drag.is_some_and(|(id,_,_)|!g.staged[group].contains(&id));
-            let (drop_start,drop_step)=layout::centered_staging(cards.len()+usize::from(incoming),cards_area);
+            let (drop_start,drop_step)=layout::staging_row(group,cards.len()+usize::from(incoming),cards_area,groups.len());
             let drop_index=(((game_mouse().0-drop_start+drop_step/2.)/drop_step.max(0.001)).floor().max(0.)) as usize;
             stage_drop=Some((group,drop_index));
             if let Some((id,sx,sy))=g.staged_drag {
@@ -646,7 +660,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 if (mx-sx).abs()+(my-sy).abs()>10.0 {
                     let source=g.staged.iter().position(|bucket|bucket.contains(&id));
                     let amount=cards.len()+usize::from(source!=Some(group));
-                    let (drop_start,drop_step)=layout::centered_staging(amount,cards_area);
+                    let (drop_start,drop_step)=layout::staging_row(group,amount,cards_area,groups.len());
                     let target_index=(((mx-drop_start+drop_step/2.)/drop_step.max(0.001)).floor().max(0.)) as usize;
                     staged_reorder=Some((id,group,target_index));
                 }
@@ -671,7 +685,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let moved=(mx-sx).abs()+(my-sy).abs()>10.0;
             if !moved {
                 staged_click=Some(id);
-            } else if inside(12.0,sh-175.0-72.0,sw-24.0,247.0) {
+            } else if {let r=layout::rect("hand_panel",layout::Rect{x:12.,y:sh-247.,w:sw-24.,h:247.});inside(r.x,r.y,r.w,r.h)} {
                 // Dragging a staged card back into the hand unstages it,
                 // without discarding it or changing the player's selection.
                 g.unstage_card(id);
@@ -681,14 +695,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     if let Some((id,group,index))=staged_reorder {g.move_staged_card(id,group,index);}
     if let Some(id)=staged_click {g.unstage_card(id);}
-    if g.stage==Stage::Draw && g.turn_count==1 {
-        for group in 0..groups.len(){
-            let slot=layout::rect(&layout::stage_key(group,groups.len(),""),layout::Rect{x:stage_left+group as f32*(stage_w+6.),y:stage_y,w:stage_w,h:117.});
-            if active_theme()!=Theme::Futuristic {draw_rectangle(slot.x,slot.y,slot.w,117.,Color::new(0.04,0.07,0.10,0.72));}
-            let t="DRAW FIRST";let tw=menu_text_width(t,24);
-            editable_label(if groups.len()==1 {"staging_single_draw_first"}else{"staging_double_draw_first"},t,slot.x+(slot.w-tw)/2.,slot.y+67.,24.,MUTED);
-        }
-    }
     let hand_panel=layout::rect("hand_panel",layout::Rect{x:12.,y:sh-229.,w:sw-24.,h:217.});
     let py=hand_panel.y+72.0;
     if active_theme()==Theme::Futuristic {
@@ -710,26 +716,26 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let p=&g.players[0];
     let hand_info=format!("YOUR HAND  |  Phase {}: {}  |  Score {}",p.phase.min(9)+1,phase_name(p.phase),p.score);
     let hand_info_width=menu_text_width(&hand_info,21);
-    editable_label("hand_heading",&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);
+    if !layout::designer::label("hand",&hand_info,22.,WHITEISH){editable_label("hand_heading",&hand_info,(sw-hand_info_width)/2.0,py-46.0,21.0,WHITEISH);}
     let sorts=[(SortMode::Runs,"RUNS"),(SortMode::Colors,"COLORS"),(SortMode::Sets,"SETS")];
     for (i,(mode,name)) in sorts.iter().enumerate() {
         let x=(sw-321.0)/2.0+i as f32*109.0;
         let sort_y=sh-51.0;
-        if editable_button("sort_button",name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
-        if g.sort==*mode && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
+        if editable_button(if layout::designer::active(){["sort_runs","sort_colors","sort_sets"][i]}else{"sort_button"},name,x,sort_y,103.0,28.0,true) {g.sort=*mode;}
+        if g.sort==*mode && active_theme()!=Theme::Futuristic && !layout::designer::active() {draw_rectangle_lines(x,sort_y,103.0,28.0,2.0,ACCENT);}
     }
     let mut hand:Vec<Card>=p.hand.iter().copied().filter(|c|!g.staged.iter().any(|v|v.contains(&c.id))).collect();
     hand.sort_by_key(|c|sort_key(*c,g.sort));
     let (hand_slot,spacing)=layout::hand_layout(hand.len());
-    let (start,card_y,w)=(hand_slot.x,hand_slot.y,hand_slot.w);
+    let (start,card_y,w)=(hand_slot.x,hand_slot.y,hand_slot.w); let hand_h=hand_slot.h;
     // Hover lifts a card without changing its selection or gameplay state.
     let (hand_mx,hand_my)=game_mouse();
     let hovered_hand_card=if g.drag.is_none() {
         hand.iter().enumerate().rev().find(|(i,c)| {
             !g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) && {
-                let x=start+*i as f32*spacing;
-                let selected_lift=if active_theme()!=Theme::Futuristic && g.selected.contains(&c.id){15.0}else{0.0};
-                hand_mx>=x&&hand_mx<=x+w&&hand_my>=card_y-selected_lift-18.0&&hand_my<=card_y+105.0
+                let slot=layout::designer::hand_card(hand.len(),*i); let x=slot.map(|r|r.x).unwrap_or(start+*i as f32*spacing);let card_y=slot.map(|r|r.y).unwrap_or(card_y);
+                let selected_lift=selected_card_lift(g.selected.contains(&c.id));
+                hand_mx>=x&&hand_mx<=x+w&&hand_my>=card_y-selected_lift-18.0&&hand_my<=card_y+hand_h
             }
         }).map(|(_,c)|c.id)
     } else {None};
@@ -737,9 +743,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     // Retarget from its current visual height when the hover changes mid-flight.
     let now=get_time();
     let ease=|t:f32| t*t*(3.0-2.0*t);
+    if layout::designer::mobile(){g.hover_lifts.clear();}
     g.hover_lifts.retain(|(id,_,_,_)|hand.iter().any(|c|c.id==*id));
     for c in &hand {
-        let target=if hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && (g.selected.contains(&c.id) || g.drag.is_some_and(|(id,_,_)|id==c.id && is_mouse_button_down(MouseButton::Left)))){18.0}else{0.0};
+        let target=if !layout::designer::mobile() && (hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && (g.selected.contains(&c.id) || g.drag.is_some_and(|(id,_,_)|id==c.id && is_mouse_button_down(MouseButton::Left))))){18.0}else{0.0};
         if let Some(state)=g.hover_lifts.iter_mut().find(|state|state.0==c.id) {
             if (state.2-target).abs()>0.01 {
                 let t=((now-state.3)/0.10).clamp(0.0,1.0) as f32;
@@ -752,7 +759,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     }
     let mut toggle=None;
     for (i,c) in hand.iter().enumerate() {
-        let x=start+i as f32*spacing;
+        let slot=layout::designer::hand_card(hand.len(),i); let x=slot.map(|r|r.x).unwrap_or(start+i as f32*spacing);let card_y=slot.map(|r|r.y).unwrap_or(card_y);
         if g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) {continue;}
         let is_dragging=g.drag.is_some_and(|(id,sx,sy)| {
             let (mx,my)=game_mouse();
@@ -765,21 +772,21 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         }).unwrap_or(0.0);
         let lifted_y=card_y-hover_lift;
         if is_dragging {
-            draw_rectangle(x,card_y,w,105.0,Color::new(0.24,0.32,0.40,0.45));
-            if active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,card_y,w,105.0,1.0,MUTED);}
+            draw_rectangle(x,card_y,w,hand_h,Color::new(0.24,0.32,0.40,0.45));
+            if active_theme()!=Theme::Futuristic {draw_rectangle_lines(x,card_y,w,hand_h,1.0,MUTED);}
         } else {
-            if card_ui(*c,x,lifted_y,w,105.0,selected){toggle=Some(c.id);}
+            if card_ui(*c,x,lifted_y,w,hand_h,selected){toggle=Some(c.id);}
             if g.drawn_card==Some(c.id) && active_theme()!=Theme::Futuristic{
-                let y=lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0};
-                draw_rectangle_lines(x-3.0,y-3.0,w+6.0,111.0,4.0,YELLOW);
+                let y=lifted_y-selected_card_lift(selected);
+                draw_rectangle_lines(x-3.0,y-3.0,w+6.0,hand_h+6.0,4.0,YELLOW);
             }
         }
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0},w,105.0){
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-selected_card_lift(selected),w,hand_h){
             g.drag=Some((c.id,game_mouse().0,game_mouse().1));
         }
     }
-    // Clicking a hand card toggles only that card; phase staging still supports multiple cards.
-    if let Some(id)=toggle {if g.selected.contains(&id){g.selected.clear();}else{g.selected=vec![id];}}
+    // Mobile taps toggle one card without clearing the other selected cards.
+    if let Some(id)=toggle {g.toggle_hand_selection(id);}
     if is_mouse_button_released(MouseButton::Left) {
         let (mx,my)=game_mouse();
         if let Some((id,ox,oy))=g.drag {
@@ -840,11 +847,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let control_x=(stage_left-control_w)/2.0;
     let control_y=stage_y+2.0;
     let has_staged=g.staged.iter().any(|group|!group.is_empty());
-    if groups.len()==1 {
+    if !layout::designer::active() && groups.len()==1 {
         if editable_button("clear_single_button","CLEAR",control_x,control_y+39.0,control_w,control_h,!g.staged[0].is_empty()) {
             g.staged[0].clear();
         }
-    } else {
+    } else if !layout::designer::active() {
         if editable_button("clear_all_button","CLEAR ALL",control_x,control_y,control_w,control_h,has_staged) {
             g.staged=[vec![],vec![]];
         }
@@ -859,11 +866,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     let discard_y=sh-51.0;
     let discard_width=103.0;
     // Mirror the right discard button across the center of the game board.
-    for discard_x in [1920.0-1250.0-discard_width,1250.0] {
+    for discard_x in [1920.0-1250.0-discard_width,1250.0].into_iter().take(if layout::designer::active(){1}else{2}) {
         if editable_button("discard_button","DISCARD",discard_x,discard_y,discard_width,28.0,discard_ready){
             g.discard_selected();
         }
-        if discard_ready && active_theme()!=Theme::Futuristic {
+        if discard_ready && active_theme()!=Theme::Futuristic && !layout::designer::active() {
             draw_rectangle_lines(discard_x,discard_y,discard_width,28.0,3.0,YELLOW);
         }
     }
@@ -906,6 +913,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             }
         }
     }
+    layout::designer::draw_panel_borders();
     // Keep the board visible until the winning discard reaches the pile.
     // The round result is already calculated, but its dialog waits for the flight.
     let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();
@@ -1027,7 +1035,7 @@ fn draw_cpu_bounds(g:&Game) {
                         draw_rectangle_lines(stack_x,cy,stack_w,84.0,2.0,orange);
                         draw_text(&format!("STACK x={:.0} w={:.0}",stack_x,stack_w),stack_x,cy+98.0,13.0,orange);
                     }
-                    for (k,card) in cards.iter().enumerate(){
+                    for k in 0..cards.len(){
                         let default=layout::Rect{x:stack_x+k as f32*step,y:cy,w:card_w,h:84.0};
                         let actual=default;
                         draw_rectangle_lines(actual.x,actual.y,actual.w,actual.h,1.0,orange);
@@ -1065,39 +1073,37 @@ fn debug_overlay(g:&Game) {
 
 #[derive(Clone,Copy,PartialEq,Eq)]
 enum MenuScreen { Home, Settings, DeveloperTools, UiWorkshop, HowToPlay, Rules, ConfirmNew, Playing, Resume }
-fn menu_button(title:&str,y:f32)->bool {
-    let (mx,my)=game_mouse();
-    let hovered=mx>=730.0&&mx<=1190.0&&my>=y&&my<=y+64.0;
-    themed_button(730.0,y,460.0,64.0,hovered);
-    // Long theme names must fit inside the standard-width menu buttons.
-    let size=if menu_text_width(title,28)>420.0 {23}else{28};
-    let w=menu_text_width(title,size);
-    menu_label(title,960.0-w/2.0,y+42.0,size as f32,if hovered && active_theme()!=Theme::Futuristic {BG} else {WHITEISH});
-    hovered&&is_mouse_button_pressed(MouseButton::Left)
-}
+fn menu_button(id:&str,title:&str,y:f32)->bool {menu_runtime::button(id,title,y)}
+fn menu_page_key(screen:MenuScreen,has_game:bool)->&'static str{match screen {
+    MenuScreen::Home=>if has_game{"home_resume"}else{"home"},MenuScreen::Settings=>if has_game{"settings_resume"}else{"settings"},
+    MenuScreen::ConfirmNew=>"confirm_new",MenuScreen::HowToPlay=>"how_to_play",MenuScreen::Rules=>"rules",MenuScreen::DeveloperTools=>"developer_tools",MenuScreen::UiWorkshop=>"ui_workshop",_=>"home",
+}}
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
+    set_game_view(false);
     let screen=if !cfg!(feature="developer-tools") && matches!(screen,MenuScreen::DeveloperTools|MenuScreen::UiWorkshop) {MenuScreen::Settings}else{screen};
+    menu_runtime::begin(menu_page_key(screen,has_game));
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1920.0).min(ph/game_canvas_height());
-    set_camera(&Camera2D{target:vec2(960.0,game_canvas_height()/2.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    let scale=(pw/game_canvas_width()).min(ph/game_canvas_height());
+    set_camera(&Camera2D{target:vec2(game_canvas_width()/2.0,game_canvas_height()/2.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
     menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
-        if button("BACK TO MENU",730.0,1028.0,460.0,60.0,true){return Some(MenuScreen::Home);}
+        if menu_button("back","BACK TO MENU",1028.0){return Some(MenuScreen::Home);}
         return None;
     }
     let panel_h=880.0;
     let panel_y=(game_canvas_height()-panel_h)/2.0;
     let submenu_offset=panel_y-190.0;
-    panel_decoration(620.0,panel_y,680.0,panel_h);
+    let panel=menu_runtime::bounds("panel",menu_model::Bounds{x:620.,y:panel_y,w:680.,h:panel_h});
+    panel_decoration(panel.x,panel.y,panel.w,panel.h);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::DeveloperTools=>"DEVELOPER TOOLS",MenuScreen::UiWorkshop=>"UI WORKSHOP",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    // Home layout uses the same panel coordinates for every window preset.
+    // Saved menu bounds override the shared screen defaults.
     let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0+submenu_offset,_=>310.0+submenu_offset};
-    let w=menu_text_width(title,54);
-    if !(screen==MenuScreen::Home && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
-        menu_heading(title,960.0-w/2.0,title_y,54.0);
+
+    if !(screen==MenuScreen::Home && !menu_runtime::has_override("title") && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
+        menu_runtime::label("title",title,menu_model::Bounds{x:660.,y:title_y-54.,w:600.,h:70.},54.,ACCENT,true);
     }
     match screen {
         MenuScreen::Home=>{
@@ -1106,120 +1112,128 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             let step=if has_game {82.0}else{85.0};
             let mut row=0.0;
             if has_game {
-                if menu_button("RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
+                if menu_button("resume","RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
                 row+=1.0;
             }
-            if menu_button("NEW GAME",first_y+step*row){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
+            if menu_button("new_game","NEW GAME",first_y+step*row){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
             row+=1.0;
-            if menu_button("HOW TO PLAY",first_y+step*row){return Some(MenuScreen::HowToPlay);}
+            if menu_button("how_to_play","HOW TO PLAY",first_y+step*row){return Some(MenuScreen::HowToPlay);}
             row+=1.0;
-            if menu_button("GAME RULES",first_y+step*row){return Some(MenuScreen::Rules);}
+            if menu_button("rules","GAME RULES",first_y+step*row){return Some(MenuScreen::Rules);}
             row+=1.0;
-            if menu_button("SETTINGS",first_y+step*row){return Some(MenuScreen::Settings);}
+            if menu_button("settings","SETTINGS",first_y+step*row){return Some(MenuScreen::Settings);}
             row+=1.0;
-            if menu_button("QUIT",first_y+step*row){std::process::exit(0);}
+            if menu_button("quit","QUIT",first_y+step*row){std::process::exit(0);}
             row+=1.0;
-            if menu_button(&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),first_y+step*row){
+            if menu_button("difficulty",&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),first_y+step*row){
                 *cpu_difficulty=cpu_difficulty.next();
                 save_cpu_difficulty(*cpu_difficulty);
             }
             if has_game {
                 let note="Difficulty applies to new games";
-                menu_label(note,960.0-menu_text_width(note,18)/2.0,first_y+step*(row+1.0)+12.0,18.0,MUTED);
+                menu_runtime::label("difficulty_note",note,menu_model::Bounds{x:690.,y:first_y+step*(row+1.)-6.,w:540.,h:30.},18.,MUTED,false);
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,panel_y+138.0,22.0,MUTED);
+            menu_runtime::label("window_heading","WINDOW",menu_model::Bounds{x:750.,y:panel_y+138.-22.,w:420.,h:30.},22.,MUTED,false);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            let preset_button_clicked=menu_button(&window_text,panel_y+164.0);
+            let preset_button_clicked=menu_button("preset",&window_text,panel_y+164.0);
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+236.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,panel_y+329.0,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
-            if !*resolution_open && menu_button(&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
+            if !*resolution_open && menu_button("layout",&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) && !cfg!(target_os="android") {
+                let mode=read_display_layout().next();
+                save_display_layout(mode);
+                let (w,h)=if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)};
+                save_selected_resolution(w,h);
+                let fitted=fit_window_to_desktop(w,h);
+                request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
+                save_window_size(fitted.0,fitted.1);
+                if active_theme()==Theme::Futuristic {set_theme(Theme::Modern);save_theme(Theme::Modern);}
+                layout::reload();
+            }
+            if !*resolution_open && menu_button("fullscreen","TOGGLE FULLSCREEN",panel_y+308.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_runtime::label("interface_heading","INTERFACE",menu_model::Bounds{x:750.,y:panel_y+329.-22.,w:420.,h:30.},22.,MUTED,false);
+            if !*resolution_open && menu_button("recent_moves",if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
+            if !*resolution_open && menu_button("speed",&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
                 let next=active_game_speed().next();set_game_speed(next);save_game_speed(next);
             }
-            menu_label("APPEARANCE",750.0,panel_y+515.0,22.0,MUTED);
+            menu_runtime::label("appearance_heading","APPEARANCE",menu_model::Bounds{x:750.,y:panel_y+515.-22.,w:420.,h:30.},22.,MUTED,false);
             if !*resolution_open {
                 if cfg!(feature="developer-tools") {
-                    if menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
-                        let next=active_theme().next();set_theme(next);save_theme(next);
+                    if menu_button("theme",&format!("THEME: {}",active_theme().name()),panel_y+538.0){
+                        let allowed=read_display_layout()==DisplayLayout::Desktop && read_display_layout().aspect(read_selected_resolution().unwrap_or((1600,1000)).0,read_selected_resolution().unwrap_or((1600,1000)).1)=="16_10";
+                        let mut next=active_theme().next();
+                        if !allowed && next==Theme::Futuristic {next=Theme::Playful;}
+                        set_theme(next);save_theme(next);
                     }
                 }else{
-                    neon_metal_button(730.,panel_y+538.,460.,64.,false,false);
+                    let r=menu_runtime::bounds("theme",menu_model::Bounds{x:730.,y:panel_y+538.,w:460.,h:64.});
+                    neon_metal_button(r.x,r.y,r.w,r.h,false,false);
                     let text="THEME: NEON FORGE";
-                    menu_label(text,960.-menu_text_width(text,28)/2.,panel_y+580.,28.,MUTED);
+                    menu_runtime::label("theme",text,r,28.,MUTED,false);
                     let note="Theme changes are planned in a future version";
                     menu_label(note,960.-menu_text_width(note,16)/2.,panel_y+625.,16.,MUTED);
                 }
             }
-            if cfg!(feature="developer-tools") && !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
-            if !*resolution_open && menu_button("BACK",panel_y+682.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
+            if cfg!(feature="developer-tools") && !*resolution_open && menu_button("developer_tools","DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("back","BACK",panel_y+682.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("resume","RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 if resolution_picker(834.0,panel_y+228.0) {*resolution_open=false;}
                 // Do not interpret the click that opened the picker as an outside click.
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+164.0&&my<=panel_y+228.0;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+228.0&&my<=panel_y+554.0;
+                    let preset=menu_runtime::bounds("preset",menu_model::Bounds{x:730.,y:panel_y+164.,w:460.,h:64.});
+                    let on_preset_button=mx>=preset.x&&mx<=preset.x+preset.w&&my>=preset.y&&my<=preset.y+preset.h;
+                    let popup=menu_runtime::page_bounds("resolution_choices","panel",menu_model::Bounds{x:834.,y:panel_y+228.,w:252.,h:47.+read_display_layout().presets().len() as f32*54.});
+                    let on_picker=mx>=popup.x&&mx<=popup.x+popup.w&&my>=popup.y&&my<=popup.y+popup.h;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
         }
         MenuScreen::DeveloperTools=>{
-            menu_label("Visual previews do not affect gameplay.",720.0,365.0+submenu_offset,22.0,MUTED);
-            if menu_button("UI WORKSHOP",475.0+submenu_offset){return Some(MenuScreen::UiWorkshop);}
-            if menu_button("BACK TO SETTINGS",575.0+submenu_offset){return Some(MenuScreen::Settings);}
+            menu_runtime::label("note","Visual previews do not affect gameplay.",menu_model::Bounds{x:670.,y:310.,w:580.,h:44.},22.,MUTED,false);
+            if menu_button("workshop","UI WORKSHOP",475.0+submenu_offset){return Some(MenuScreen::UiWorkshop);}
+            if menu_button("back","BACK TO SETTINGS",575.0+submenu_offset){return Some(MenuScreen::Settings);}
         }
         MenuScreen::UiWorkshop=>{
             // Preview rendering happens in the main loop so it can use the workshop state.
-            if menu_button("BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
+            if menu_button("back","BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
         }
         MenuScreen::ConfirmNew=>{
             let warning="Start over? Current game progress will be lost.";
-            menu_label(warning,960.0-menu_text_width(warning,22)/2.0,panel_y+185.0,22.0,WHITEISH);
-            if menu_button("YES, NEW GAME",panel_y+245.0){return Some(MenuScreen::Playing);}
-            if menu_button("CANCEL",panel_y+345.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",panel_y+445.0){return Some(MenuScreen::Resume);}
+            menu_runtime::label("warning",warning,menu_model::Bounds{x:660.,y:320.,w:600.,h:52.},22.,WHITEISH,false);
+            if menu_button("confirm","YES, NEW GAME",panel_y+245.0){return Some(MenuScreen::Playing);}
+            if menu_button("cancel","CANCEL",panel_y+345.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("resume","RESUME GAME",panel_y+445.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }
     None
 }
-// 16:10 resolution presets for the fixed 1920x1200 design canvas.
+// Presets are restricted to the selected display layout.
 fn resolution_picker(x:f32,y:f32)->bool {
-    let presets=[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600)];
-    draw_rectangle(x,y,252.0,326.0,active_theme().background());
-    draw_rectangle_lines(x,y,252.0,326.0,2.0,ACCENT);
-    menu_label("16:10 RESOLUTIONS",x+19.0,y+27.0,19.0,ACCENT);
-    let (mx,my)=game_mouse();
-    for (index,(w,h)) in presets.iter().enumerate() {
-        let bx=x+12.0;
-        let by=y+39.0+index as f32*54.0;
-        let hover=mx>=bx&&mx<=bx+228.0&&my>=by&&my<=by+48.0;
-        themed_button(bx,by,228.0,48.0,hover);
-        let text=format!("{} x {}",w,h);
-        let tw=menu_text_width(&text,19);
-        menu_label(&text,bx+(228.0-tw)/2.0,by+31.0,19.0,WHITEISH);
-        if hover&&is_mouse_button_pressed(MouseButton::Left) {
-            let fitted=fit_window_to_desktop(*w,*h);
-            request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
-            save_window_size(fitted.0,fitted.1);
-            save_selected_resolution(*w,*h);
-            return true;
+    let previous=menu_runtime::current_page();menu_runtime::begin("resolution_choices");
+    let mode=read_display_layout();let presets=mode.presets();let height=47.+presets.len() as f32*54.;
+    let panel=menu_runtime::bounds("panel",menu_model::Bounds{x,y,w:252.,h:height});
+    draw_rectangle(panel.x,panel.y,panel.w,panel.h,active_theme().background());draw_rectangle_lines(panel.x,panel.y,panel.w,panel.h,2.,ACCENT);
+    menu_runtime::label("title",if mode==DisplayLayout::Mobile{"MOBILE RESOLUTIONS"}else{"DESKTOP RESOLUTIONS"},menu_model::Bounds{x:panel.x+12.,y:panel.y+4.,w:panel.w-24.,h:28.},17.,ACCENT,false);
+    for (index,(w,h)) in presets.iter().enumerate(){
+        let label=format!("{} x {} ({})",w,h,if mode.aspect(*w,*h)=="19_5_9"{"19.5:9"}else if mode.aspect(*w,*h)=="20_9"{"20:9"}else if mode.aspect(*w,*h)=="16_9"{"16:9"}else{"16:10"});
+        if menu_runtime::button_at(&format!("resolution_{index}"),&label,menu_model::Bounds{x:panel.x+12.,y:panel.y+39.+index as f32*54.,w:panel.w-24.,h:48.},17.){
+            let fitted=fit_window_to_desktop(*w,*h);request_new_screen_size(fitted.0 as f32,fitted.1 as f32);save_window_size(fitted.0,fitted.1);save_selected_resolution(*w,*h);
+            if active_theme()==Theme::Futuristic && (mode!=DisplayLayout::Desktop || mode.aspect(*w,*h)!="16_10"){set_theme(Theme::Modern);save_theme(Theme::Modern);}
+            layout::reload();menu_runtime::begin(&previous);return true;
         }
     }
-    false
+    menu_runtime::begin(&previous);false
 }
-// Windows window placement is independent of Macroquad's client-area sizing.
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){
@@ -1230,7 +1244,14 @@ async fn main(){
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0x50484153455550);
     macroquad::rand::srand(seed);
+    #[cfg(feature="developer-tools")]
+    if let Some(output)=std::env::args().skip_while(|a|a!="--layout-smoke").nth(1){layout_smoke::run(&output).await;return;}
+    #[cfg(feature="developer-tools")]
+    if let Some(output)=std::env::args().skip_while(|a|a!="--menu-smoke").nth(1){layout_smoke::menus(&output).await;return;}
     set_theme(read_theme());
+    if active_theme()==Theme::Futuristic && (read_display_layout()!=DisplayLayout::Desktop || !read_selected_resolution().is_some_and(|(w,h)|read_display_layout().aspect(w,h)=="16_10")) {
+        set_theme(Theme::Modern);
+    }
     layout::reload();
     load_menu_fonts().await;
     load_neon_cards().await;

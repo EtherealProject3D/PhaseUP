@@ -1,8 +1,26 @@
 pub(super) fn window_size_path() -> std::path::PathBuf {
+    #[cfg(target_os="android")]
+    {return android_settings_dir().join("window_size.txt");}
+    #[cfg(not(target_os="android"))]
+    {
     let base=std::env::var_os("APPDATA").map(std::path::PathBuf::from)
         .or_else(||std::env::var_os("HOME").map(|h|std::path::PathBuf::from(h).join(".config")))
         .unwrap_or_else(||std::path::PathBuf::from("."));
     base.join("PhaseUP").join("window_size.txt")
+    }
+}
+#[cfg(target_os="android")]
+fn android_settings_dir()->std::path::PathBuf {
+    use macroquad::miniquad::native::android::{attach_jni_env,ndk_utils,ACTIVITY};
+    static PATH:std::sync::OnceLock<std::path::PathBuf>=std::sync::OnceLock::new();
+    PATH.get_or_init(||unsafe{
+        let env=attach_jni_env();
+        let dir=ndk_utils::call_object_method!(env,ACTIVITY,"getFilesDir","()Ljava/io/File;");
+        let path=ndk_utils::call_object_method!(env,dir,"getAbsolutePath","()Ljava/lang/String;");
+        let value=ndk_utils::get_utf_str!(env,path);
+        (**env).DeleteLocalRef.unwrap()(env,path);(**env).DeleteLocalRef.unwrap()(env,dir);
+        std::path::PathBuf::from(value)
+    }).clone()
 }
 pub(super) fn read_window_size() -> (i32,i32) {
     if let Ok(s)=std::fs::read_to_string(window_size_path()) {
@@ -49,6 +67,10 @@ pub(super) fn save_selected_resolution(w:i32,h:i32) {
     let _=std::fs::write(path,format!("{w} {h}\n"));
 }
 pub(super) fn read_selected_resolution()->Option<(i32,i32)> {
+    #[cfg(feature="developer-tools")]
+    if let Some((_,resolution))=DISPLAY_PREVIEW.with(|v|v.get()){return Some(resolution);}
+    #[cfg(target_os="android")]
+    if !selected_resolution_path().exists(){return Some(mobile_resolution_for_viewport(macroquad::prelude::screen_width(),macroquad::prelude::screen_height()));}
     let data=std::fs::read_to_string(selected_resolution_path()).ok()?;
     let mut parts=data.split_whitespace();
     let w=parts.next()?.parse::<i32>().ok()?;
@@ -89,7 +111,7 @@ pub(super) fn read_theme()->crate::theme::Theme {
             }
         }
     }
-    crate::theme::Theme::Futuristic
+    if cfg!(target_os="android") && cfg!(feature="developer-tools"){crate::theme::Theme::Modern}else{crate::theme::Theme::Futuristic}
 }
 pub(super) fn save_theme(theme:crate::theme::Theme){
     let path=preferences_path();
@@ -175,4 +197,51 @@ pub(super) fn save_cpu_difficulty(level:crate::Difficulty) {
     let path=cpu_difficulty_path();
     if let Some(parent)=path.parent(){if std::fs::create_dir_all(parent).is_err(){return;}}
     let _=std::fs::write(path,level.key());
+}
+
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
+pub(super) enum DisplayLayout { Desktop, Mobile }
+#[cfg(any(target_os="android",test))]
+pub(super) fn mobile_resolution_for_viewport(w:f32,h:f32)->(i32,i32){
+    if !w.is_finite()||!h.is_finite()||w<=0.||h<=0.{return (2400,1080);}
+    let ratio=w/h;if (ratio-20./9.).abs()<=(ratio-19.5/9.).abs(){(2400,1080)}else{(2340,1080)}
+}
+#[cfg(feature="developer-tools")]
+thread_local!{static DISPLAY_PREVIEW:std::cell::Cell<Option<(DisplayLayout,(i32,i32))>>=const{std::cell::Cell::new(None)};}
+#[cfg(feature="developer-tools")]
+pub(super) fn preview_display(value:Option<(DisplayLayout,(i32,i32))>){DISPLAY_PREVIEW.with(|v|v.set(value));}
+impl DisplayLayout {
+    pub(super) fn name(self)->&'static str {match self {Self::Desktop=>"DESKTOP",Self::Mobile=>"MOBILE"}}
+    pub(super) fn next(self)->Self {match self {Self::Desktop=>Self::Mobile,Self::Mobile=>Self::Desktop}}
+    pub(super) fn presets(self)->&'static [(i32,i32)] {
+        match self {
+            Self::Desktop=>&[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600),(1280,720),(1600,900),(1920,1080),(2560,1440)],
+            Self::Mobile=>&[(2400,1080),(2340,1080)]
+        }
+    }
+    pub(super) fn aspect(self,w:i32,h:i32)->&'static str {
+        if self==Self::Mobile {if (w as f32/h as f32-20.0/9.0).abs()<0.03 {"20_9"}else{"19_5_9"}}
+        else if (w as f32/h as f32-16.0/9.0).abs()<0.03 {"16_9"}else{"16_10"}
+    }
+    pub(super) fn layout_file(self,w:i32,h:i32)->String {
+        let kind=if self==Self::Mobile {"mobile"}else{"desktop"};
+        format!("assets/layouts/prototype_{}_compact_{}.json",kind,self.aspect(w,h))
+    }
+}
+pub(super) fn display_layout_path()->std::path::PathBuf {window_size_path().with_file_name("display_layout.txt")}
+pub(super) fn read_display_layout()->DisplayLayout {
+    #[cfg(feature="developer-tools")]
+    if let Some((mode,_))=DISPLAY_PREVIEW.with(|v|v.get()){return mode;}
+    if cfg!(target_os="android"){return DisplayLayout::Mobile;}
+    if std::fs::read_to_string(display_layout_path()).is_ok_and(|s|s.trim()=="mobile"){DisplayLayout::Mobile}else{DisplayLayout::Desktop}
+}
+pub(super) fn save_display_layout(mode:DisplayLayout){
+    let path=display_layout_path();
+    if let Some(parent)=path.parent(){let _=std::fs::create_dir_all(parent);}
+    let _=std::fs::write(path,if mode==DisplayLayout::Mobile {"mobile"}else{"desktop"});
+}
+pub(super) fn selected_layout_file()->String {
+    let mode=read_display_layout();
+    let (w,h)=read_selected_resolution().unwrap_or(if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)});
+    mode.layout_file(w,h)
 }

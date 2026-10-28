@@ -1,7 +1,7 @@
 [package]
 name = "phaseup"
 default-run = "phaseup"
-version = "0.4.1"
+version = "0.4.5"
 edition = "2021"
 
 [dependencies]
@@ -20,8 +20,11 @@ required-features = ["ui-designer"]
 
 # Android sideload build; bundled artwork works offline.
 [package.metadata.android]
-package_name = "com.etherealproject3d.phaseup"
-label = "PhaseUP"
+package_name = "com.etherealproject3d.phaseup.dev"
+label = "PhaseUP 0.4.5 dev"
+version_name = "0.4.5-dev"
+version_code = 40501
+fullscreen = true
 assets = "assets/"
 android_version = 35
 target_sdk_version = 28

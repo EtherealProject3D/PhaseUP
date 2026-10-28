@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 // One aspect ratio for hand, phase, CPU and dragged cards.
 const CARD_ASPECT:f32=0.68;
 #[derive(Clone,Copy,Debug,Default)]
-pub(super) struct HandStyle {pub height:Option<f32>,pub dx:f32,pub dy:f32}
+pub(super) struct HandStyle {pub height:Option<f32>,pub dx:f32,pub dy:f32,pub gap:Option<f32>}
 pub(super) type HandStyles=std::collections::BTreeMap<String,HandStyle>;
 
 pub(super) fn card_offset(styles:&HandStyles,key:&str,index:usize)->Vec2 {
@@ -20,9 +20,20 @@ pub(super) fn resize_hand(style:&mut HandStyle,old_height:f32,height:f32,anchor:
     style.height=Some(height);
 }
 fn styled_row(cards:&[Card],r:Rect,z:f32,selected:&BTreeSet<u32>,style:HandStyle)->Vec<(Card,Rect)>{
-    row(cards,r,z,selected).into_iter().map(|(c,r)|{
-        let size=style.height.map(|h|Vec2::new(h*CARD_ASPECT,h)*z).unwrap_or(r.size());
-        (c,Rect::from_center_size(r.center()+Vec2::new(style.dx,style.dy)*z,size))
+    if cards.is_empty(){return vec![];}
+    let default_height=card_size(Vec2::new(r.width(),r.height().min(136.*z))).y;
+    let height=style.height.map(|h|h*z).unwrap_or(default_height);
+    let width=height*CARD_ASPECT;
+    let count=cards.len();
+    let gap=style.gap.unwrap_or(12.).clamp(0.,200.)*z;
+    let ideal_step=width+gap;
+    let available_step=if count>1 {(r.width()-width).max(0.)/(count-1) as f32}else{0.};
+    let step=if count>1 {ideal_step.min(available_step)}else{0.};
+    let total=width+step*(count-1) as f32;
+    let left=r.center().x-total/2.+style.dx*z;
+    cards.iter().enumerate().map(|(i,c)|{
+        let y=r.center().y-height/2.+style.dy*z-if selected.contains(&c.id){12.*z}else{0.};
+        (*c,Rect::from_min_size(Pos2::new(left+i as f32*step,y),Vec2::new(width,height)))
     }).collect()
 }
 fn card_size(bounds:Vec2)->Vec2 {
@@ -31,6 +42,9 @@ fn card_size(bounds:Vec2)->Vec2 {
 }
 
 pub(super) fn add_children(elements:&mut Snapshot) {
+    if let Some(draw)=elements.get("draw").copied(){
+        elements.entry("draw_count".into()).or_insert(Box2{x:draw.x,y:draw.y+draw.h/2.+19.5,w:draw.w,h:24.});
+    }
     for parent in ["phase","staging"] {
         let Some(p)=elements.get(parent).copied() else {continue};
         for count in 1..=2 {
@@ -45,7 +59,8 @@ pub(super) fn add_children(elements:&mut Snapshot) {
     }
 }
 pub(super) fn parent(name:&str)->Option<String> {
-    if name.starts_with("phase_")&&name.contains("_group_"){Some("phase".into())}
+    if name=="draw_count"{Some("draw".into())}
+    else if name.starts_with("phase_")&&name.contains("_group_"){Some("phase".into())}
     else if name.starts_with("staging_"){Some("staging".into())}
     else if name.starts_with("cpu_")&&name.matches('_').count()>1 {Some(name[..5].into())}else{None}
 }
@@ -64,7 +79,7 @@ pub(super) fn collapse_cpu_rows(elements:&mut Snapshot) {
 pub(super) fn layout(separate: bool) -> Snapshot {
     let mut result = Snapshot::new();
     for (name,x,y,w,h) in [
-        ("header",24.,24.,1872.,64.),
+        ("header",24.,24.,1872.,64.),("menu_button",1770.,20.,120.,48.),
         ("cpu_1",24.,112.,608.,280.),("cpu_2",656.,112.,608.,280.),("cpu_3",1288.,112.,608.,280.),
         ("draw",800.,420.,120.,155.),("discard",1000.,420.,120.,155.),
         ("phase",280.,610.,1360.,220.),
@@ -80,6 +95,7 @@ pub(super) fn layout(separate: bool) -> Snapshot {
 }
 
 pub(super) struct Preview {
+    remaining:usize,
     phase: usize, hand: Vec<Card>, groups: [Vec<Card>;2], selected: BTreeSet<u32>,
     pinned: BTreeSet<u32>, last_sort: Option<usize>, laid: bool, ended: bool,
     dragging: Option<u32>, discard: Option<Card>, message: String,
@@ -119,7 +135,7 @@ impl Preview {
             }
         }
         while hand.len()<11 {hand.push(Card{id:hand.len() as u32,kind:Kind::Number(12,2)});}
-        Self{phase,hand,groups:[vec![],vec![]],selected:BTreeSet::new(),pinned:BTreeSet::new(),last_sort:None,laid:false,ended:false,dragging:None,discard:None,message:"Preview starts after drawing. Build your phase, play it, then discard.".into()}
+        Self{remaining:67,phase,hand,groups:[vec![],vec![]],selected:BTreeSet::new(),pinned:BTreeSet::new(),last_sort:None,laid:false,ended:false,dragging:None,discard:None,message:"Preview starts after drawing. Build your phase, play it, then discard.".into()}
     }
     fn ready(&self)->bool {
         !self.laid && PHASES[self.phase].iter().enumerate().all(|(g,&n)|
@@ -166,6 +182,7 @@ impl Preview {
     pub(super) fn controls(&mut self,ui:&mut egui::Ui) {
         ui.heading("Plain prototype");
         ui.label("Interaction sandbox, not a live game.");
+        ui.horizontal(|ui|{ui.label("Cards remaining (preview)");ui.add(egui::DragValue::new(&mut self.remaining).range(0..=108));});
         let mut p=self.phase;
         egui::ComboBox::from_label("Phase").selected_text(format!("{}: {}",p+1,phase_name(p))).show_ui(ui,|ui|{for n in 0..10 {ui.selectable_value(&mut p,n,format!("{}: {}",n+1,phase_name(n)));}});
         if p!=self.phase {*self=Self::new(p);}
@@ -179,35 +196,38 @@ impl Preview {
         ui.label("Uncheck Play preview to move or resize layout elements. Width/height are in Properties.");
         ui.separator();ui.label(&self.message);
     }
-    pub(super) fn draw(&mut self,ui:&mut egui::Ui,board:Rect,z:f32,elements:&Snapshot,separate:bool,interactive:bool,texts:&std::collections::BTreeMap<String,super::LabelStyle>,show_cpu:bool,cpu_laid:bool,styles:&HandStyles,cpu_counts:&std::collections::BTreeMap<String,usize>) {
+    pub(super) fn draw(&mut self,ui:&mut egui::Ui,board:Rect,z:f32,elements:&Snapshot,separate:bool,interactive:bool,texts:&std::collections::BTreeMap<String,super::LabelStyle>,show_cpu:bool,cpu_laid:bool,styles:&HandStyles,cpu_counts:&std::collections::BTreeMap<String,usize>,number_size:Option<f32>) {
         let screen=|b:Box2|Rect::from_min_size(board.min+Vec2::new(b.x,b.y)*z,Vec2::new(b.w,b.h)*z);
         let area=|name:&str|screen(elements[name]);
         let text=|ui:&egui::Ui,r:Rect,s:&str,size:f32|{ui.painter().text(r.center(),Align2::CENTER_CENTER,s,FontId::proportional((size*z).max(9.)),Color32::WHITE);};
+        let label_phase=self.phase;
         let label=|ui:&egui::Ui,key:&str,r:Rect,s:&str,size:f32|{
             let style=texts.get(key).cloned().unwrap_or_default();
-            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{value}",s)};
+            let content=if style.text.is_empty(){s.to_owned()}else{style.text.replace("{phase_number}",&(label_phase+1).to_string()).replace("{phase_name}",phase_name(label_phase)).replace("{value}",s)};
             text(ui,r.translate(Vec2::new(style.dx,style.dy)*z),&content,style.size.unwrap_or(size));
         };
         let mut panels:Vec<_>=elements.iter().filter(|(n,_)|self.visible(n,show_cpu,separate)).collect();
         panels.sort_by_key(|(n,_)|usize::from(parent(n).is_some()));
         for (name,b) in panels {
+            if name=="draw_count"{continue;}
             let bounds=screen(*b);
             let r=if name=="draw"||name=="discard"{Rect::from_center_size(bounds.center(),card_size(bounds.size()))}else{bounds};
             ui.painter().rect_filled(r,3.,Color32::from_rgb(32,39,48));
             ui.painter().rect_stroke(r,3.,Stroke::new(1.0_f32,Color32::from_gray(110)));
             if name.starts_with("cpu_") && parent(name).is_none(){label(ui,name,Rect::from_min_size(r.min,Vec2::new(r.width(),32.*z)),&format!("{}  |  Phase 1  |  10 cards",name.to_uppercase()),22.);}
         }
+        if elements.contains_key("menu_button") { label(ui,"menu_button",area("menu_button"),"MENU",22.); }
         for i in 1..=3 {
             let key=format!("cpu_{i}_hand");let r=area(&key);
             if show_cpu {
                 let cards:Vec<_>=(0..10).map(|id|Card{id,kind:Kind::Skip}).collect();
-                for (_,r) in styled_row(&cards,r.shrink(6.*z),z,&BTreeSet::new(),styles.get(&key).copied().unwrap_or_default()) {ui.painter().rect_filled(r,2.,Color32::from_rgb(45,70,95));ui.painter().rect_stroke(r,2.,Stroke::new(1.0_f32,Color32::LIGHT_BLUE));}
-                label(ui,&key,r,"HAND",16.);
+                for (_,r) in styled_row(&cards,r.shrink(6.*z),z,&BTreeSet::new(),styles.get(&key).copied().unwrap_or_default()) {paint_back(ui,r,z,false); }
+
             }
             for g in 1..=2 {
                 let key=format!("cpu_{i}_laid_{g}");let r=area(&key);
                 let count=*cpu_counts.get(&key).unwrap_or(&3);
-                label(ui,&key,Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("SET — {count} cards"),18.);
+                label(ui,&key,Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&requirement_label(self.phase,g-1),18.);
                 if cpu_laid {
                     let cards:Vec<_>=(0..count as u32).map(|id|Card{id,kind:Kind::Number((i+g) as u8,(id%4) as u8)}).collect();
                     let content=Rect::from_min_max(
@@ -215,38 +235,39 @@ impl Preview {
     r.max-Vec2::splat(6.*z)
 );
 let style=styles.get(&key).copied().unwrap_or_default();
-let mut laid_cards=styled_row(
-    &cards,content,z,&BTreeSet::new(),style
-);
-if let Some(height)=style.height {
-    let card_h=height*z;
-    let card_w=card_h*CARD_ASPECT;
-    let count=laid_cards.len();
-    if count>0 {
-        let available=(content.width()-card_w).max(0.);
-        let step=if count>1 {
-            (available/(count-1) as f32).min(card_w*0.85)
-        }else{0.};
-        let total=card_w+step*(count.saturating_sub(1)) as f32;
-        let left=content.center().x-total/2.;
-        let top=content.center().y-card_h/2.;
-        for (index,(_,card_rect)) in laid_cards.iter_mut().enumerate(){
-            *card_rect=Rect::from_min_size(
-                Pos2::new(left+index as f32*step,top),
-                Vec2::new(card_w,card_h)
-            );
-        }
-    }
-}
+// Lay every CPU preview group out with the same centering and spacing
+// rules. Preserve its configured card height and offset, but only
+// overlap cards when the available width makes it unavoidable.
+let natural_height=content.height().max(0.).min(content.width().max(0.)/CARD_ASPECT);
+let card_h=style.height.unwrap_or(natural_height/z)*z;
+let card_w=card_h*CARD_ASPECT;
+let n=cards.len();
+let gap=style.gap.unwrap_or(16.).clamp(0.,200.)*z;
+let available=(content.width()-card_w).max(0.);
+let step=if n>1 {
+    (available/(n-1) as f32).min(card_w+gap)
+}else{0.};
+let total=if n>0 {card_w+step*(n-1) as f32}else{0.};
+let left=content.center().x-total/2.+style.dx*z;
+let top=content.center().y-card_h/2.+style.dy*z;
+let laid_cards:Vec<_>=cards.into_iter().enumerate().map(|(index,card)|{
+    (card,Rect::from_min_size(
+        Pos2::new(left+index as f32*step,top),
+        Vec2::new(card_w,card_h)
+    ))
+}).collect();
 for (card,card_rect) in laid_cards {
-    paint_card(ui,card,card_rect,z,false);
+    paint_card(ui,card,card_rect,z,false,number_size,true);
 }
                 }else{text(ui,r.translate(Vec2::new(0.,12.*z)),"NOT LAID",18.);}
             }
         }
         if elements.contains_key("header") { label(ui,"header",area("header"),"PHASE-UP  |  PLAIN LAYOUT PROTOTYPE",30.); }
+        paint_back(ui,area("draw"),z,true);
         label(ui,"draw",area("draw"),"DRAW",22.);
-        label(ui,"discard",area("discard"),&self.discard.map(|c|card_label(c)).unwrap_or("DISCARD".into()),28.);
+        if elements.contains_key("draw_count"){label(ui,"draw_count",area("draw_count"),&format!("{} left",self.remaining),17.);}
+        if let Some(card)=self.discard {paint_card(ui,card,area("discard"),z,false,number_size,false);}
+        else {label(ui,"discard",area("discard"),"DISCARD",28.);}
         let phase_area=area("phase");
         let active=if separate && !self.laid{area("staging")}else{phase_area};
         if separate && !self.laid {text(ui,phase_area,"YOUR LAID PHASE — NOT YET PLAYED",24.);}
@@ -259,7 +280,7 @@ for (card,card_rect) in laid_cards {
         let mut slots:Vec<(Card,Rect)>=vec![];
         for (g,r) in groups.iter().enumerate(){
             ui.painter().rect_stroke(*r,2.,Stroke::new(1.0_f32,if self.laid{Color32::LIGHT_GREEN}else{Color32::GRAY}));
-            label(ui,&group_keys[g],Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&format!("{}  {} / {}",requirement(self.phase,g).to_uppercase(),self.groups[g].len(),PHASES[self.phase][g]),18.);
+            label(ui,&group_keys[g],Rect::from_min_size(r.min,Vec2::new(r.width(),24.*z)),&requirement_label(self.phase,g),18.);
             slots.extend(styled_row(&self.groups[g],Rect::from_min_max(r.min+Vec2::new(8.*z,28.*z),r.max-Vec2::splat(6.*z)),z,&self.selected,styles.get(&group_keys[g]).copied().unwrap_or_default()));
         }
         let hand=area("hand");
@@ -272,7 +293,7 @@ for (card,card_rect) in laid_cards {
         slots.extend(hand_slots.iter().copied());
         let mut dropped=None;
         for (card,r) in &slots {
-            paint_card(ui,*card,*r,z,self.pinned.contains(&card.id));
+            paint_card(ui,*card,*r,z,self.pinned.contains(&card.id),number_size,self.laid && !self.hand.iter().any(|c|c.id==card.id));
             let movable=!self.ended && (!self.laid || self.hand.iter().any(|c|c.id==card.id));
             if interactive && movable {
                 let response=ui.interact(*r,ui.id().with(("card",card.id)),Sense::click_and_drag());
@@ -301,11 +322,12 @@ for (card,card_rect) in laid_cards {
         if let Some(id)=self.dragging {
             if let (Some(p),Some(card))=(ui.input(|i|i.pointer.interact_pos()),slots.iter().find(|(c,_)|c.id==id).map(|(c,_)|*c)) {
                 let size=slots.iter().find(|(c,_)|c.id==id).map(|(_,r)|r.size()).unwrap_or(Vec2::new(68.,100.)*z);
-                paint_card(ui,card,Rect::from_center_size(p,size),z,false);
+                paint_card(ui,card,Rect::from_center_size(p,size),z,false,number_size,false);
             }
         }
     }
 }
+#[cfg(test)]
 fn row(cards:&[Card],r:Rect,z:f32,selected:&BTreeSet<u32>)->Vec<(Card,Rect)> {
     if cards.is_empty(){return vec![];}
     let size=card_size(Vec2::new(r.width(),r.height().min(136.*z)));
@@ -314,18 +336,44 @@ fn row(cards:&[Card],r:Rect,z:f32,selected:&BTreeSet<u32>)->Vec<(Card,Rect)> {
     let start=r.center().x-(w+step*(cards.len()-1) as f32)/2.;
     cards.iter().enumerate().map(|(i,c)|(*c,Rect::from_min_size(Pos2::new(start+i as f32*step,r.center().y-h/2.-if selected.contains(&c.id){12.*z}else{0.}),Vec2::new(w,h)))).collect()
 }
-fn card_label(c:Card)->String {match c.kind {Kind::Number(n,_)=>n.to_string(),Kind::Wild=>"W".into(),Kind::Skip=>"S".into()}}
-fn paint_card(ui:&egui::Ui,c:Card,r:Rect,z:f32,pinned:bool) {
+fn paint_back(ui:&egui::Ui,r:Rect,z:f32,compact:bool){
+    use super::clean_cards as style;
     let r=Rect::from_center_size(r.center(),card_size(r.size()));
-    let color=match c.kind {Kind::Number(_,0)=>Color32::from_rgb(135,48,50),Kind::Number(_,1)=>Color32::from_rgb(40,85,140),Kind::Number(_,2)=>Color32::from_rgb(130,105,35),Kind::Number(_,_)=>Color32::from_rgb(40,115,70),Kind::Wild=>Color32::from_rgb(110,55,140),Kind::Skip=>Color32::GRAY};
-    ui.painter().rect_filled(r,3.,color);ui.painter().rect_stroke(r,3.,Stroke::new(1.0_f32,Color32::WHITE));
-    ui.painter().text(r.center(),Align2::CENTER_CENTER,card_label(c),FontId::proportional((32.*z).max(10.)),Color32::WHITE);
+    let rgb=|rgb:[u8;3]|Color32::from_rgb(rgb[0],rgb[1],rgb[2]);
+    let radius=(r.width()*0.08).min(10.*z);let border=(r.width()*0.025).max(z);
+    ui.painter().rect_filled(r,radius,rgb(style::CREAM));
+    ui.painter().rect_filled(r.shrink(border),(radius-border).max(0.),rgb(style::NAVY));
+    let pos=|p:[f32;2],mirrored:bool|{let p=style::mark_point(p,mirrored,compact);r.min+Vec2::new(p[0]*r.width(),p[1]*r.height())};
+    let width=r.width()*if compact{0.045}else{0.07};
+    for mirrored in [false,true]{for (path,color) in [(&style::P_BOWL[..],style::CREAM),(&style::P_STEM[..],style::TEAL)]{
+        ui.painter().add(egui::Shape::line(path.iter().map(|p|pos(*p,mirrored)).collect(),Stroke::new(width,rgb(color))));
+    }}
+    let c=pos([0.5,0.5],false);let d=r.width()*if compact{0.035}else{0.055};
+    ui.painter().add(egui::Shape::convex_polygon(vec![c+Vec2::new(0.,-d),c+Vec2::new(d,0.),c+Vec2::new(0.,d),c+Vec2::new(-d,0.)],rgb(style::TEAL),Stroke::NONE));
+}
+fn card_label(c:Card)->String {match c.kind {Kind::Number(n,_)=>n.to_string(),Kind::Wild=>"W".into(),Kind::Skip=>"S".into()}}
+fn paint_card(ui:&egui::Ui,c:Card,r:Rect,z:f32,pinned:bool,number_size:Option<f32>,corner:bool) {
+    let r=Rect::from_center_size(r.center(),card_size(r.size()));
+    let rgb=|rgb:[u8;3]|Color32::from_rgb(rgb[0],rgb[1],rgb[2]);
+    let radius=(r.width()*0.08).min(10.*z);let border=(r.width()*0.025).max(z);
+    ui.painter().rect_filled(r,radius,rgb(super::clean_cards::CREAM));
+    ui.painter().rect_filled(r.shrink(border),(radius-border).max(0.),rgb(super::clean_cards::face(c.kind)));
+    let size=number_size.unwrap_or(if corner{28.}else{(r.height()/z*0.36).min(r.width()/z*0.6)});
+    let ink=rgb(super::clean_cards::ink(c.kind));
+    if !corner{ui.painter().text(r.center(),Align2::CENTER_CENTER,card_label(c),FontId::proportional((size*z).max(1.)),ink);}
+    let index_size=if corner{size}else{(size*0.43).clamp(8.,24.)};
+    ui.painter().text(r.min+Vec2::new(r.width()*0.09,r.height()*0.06),Align2::LEFT_TOP,card_label(c),FontId::proportional((index_size*z).max(1.)),ink);
     if pinned {ui.painter().circle_filled(r.center_bottom()-Vec2::new(0.,6.*z),3.*z,Color32::WHITE);}
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn remaining_count_is_an_editable_child_of_the_draw_pile(){
+        let mut e=layout(false);assert_eq!(parent("draw_count"),Some("draw".into()));
+        e.remove("draw_count");e.get_mut("draw").unwrap().x+=120.;add_children(&mut e);
+        assert_eq!(e["draw_count"].x,e["draw"].x);assert_eq!(e["draw_count"].w,e["draw"].w);
+    }
     #[test] fn resizing_one_card_resizes_its_hand_and_preserves_the_chosen_anchor(){
         let p=Preview::new(0);let e=layout(false);
         let before=p.hand_items(&e,&Default::default(),true);
@@ -358,7 +406,7 @@ mod tests {
         let frame=|p:&mut Preview,events:Vec<egui::Event>| {
             let input=egui::RawInput{screen_rect:Some(board),events,..Default::default()};
             let _=ctx.run(input,|ctx|{egui::CentralPanel::default().show(ctx,|ui|{
-                ui.allocate_rect(board,Sense::click_and_drag());p.draw(ui,board,1.,&layout,false,true,&Default::default(),true,false,&Default::default(),&Default::default());
+                ui.allocate_rect(board,Sense::click_and_drag());p.draw(ui,board,1.,&layout,false,true,&Default::default(),true,false,&Default::default(),&Default::default(),None);
             });});
         };
         let press=|pos,pressed|egui::Event::PointerButton{pos,button:egui::PointerButton::Primary,pressed,modifiers:egui::Modifiers::default()};

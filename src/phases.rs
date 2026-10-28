@@ -10,6 +10,25 @@ pub(super) fn requirement(phase: usize, group: usize) -> &'static str {
         _ => "set"
     }
 }
+// A group heading describes its original requirement, even after extra hits.
+pub(super) fn requirement_label(phase:usize,group:usize)->String {
+    let phase=phase.min(PHASES.len()-1);
+    let group=group.min(PHASES[phase].len()-1);
+    format!("{} OF {}",requirement(phase,group).to_uppercase(),PHASES[phase][group])
+}
+
+#[cfg(test)] mod requirement_heading_tests {
+    use super::*;
+    #[test] fn headings_describe_each_phase_requirement(){
+        for (phase,expected) in [
+            (0,vec!["SET OF 3","SET OF 3"]),(1,vec!["SET OF 3","RUN OF 4"]),
+            (2,vec!["SET OF 4","RUN OF 4"]),(3,vec!["RUN OF 7"]),
+            (4,vec!["RUN OF 8"]),(5,vec!["RUN OF 9"]),
+            (6,vec!["SET OF 4","SET OF 4"]),(7,vec!["COLOR OF 7"]),
+            (8,vec!["SET OF 5","SET OF 2"]),(9,vec!["SET OF 5","SET OF 3"]),
+        ] {for (group,text) in expected.iter().enumerate(){assert_eq!(requirement_label(phase,group),*text);}}
+    }
+}
 pub(super) fn phase_name(p: usize) -> &'static str {
     const N: [&str;10] = ["2 sets of 3","set of 3 + run of 4","set of 4 + run of 4","run of 7","run of 8","run of 9","2 sets of 4","7 of one color","set of 5 + set of 2","set of 5 + set of 3"];
     N[p.min(9)]

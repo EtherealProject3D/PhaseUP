@@ -1,5 +1,8 @@
 #[path = "../card_model.rs"]
 mod card_model;
+#[path = "../clean_cards.rs"] mod clean_cards;
+#[path = "../menu_model.rs"] mod menu_model;
+#[path = "../menu_designer.rs"] mod menu_designer;
 use card_model::{Card, Kind};
 #[path = "../phases.rs"]
 #[allow(dead_code)]
@@ -46,7 +49,27 @@ fn wheel_drag_value(
             .fixed_decimals(0)
     );
 
-    if response.changed() {
+    // Record the numeric control's screen rectangle for the Properties
+    // ScrollArea to test against the pointer on the next frame.
+    ui.ctx().data_mut(|data| {
+        let id = egui::Id::new("phaseup_numeric_rects");
+        let mut rects = data.get_temp::<Vec<Rect>>(id).unwrap_or_default();
+        rects.push(response.rect);
+        data.insert_temp(id, rects);
+    });
+
+    // A wheel over this control is an intentional one-pixel adjustment.
+    // Merely displaying a rounded number must not modify the stored value.
+    let wheel = if response.hovered() {
+        ui.input(|i| i.raw_scroll_delta.y)
+    } else {
+        0.0
+    };
+    if wheel.abs() > 0.0 {
+        let step = if wheel > 0.0 { 1.0 } else { -1.0 };
+        *value = (original.round() + step).clamp(min, max);
+        (*value - original).abs() > 0.001
+    } else if response.changed() {
         *value = displayed;
         (*value - original).abs() > 0.001
     } else {
@@ -70,23 +93,27 @@ enum SizeSync {
 }
 
 struct Designer {
+ capture_path:Option<String>,capture_frames:u8,menu_mode:bool,menu_editor:menu_designer::MenuDesigner,
  elements:Snapshot, selected:BTreeSet<String>,undo:Vec<Snapshot>,redo:Vec<Snapshot>,
  zoom:f32,pan:Vec2,grid:f32,snap_grid:bool,snap_edges:bool,snap_objects:bool,
  drag_start:Option<(Pos2,Snapshot)>,marquee:Option<Pos2>,status:String,
- path:PathBuf, preview:designer_preview::Preview, play:bool, separate:bool, center_guides:bool, desktop:bool,show_cpu:bool,cpu_laid:bool,texts:BTreeMap<String,LabelStyle>,cpu_expanded:Snapshot,cpu_collapsed:Snapshot,aspect:usize,hand_styles:designer_preview::HandStyles,selected_card:Option<(String,usize)>,resize_anchor:usize,hand_undo:Vec<designer_preview::HandStyles>,hand_redo:Vec<designer_preview::HandStyles>,card_resize:Option<(f32,designer_preview::HandStyle)>,card_move:Option<(Pos2,designer_preview::HandStyles)>,cpu_counts:BTreeMap<String,usize>,grid_vertical:bool,grid_horizontal:bool,grid_columns:usize,grid_rows:usize,
- sync_draft:Option<SizeSync>,sync_last_change:f64,sync_prompt:Option<SizeSync>
+ card_number_size:Option<f32>,path:PathBuf, preview:designer_preview::Preview, play:bool, separate:bool, center_guides:bool, desktop:bool,show_cpu:bool,cpu_laid:bool,texts:BTreeMap<String,LabelStyle>,cpu_expanded:Snapshot,cpu_collapsed:Snapshot,aspect:usize,hand_styles:designer_preview::HandStyles,selected_card:Option<(String,usize)>,resize_anchor:usize,hand_undo:Vec<designer_preview::HandStyles>,hand_redo:Vec<designer_preview::HandStyles>,card_resize:Option<(f32,designer_preview::HandStyle)>,card_move:Option<(Pos2,designer_preview::HandStyles)>,cpu_counts:BTreeMap<String,usize>,grid_vertical:bool,grid_horizontal:bool,grid_columns:usize,grid_rows:usize,
+ sync_draft:Option<SizeSync>,sync_last_change:f64,sync_prompt:Option<SizeSync>,sync_owner:Option<String>
 }
 impl Designer {
  fn new()->Self{
-  let mut app=Self{elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
+  let capture_path=std::env::args().skip_while(|a|a!="--menu-capture").nth(1);
+  let mut app=Self{capture_path:capture_path.clone(),capture_frames:0,menu_mode:capture_path.is_some(),menu_editor:menu_designer::MenuDesigner::new(),elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
    zoom:0.0,pan:Vec2::ZERO,grid:8.,snap_grid:true,snap_edges:true,snap_objects:true,
-   drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None};
+   card_number_size:None,drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None,sync_owner:None};
   app.load();app
  }
  fn board_size(&self)->Vec2{canvas(self.desktop,self.aspect)}
  fn queue_size_sync(&mut self,change:SizeSync,now:f64){
   if self.desktop{return;}
   self.sync_last_change=now;
+  self.sync_owner=self.selected_card.as_ref().map(|(key,_)|key.clone())
+   .or_else(||self.selected.iter().next().cloned());
   match (&mut self.sync_draft,change){
    (Some(SizeSync::Elements(existing)),SizeSync::Elements(changes))=>{
     for (name,w,h) in changes{
@@ -130,7 +157,8 @@ impl Designer {
 
  fn load(&mut self){
   if !self.desktop {self.separate=false;self.path=profile_path(false,false,self.aspect);}
-  self.sync_draft=None;self.sync_prompt=None;self.sync_last_change=0.0;
+  self.sync_draft=None;self.sync_prompt=None;self.sync_last_change=0.0;self.sync_owner=None;
+  self.card_number_size=None;
   self.hand_styles.clear();self.selected_card=None;self.card_move=None;self.hand_undo.clear();self.hand_redo.clear();self.cpu_counts.clear();
    for cpu in 1..=3 {
     for group in 1..=2 {
@@ -157,9 +185,10 @@ impl Designer {
      for key in self.elements.keys().cloned().collect::<Vec<_>>() {if designer_preview::parent(&key).is_some(){self.elements.remove(&key);}}
      designer_preview::add_children(&mut self.elements);
      if let Some(map)=root["elements"].as_object(){for (name,v) in map{if let Some(b)=Box2::from_json(v){self.elements.insert(name.clone(),b);}}}
+     self.card_number_size=root["card_number_size"].as_f64().filter(|size|size.is_finite() && (8.0..=96.0).contains(size)).map(|size|size as f32);
      if let Some(map)=root["labels"].as_object(){for (key,v) in map{self.texts.insert(key.clone(),LabelStyle{text:v["text"].as_str().unwrap_or("").into(),size:v["size"].as_f64().map(|n|n as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32});}}
      if let Some(map)=root["hand_card_styles"].as_object(){for (key,v) in map {
-      self.hand_styles.insert(key.clone(),designer_preview::HandStyle{height:v["height"].as_f64().filter(|h|h.is_finite()&&*h>=10.&&*h<=1000.).map(|h|h as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32});
+      self.hand_styles.insert(key.clone(),designer_preview::HandStyle{height:v["height"].as_f64().filter(|h|h.is_finite()&&*h>=10.&&*h<=1000.).map(|h|h as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32,gap:v["gap"].as_f64().filter(|g|g.is_finite()&&*g>=0.&&*g<=200.).map(|g|g as f32)});
      }}
      if root["guides"].is_object(){self.grid_vertical=root["guides"]["vertical"].as_bool().unwrap_or(false);self.grid_horizontal=root["guides"]["horizontal"].as_bool().unwrap_or(false);self.grid_columns=(root["guides"]["columns"].as_u64().unwrap_or(4) as usize).clamp(1,32);self.grid_rows=(root["guides"]["rows"].as_u64().unwrap_or(2) as usize).clamp(1,32);}
      self.show_cpu=root["show_cpu_cards"].as_bool().unwrap_or(true);
@@ -189,23 +218,14 @@ impl Designer {
   rescale(&mut self.cpu_expanded,source_size,target);
   rescale(&mut self.cpu_collapsed,source_size,target);
   if !self.desktop {
-    // Remove the mobile-only header. Existing desktop layouts are untouched.
-    // On the first load, reclaim its vertical band for the CPU panels.
-    if let Some(header)=self.elements.remove("header"){
-     let shift=header.h.min(72.);
-     for (name,b) in self.elements.iter_mut(){
-      if name.starts_with("cpu_"){
-       b.y=(b.y-shift).max(0.);
-      }
-     }
-     for map in [&mut self.cpu_expanded,&mut self.cpu_collapsed]{
-      for (name,b) in map.iter_mut(){
-       if name.starts_with("cpu_"){
-        b.y=(b.y-shift).max(0.);
-       }
-      }
-     }
-    }
+    // Hide the mobile header without modifying saved CPU coordinates.
+    // Older layouts may contain a header entry, but their element positions
+    // must remain exactly as authored by the user.
+    self.elements.remove("header");
+    // Standalone top-right menu control, independent of the removed header.
+    self.elements.entry("menu_button".to_owned()).or_insert(Box2{
+     x:(target.x-144.).max(0.),y:16.,w:120.,h:48.
+    });
     self.toggle_cpu_cards(false);
    }
  }
@@ -234,8 +254,9 @@ impl Designer {
      map.remove("header");
     }
    }
-  root["hand_card_styles"]=serde_json::Value::Object(self.hand_styles.iter().map(|(key,s)|(key.clone(),serde_json::json!({"height":s.height.map(|v|v.round()),"dx":s.dx.round(),"dy":s.dy.round()}))).collect());
+  root["hand_card_styles"]=serde_json::Value::Object(self.hand_styles.iter().map(|(key,s)|(key.clone(),serde_json::json!({"height":s.height.map(|v|v.round()),"dx":s.dx.round(),"dy":s.dy.round(),"gap":s.gap}))).collect());
   root["guides"]=serde_json::json!({"vertical":self.grid_vertical,"horizontal":self.grid_horizontal,"columns":self.grid_columns,"rows":self.grid_rows});
+  root["card_number_size"]=serde_json::json!(self.card_number_size);
   root["labels"]=serde_json::Value::Object(self.texts.iter().map(|(k,v)|(k.clone(),serde_json::json!({"text":v.text,"size":v.size.map(|n|n.round()),"dx":v.dx.round(),"dy":v.dy.round()}))).collect());
   root["show_cpu_cards"]=self.show_cpu.into();
    root["cpu_preview_counts"]=serde_json::json!(self.cpu_counts);
@@ -297,6 +318,13 @@ impl Designer {
 }
 impl eframe::App for Designer{
  fn update(&mut self,ctx:&egui::Context,_frame:&mut eframe::Frame){
+  if let Some(path)=self.capture_path.clone(){
+   let image=ctx.input(|i|i.events.iter().find_map(|e|if let egui::Event::Screenshot{image,..}=e{Some(image.clone())}else{None}));
+   if let Some(image)=image{let bytes=image.pixels.chunks(image.size[0]).rev().flat_map(|row|row.iter().flat_map(|c|c.to_array())).collect();let image=macroquad::texture::Image{bytes,width:image.size[0] as u16,height:image.size[1] as u16};image.export_png(&path);self.capture_path=None;ctx.send_viewport_cmd(egui::ViewportCommand::Close);return;}
+   self.capture_frames=self.capture_frames.saturating_add(1);if self.capture_frames==3{ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);}ctx.request_repaint();
+  }
+  egui::TopBottomPanel::top("design_workspace").show(ctx,|ui|{ui.horizontal(|ui|{ui.label("Design:");ui.selectable_value(&mut self.menu_mode,false,"Gameplay");ui.selectable_value(&mut self.menu_mode,true,"Menus");});});
+  if self.menu_mode{self.menu_editor.show(ctx);return;}
   let undo=!self.play && !ctx.wants_keyboard_input() && ctx.input(|i|i.modifiers.command&&i.key_pressed(egui::Key::Z));
   let redo=!self.play && !ctx.wants_keyboard_input() && ctx.input(|i|i.modifiers.command&&i.key_pressed(egui::Key::Y));
   if undo{self.undo();}if redo{self.redo();}
@@ -332,7 +360,7 @@ impl eframe::App for Designer{
     let names:Vec<String>=self.elements.keys().filter(|n|self.preview.visible(n,self.show_cpu,self.separate)).cloned().collect();
     for name in names{
      let selected=self.selected.contains(&name);
-     if ui.selectable_label(selected,&name).clicked(){
+     if ui.selectable_label(selected,if name=="draw_count"{"draw_count (cards remaining)"}else{&name}).clicked(){
       self.selected_card=None;
       let multi=ui.input(|i|i.modifiers.ctrl||i.modifiers.command);
       if !multi{self.selected.clear();}
@@ -341,8 +369,18 @@ impl eframe::App for Designer{
     }
    });
   });
+  // Disable wheel scrolling only when the pointer is over a numeric editor.
+  // Use rectangles from the previous frame so the ScrollArea knows its wheel
+  // policy before it processes the current frame's content.
+  let numeric_id=egui::Id::new("phaseup_numeric_rects");
+  let numeric_rects=ctx.data(|data|data.get_temp::<Vec<Rect>>(numeric_id).unwrap_or_default());
+  let over_numeric=ctx.input(|i|i.pointer.hover_pos())
+   .is_some_and(|pos|numeric_rects.iter().any(|rect|rect.contains(pos)));
+  ctx.data_mut(|data|data.insert_temp(numeric_id,Vec::<Rect>::new()));
   egui::SidePanel::right("properties").default_width(255.).min_width(210.).show(ctx,|ui|{
-   egui::ScrollArea::vertical().show(ui,|ui|{
+   egui::ScrollArea::vertical()
+    .enable_scrolling(!over_numeric)
+    .show(ui,|ui|{
    if self.desktop {let mut show=self.show_cpu;
     if ui.checkbox(&mut show,"Show CPU hand cards").changed(){self.toggle_cpu_cards(show);}
    }else{ui.label("Mobile: compact phase area | CPU hand cards hidden");}
@@ -367,6 +405,12 @@ impl eframe::App for Designer{
    self.preview.controls(ui);
    ui.separator();
    ui.heading("Properties");
+   ui.heading("Card numbers");
+   let mut number_size=self.card_number_size.unwrap_or(32.);
+   ui.horizontal(|ui|{ui.label("Number text size");if wheel_drag_value(ui,&mut number_size,8.,96.){self.card_number_size=Some(number_size);}});
+   if ui.button("Reset number size").clicked(){self.card_number_size=None;}
+   ui.label("Applies to all card values. Laid-card values stay in the corner.");
+   ui.separator();
    ui.label(format!("{} selected",if self.selected_card.is_some(){1}else{self.selected.len()}));
    if self.selected_card.is_some()||!self.selected.is_empty(){
     egui::ComboBox::from_label("Resize anchor").selected_text(["Center","Left edge","Right edge","Top edge","Bottom edge"][self.resize_anchor]).show_ui(ui,|ui|{for (i,name) in ["Center","Left edge","Right edge","Top edge","Bottom edge"].iter().enumerate(){ui.selectable_value(&mut self.resize_anchor,i,*name);}});
@@ -408,6 +452,16 @@ impl eframe::App for Designer{
       self.queue_size_sync(SizeSync::Hand(key.clone(),height),ctx.input(|i|i.time));}
     }
     if ui.button("Reset this hand's card size").clicked(){self.hand_undo.push(self.hand_styles.clone());self.hand_redo.clear();self.hand_styles.remove(&key);}
+   }
+   if self.selected_card.as_ref().is_some_and(|(key,_)|key=="hand") {
+    let original_gap=self.hand_styles.get("hand").and_then(|style|style.gap).unwrap_or(12.);
+    let mut gap=original_gap;
+    ui.horizontal(|ui|{ui.label("Hand card gap (px)");wheel_drag_value(ui,&mut gap,0.,200.);});
+    if (gap-original_gap).abs()>0.001 {
+     self.hand_undo.push(self.hand_styles.clone());self.hand_redo.clear();
+     self.hand_styles.entry("hand".to_owned()).or_default().gap=Some(gap);
+    }
+    ui.label("Hand cards overlap automatically when they do not fit.");
    }
    if self.selected.len()==1{
     let name=self.selected.iter().next().unwrap().clone();
@@ -466,6 +520,44 @@ impl eframe::App for Designer{
             );
         }
 
+        {
+            let original_gap=self.hand_styles.get(&name).and_then(|style|style.gap).unwrap_or(16.);
+            let mut gap=original_gap;
+            ui.horizontal(|ui|{
+                ui.label("Card gap (px)");
+                wheel_drag_value(ui,&mut gap,0.,200.);
+            });
+            if (gap-original_gap).abs()>0.001 {
+                self.hand_undo.push(self.hand_styles.clone());
+                self.hand_redo.clear();
+                self.hand_styles.entry(name.clone()).or_default().gap=Some(gap);
+            }
+            ui.label("Cards overlap automatically when the group is too narrow.");
+        }
+        ui.label("Card group position inside laid-phase area (px)");
+        let current=self.hand_styles.get(&name).copied().unwrap_or_default();
+        let mut dx=current.dx;
+        let mut dy=current.dy;
+        ui.horizontal(|ui|{
+            ui.label("Card X");
+            wheel_drag_value(ui,&mut dx,-10000.,10000.);
+            ui.label("Card Y");
+            wheel_drag_value(ui,&mut dy,-10000.,10000.);
+        });
+        if (dx-current.dx).abs()>0.001 || (dy-current.dy).abs()>0.001 {
+            self.hand_undo.push(self.hand_styles.clone());
+            self.hand_redo.clear();
+            let style=self.hand_styles.entry(name.clone()).or_default();
+            style.dx=dx;
+            style.dy=dy;
+        }
+        if ui.button("Center cards in laid-phase area").clicked(){
+            self.hand_undo.push(self.hand_styles.clone());
+            self.hand_redo.clear();
+            let style=self.hand_styles.entry(name.clone()).or_default();
+            style.dx=0.;
+            style.dy=0.;
+        }
         if ui.button("Reset laid-phase card size").clicked(){
             self.hand_undo.push(self.hand_styles.clone());
             self.hand_redo.clear();
@@ -482,14 +574,14 @@ impl eframe::App for Designer{
     });
     if resized {let anchored=anchored_resize(old,b.w,b.h,self.resize_anchor);b.x+=anchored.x-old.x;b.y+=anchored.y-old.y;}
     if b.x!=old.x||b.y!=old.y||b.w!=old.w||b.h!=old.h{self.checkpoint();self.elements.insert(name.clone(),b);self.carry_children();
-     if b.w!=old.w||b.h!=old.h{self.queue_size_sync(SizeSync::Elements(vec![(name,b.w,b.h)]),ctx.input(|i|i.time));}}
+     if resized && (b.w-old.w).abs()>0.001 || resized && (b.h-old.h).abs()>0.001 {self.queue_size_sync(SizeSync::Elements(vec![(name,b.w,b.h)]),ctx.input(|i|i.time));}}
    }
    if self.selected.len()==1 {
     let name=self.selected.iter().next().unwrap().clone();
-    let label=self.texts.entry(name).or_default();
-    ui.heading("Text");ui.label("Blank = live game label. {value} inserts the live label.");
+    let label=self.texts.entry(name.clone()).or_default();
+    ui.heading("Text");ui.label("Blank = live game label. {value} = live label, {phase_number} = current phase number, {phase_name} = current phase name.");
     ui.text_edit_singleline(&mut label.text);
-    let mut size=label.size.unwrap_or(22.);
+    let mut size=label.size.unwrap_or(if name=="draw_count"{17.}else{22.});
     if wheel_drag_value(ui,&mut size,8.0,80.0){label.size=Some(size);}
     wheel_drag_value(ui,&mut label.dx,-10000.0,10000.0);
     wheel_drag_value(ui,&mut label.dy,-10000.0,10000.0);
@@ -508,6 +600,23 @@ impl eframe::App for Designer{
     if ui.button("Align top").clicked(){self.checkpoint();let y=self.selected.iter().map(|n|self.elements[n].y).fold(f32::INFINITY,f32::min);for n in &self.selected{self.elements.get_mut(n).unwrap().y=y;}self.carry_children();}
     if ui.button("Center horizontally").clicked(){self.checkpoint();for n in &self.selected{let b=self.elements.get_mut(n).unwrap();b.x=(canvas(self.desktop,self.aspect).x-b.w)/2.;}self.carry_children();}
     if ui.button("Center vertically").clicked(){self.checkpoint();for n in &self.selected{let b=self.elements.get_mut(n).unwrap();b.y=(canvas(self.desktop,self.aspect).y-b.h)/2.;}self.carry_children();}
+   }
+   // Arrow keys nudge the whole player's hand when a hand card is selected.
+   if !self.play && self.selected_card.as_ref().is_some_and(|(key,_)|key=="hand")
+      && !ctx.wants_keyboard_input() {
+    let mut delta=Vec2::ZERO;
+    ctx.input(|i|{
+     let step=if i.modifiers.shift{10.}else{1.};
+     for (key,d) in [(egui::Key::ArrowLeft,Vec2::new(-step,0.)),(egui::Key::ArrowRight,Vec2::new(step,0.)),(egui::Key::ArrowUp,Vec2::new(0.,-step)),(egui::Key::ArrowDown,Vec2::new(0.,step))] {
+      if i.key_pressed(key){delta+=d;}
+     }
+    });
+    if delta!=Vec2::ZERO {
+     self.hand_undo.push(self.hand_styles.clone());
+     self.hand_redo.clear();
+     let style=self.hand_styles.entry("hand".to_owned()).or_default();
+     style.dx+=delta.x;style.dy+=delta.y;
+    }
    }
    if !self.play && !self.selected.is_empty() {
     let mut delta=Vec2::ZERO;
@@ -536,14 +645,7 @@ impl eframe::App for Designer{
    ui.separator();ui.label(&self.status);
    });
   });
-   if !self.desktop && self.sync_prompt.is_none() && self.sync_draft.is_some(){
-    if ctx.input(|i|i.time)-self.sync_last_change>=0.7{
-     if self.sync_draft.is_some() && self.sync_last_change > 0.0 {
-    self.sync_prompt = self.sync_draft.take();
-    self.sync_last_change = 0.0;
-}
-    }else{ctx.request_repaint_after(std::time::Duration::from_millis(120));}
-   }
+   // Sync is shown only when the edited item loses selection.
    if let Some(change)=self.sync_prompt.clone(){
     let other=if self.aspect==0{"19.5:9"}else{"20:9"};
     egui::Window::new("Sync mobile item size?")
@@ -591,7 +693,7 @@ impl eframe::App for Designer{
    let center=board.center();
    painter.line_segment([Pos2::new(center.x,board.top()),Pos2::new(center.x,board.bottom())],Stroke::new(1.0_f32,Color32::from_rgb(36,90,95)));
    painter.line_segment([Pos2::new(board.left(),center.y),Pos2::new(board.right(),center.y)],Stroke::new(1.0_f32,Color32::from_rgb(36,90,95)));
-   self.preview.draw(ui,board,self.zoom,&self.elements,self.separate,self.play,&self.texts,self.show_cpu,self.cpu_laid,&self.hand_styles,&self.cpu_counts);
+   self.preview.draw(ui,board,self.zoom,&self.elements,self.separate,self.play,&self.texts,self.show_cpu,self.cpu_laid,&self.hand_styles,&self.cpu_counts,self.card_number_size);
    if self.play { return; }
    let grid_painter=painter.with_clip_rect(viewport.intersect(board));
    let grid_color=Color32::from_rgba_unmultiplied(150,175,215,125);
@@ -600,7 +702,10 @@ impl eframe::App for Designer{
    let hand_items=self.preview.hand_items(&self.elements,&self.hand_styles,self.show_cpu);
    let pointer=ctx.input(|i|i.pointer.interact_pos());
    let card_hit=pointer.and_then(|pos|{let world=self.world(pos,board);hand_items.iter().rev().find(|(_,_,r)|r.contains(world)).map(|(key,index,_)|(key.clone(),*index))});
-   if response.drag_started_by(egui::PointerButton::Primary) {
+   // Track the hand from the initial press, even when the canvas drag
+   // response does not become active over a painted card.
+   if ctx.input(|i|i.pointer.button_pressed(egui::PointerButton::Primary))
+      && response.rect.contains(pointer.unwrap_or(Pos2::ZERO)) {
      if let (Some(pos),Some((key,index)))=(pointer,card_hit.as_ref()) {
       if key=="hand" {
        self.hand_undo.push(self.hand_styles.clone());
@@ -614,18 +719,19 @@ impl eframe::App for Designer{
     if response.clicked_by(egui::PointerButton::Primary)||response.drag_started_by(egui::PointerButton::Primary){
     self.selected_card=card_hit.clone();if card_hit.is_some(){self.selected.clear();}
    }
-   if let (Some((start,original)),Some(pos),Some((key,index)))=
+   if let (Some((start,original)),Some(pos),Some((key,_index)))=
      (&self.card_move,pointer,&self.selected_card) {
-     if response.dragged_by(egui::PointerButton::Primary) && key=="hand" {
+     if ctx.input(|i|i.pointer.button_down(egui::PointerButton::Primary)) && key=="hand" {
       let delta=(pos-*start)/self.zoom;
-      let card_key=format!("{key}_card_{index}");
-      let base=original.get(&card_key).copied().unwrap_or_default();
-      let style=self.hand_styles.entry(card_key).or_default();
+      // Dragging any card in the player's hand moves the entire hand
+      // together. Individual card offsets remain available in Properties.
+      let base=original.get(key).copied().unwrap_or_default();
+      let style=self.hand_styles.entry(key.clone()).or_default();
       style.dx=(base.dx+delta.x).round();
       style.dy=(base.dy+delta.y).round();
      }
     }
-    if response.drag_stopped_by(egui::PointerButton::Primary){
+    if ctx.input(|i|i.pointer.button_released(egui::PointerButton::Primary)){
      self.card_move=None;
     }
     if let Some((key,index))=&self.selected_card {
@@ -642,9 +748,11 @@ impl eframe::App for Designer{
       let mut style=original;designer_preview::resize_hand(&mut style,height,new_height,self.resize_anchor);self.hand_styles.insert(key.clone(),style);
      }}
      if resize.drag_stopped(){
-       if let Some((key,_))=&self.selected_card{
+       if let (Some((original_height,_)),Some((key,_)))=(self.card_resize,&self.selected_card){
         if let Some(height)=self.hand_styles.get(key).and_then(|s|s.height){
-         self.queue_size_sync(SizeSync::Hand(key.clone(),height),ctx.input(|i|i.time));
+         if (height-original_height).abs()>0.5 {
+          self.queue_size_sync(SizeSync::Hand(key.clone(),height),ctx.input(|i|i.time));
+         }
         }
        }
        self.card_resize=None;
@@ -729,17 +837,37 @@ impl eframe::App for Designer{
     }
    }
   });
+  if !self.desktop && self.sync_prompt.is_none() && self.sync_draft.is_some(){
+   let active=self.selected_card.as_ref().map(|(key,_)|key.clone())
+    .or_else(||self.selected.iter().next().cloned());
+   if active!=self.sync_owner {
+    self.sync_prompt=self.sync_draft.take();
+    self.sync_owner=None;
+   }
+  }
  }
 }
 fn main()->eframe::Result<()>{
  // eframe restores saved window bounds before applying these first-run defaults.
- let options=eframe::NativeOptions{persist_window:true,viewport:egui::ViewportBuilder::default().with_title("PhaseUP UI Designer").with_inner_size([1500.,900.]),..Default::default()};
- eframe::run_native("PhaseUP UI Designer",options,Box::new(|_|Ok(Box::new(Designer::new()))))
+ let capture=std::env::args().any(|a|a=="--menu-capture");
+ let options=eframe::NativeOptions{persist_window:!capture,viewport:egui::ViewportBuilder::default().with_title("PhaseUP UI Designer").with_inner_size([1500.,900.]),..Default::default()};
+ eframe::run_native(if capture{"PhaseUP menu capture"}else{"PhaseUP UI Designer"},options,Box::new(|_|Ok(Box::new(Designer::new()))))
 }
 
 #[cfg(test)]
 mod aspect_tests {
  use super::*;
+ #[test] fn number_text_size_saves_and_reloads_without_changing_geometry(){
+  let mut app=Designer::new();app.desktop=true;app.elements=designer_preview::layout(false);app.show_cpu=true;app.cpu_expanded.clear();app.cpu_collapsed.clear();
+  app.path=std::env::temp_dir().join(format!("phaseup-number-size-{}.json",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+  app.card_number_size=Some(48.);app.save();assert!(app.status.starts_with("Saved"));
+  let saved:serde_json::Value=serde_json::from_str(&fs::read_to_string(&app.path).unwrap()).unwrap();
+  assert_eq!(saved["card_number_size"],48.);let geometry=saved["elements"].clone();
+  app.card_number_size=None;app.load();assert_eq!(app.card_number_size,Some(48.));app.save();
+  let restored:serde_json::Value=serde_json::from_str(&fs::read_to_string(&app.path).unwrap()).unwrap();assert_eq!(restored["elements"],geometry);
+  app.card_number_size=None;app.save();app.load();assert_eq!(app.card_number_size,None);
+  fs::remove_file(&app.path).unwrap();
+ }
  #[test] fn mobile_profiles_keep_geometry_in_bounds_and_do_not_share_files(){
   for aspect in 0..4 {
    let size=canvas(false,aspect);let mut e=defaults();rescale(&mut e,BOARD,size);
