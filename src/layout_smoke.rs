@@ -1,6 +1,99 @@
 //! Reproducible captures of the real gameplay renderer, with no settings writes.
 use crate::*;
 
+pub(super) async fn menus(output: &str) {
+    std::fs::create_dir_all(output).unwrap();
+    set_theme(Theme::Modern);
+    load_menu_fonts().await;
+    set_board_input_blocked(true);
+    for (aspect, source, resolution) in [
+        (
+            "20_9",
+            include_str!("../assets/layouts/menus_mobile_20_9.json"),
+            (2400, 1080),
+        ),
+        (
+            "19_5_9",
+            include_str!("../assets/layouts/menus_mobile_19_5_9.json"),
+            (2340, 1080),
+        ),
+    ] {
+        preview_display(Some((DisplayLayout::Mobile, resolution)));
+        let doc = menu_model::Document::parse(source).unwrap();
+        let (w, h) = doc.canvas();
+        menu_runtime::load_for_test(doc.clone());
+        request_new_screen_size(w * 0.5, h * 0.5);
+        next_frame().await;
+        next_frame().await;
+        for (name, screen, has_game, popup) in [
+            ("home", MenuScreen::Home, false, false),
+            ("home_resume", MenuScreen::Home, true, false),
+            ("settings", MenuScreen::Settings, false, false),
+            ("settings_resume", MenuScreen::Settings, true, false),
+            ("resolution_choices", MenuScreen::Settings, true, true),
+            ("confirm_new", MenuScreen::ConfirmNew, true, false),
+            ("how_to_play", MenuScreen::HowToPlay, true, false),
+            ("rules", MenuScreen::Rules, true, false),
+            ("developer_tools", MenuScreen::DeveloperTools, true, false),
+            ("ui_workshop", MenuScreen::UiWorkshop, true, false),
+        ] {
+            let mut fullscreen = false;
+            let mut moves = true;
+            let mut scroll = 0.;
+            let mut opened = popup;
+            let mut difficulty = Difficulty::Normal;
+            draw_menu(
+                screen,
+                has_game,
+                &mut fullscreen,
+                &mut moves,
+                &mut scroll,
+                &mut opened,
+                &mut difficulty,
+            );
+            let path = std::path::Path::new(output).join(format!("{aspect}_{name}.png"));
+            get_screen_data().export_png(path.to_str().unwrap());
+            next_frame().await;
+        }
+        let mut edited = doc;
+        edited.set_bounds(
+            "home",
+            "new_game",
+            menu_model::Bounds {
+                x: w / 2. - 340.,
+                y: 330.,
+                w: 680.,
+                h: 92.,
+            },
+        );
+        edited.set_style("home", "new_game", "START A NEW GAME", 32., 0., 0.);
+        menu_runtime::load_for_test(edited);
+        let mut fullscreen = false;
+        let mut moves = true;
+        let mut scroll = 0.;
+        let mut opened = false;
+        let mut difficulty = Difficulty::Normal;
+        draw_menu(
+            MenuScreen::Home,
+            false,
+            &mut fullscreen,
+            &mut moves,
+            &mut scroll,
+            &mut opened,
+            &mut difficulty,
+        );
+        get_screen_data().export_png(
+            std::path::Path::new(output)
+                .join(format!("{aspect}_edited_home.png"))
+                .to_str()
+                .unwrap(),
+        );
+        next_frame().await;
+    }
+    preview_display(None);
+    set_board_input_blocked(false);
+}
+
 pub(super) async fn run(output: &str) {
     std::fs::create_dir_all(output).expect("create capture directory");
     set_theme(Theme::Modern);

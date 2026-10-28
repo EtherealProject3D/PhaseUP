@@ -11,6 +11,8 @@ const MUTED: Color = Color::new(0.60, 0.68, 0.78, 1.);
 
 mod card_model;
 mod clean_cards;
+mod menu_model;
+mod menu_runtime;
 use card_model::{Card, Kind};
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -1071,40 +1073,37 @@ fn debug_overlay(g:&Game) {
 
 #[derive(Clone,Copy,PartialEq,Eq)]
 enum MenuScreen { Home, Settings, DeveloperTools, UiWorkshop, HowToPlay, Rules, ConfirmNew, Playing, Resume }
-fn menu_button(title:&str,y:f32)->bool {
-    let (mx,my)=game_mouse();
-    let hovered=mx>=730.0&&mx<=1190.0&&my>=y&&my<=y+64.0;
-    themed_button(730.0,y,460.0,64.0,hovered);
-    // Long theme names must fit inside the standard-width menu buttons.
-    let size=if menu_text_width(title,28)>420.0 {23}else{28};
-    let w=menu_text_width(title,size);
-    menu_label(title,960.0-w/2.0,y+42.0,size as f32,if hovered && active_theme()!=Theme::Futuristic {BG} else {WHITEISH});
-    hovered&&is_mouse_button_pressed(MouseButton::Left)
-}
+fn menu_button(id:&str,title:&str,y:f32)->bool {menu_runtime::button(id,title,y)}
+fn menu_page_key(screen:MenuScreen,has_game:bool)->&'static str{match screen {
+    MenuScreen::Home=>if has_game{"home_resume"}else{"home"},MenuScreen::Settings=>if has_game{"settings_resume"}else{"settings"},
+    MenuScreen::ConfirmNew=>"confirm_new",MenuScreen::HowToPlay=>"how_to_play",MenuScreen::Rules=>"rules",MenuScreen::DeveloperTools=>"developer_tools",MenuScreen::UiWorkshop=>"ui_workshop",_=>"home",
+}}
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
     set_game_view(false);
     let screen=if !cfg!(feature="developer-tools") && matches!(screen,MenuScreen::DeveloperTools|MenuScreen::UiWorkshop) {MenuScreen::Settings}else{screen};
+    menu_runtime::begin(menu_page_key(screen,has_game));
     set_default_camera();
     clear_background(active_theme().background());
     let (pw,ph)=(screen_width(),screen_height());
-    let scale=(pw/1920.0).min(ph/game_canvas_height());
-    set_camera(&Camera2D{target:vec2(960.0,game_canvas_height()/2.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
+    let scale=(pw/game_canvas_width()).min(ph/game_canvas_height());
+    set_camera(&Camera2D{target:vec2(game_canvas_width()/2.0,game_canvas_height()/2.0),zoom:vec2(2.0*scale/pw,2.0*scale/ph),..Default::default()});
     menu_background();
     if matches!(screen,MenuScreen::HowToPlay|MenuScreen::Rules) {
         help_page(screen==MenuScreen::Rules,help_scroll);
-        if button("BACK TO MENU",730.0,1028.0,460.0,60.0,true){return Some(MenuScreen::Home);}
+        if menu_button("back","BACK TO MENU",1028.0){return Some(MenuScreen::Home);}
         return None;
     }
     let panel_h=880.0;
     let panel_y=(game_canvas_height()-panel_h)/2.0;
     let submenu_offset=panel_y-190.0;
-    panel_decoration(620.0,panel_y,680.0,panel_h);
+    let panel=menu_runtime::bounds("panel",menu_model::Bounds{x:620.,y:panel_y,w:680.,h:panel_h});
+    panel_decoration(panel.x,panel.y,panel.w,panel.h);
     let title=match screen {MenuScreen::Home=>"PHASEUP",MenuScreen::Settings=>"SETTINGS",MenuScreen::DeveloperTools=>"DEVELOPER TOOLS",MenuScreen::UiWorkshop=>"UI WORKSHOP",MenuScreen::ConfirmNew=>"NEW GAME?",MenuScreen::Playing|MenuScreen::Resume|MenuScreen::HowToPlay|MenuScreen::Rules=>""};
-    // Home layout uses the same panel coordinates for every window preset.
+    // Saved menu bounds override the shared screen defaults.
     let title_y=match screen {MenuScreen::Home=>panel_y+115.0,MenuScreen::Settings=>260.0+submenu_offset,_=>310.0+submenu_offset};
-    let w=menu_text_width(title,54);
-    if !(screen==MenuScreen::Home && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
-        menu_heading(title,960.0-w/2.0,title_y,54.0);
+
+    if !(screen==MenuScreen::Home && !menu_runtime::has_override("title") && active_theme()==Theme::Futuristic && neon_logo(770.0,panel_y+64.0,380.0,70.0)) {
+        menu_runtime::label("title",title,menu_model::Bounds{x:660.,y:title_y-54.,w:600.,h:70.},54.,ACCENT,true);
     }
     match screen {
         MenuScreen::Home=>{
@@ -1113,40 +1112,40 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             let step=if has_game {82.0}else{85.0};
             let mut row=0.0;
             if has_game {
-                if menu_button("RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
+                if menu_button("resume","RESUME GAME",first_y+step*row){return Some(MenuScreen::Playing);}
                 row+=1.0;
             }
-            if menu_button("NEW GAME",first_y+step*row){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
+            if menu_button("new_game","NEW GAME",first_y+step*row){return Some(if has_game {MenuScreen::ConfirmNew} else {MenuScreen::Playing});}
             row+=1.0;
-            if menu_button("HOW TO PLAY",first_y+step*row){return Some(MenuScreen::HowToPlay);}
+            if menu_button("how_to_play","HOW TO PLAY",first_y+step*row){return Some(MenuScreen::HowToPlay);}
             row+=1.0;
-            if menu_button("GAME RULES",first_y+step*row){return Some(MenuScreen::Rules);}
+            if menu_button("rules","GAME RULES",first_y+step*row){return Some(MenuScreen::Rules);}
             row+=1.0;
-            if menu_button("SETTINGS",first_y+step*row){return Some(MenuScreen::Settings);}
+            if menu_button("settings","SETTINGS",first_y+step*row){return Some(MenuScreen::Settings);}
             row+=1.0;
-            if menu_button("QUIT",first_y+step*row){std::process::exit(0);}
+            if menu_button("quit","QUIT",first_y+step*row){std::process::exit(0);}
             row+=1.0;
-            if menu_button(&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),first_y+step*row){
+            if menu_button("difficulty",&format!("CPU DIFFICULTY: {}",cpu_difficulty.name()),first_y+step*row){
                 *cpu_difficulty=cpu_difficulty.next();
                 save_cpu_difficulty(*cpu_difficulty);
             }
             if has_game {
                 let note="Difficulty applies to new games";
-                menu_label(note,960.0-menu_text_width(note,18)/2.0,first_y+step*(row+1.0)+12.0,18.0,MUTED);
+                menu_runtime::label("difficulty_note",note,menu_model::Bounds{x:690.,y:first_y+step*(row+1.)-6.,w:540.,h:30.},18.,MUTED,false);
             }
         }
         MenuScreen::Settings=>{
-            menu_label("WINDOW",750.0,panel_y+138.0,22.0,MUTED);
+            menu_runtime::label("window_heading","WINDOW",menu_model::Bounds{x:750.,y:panel_y+138.-22.,w:420.,h:30.},22.,MUTED,false);
             let (current_w,current_h)=(screen_width().round() as i32,screen_height().round() as i32);
             // Always identify a chosen resolution by its preset, even when
             // Windows fits its actual client size to the available desktop.
             let selected=read_selected_resolution().unwrap_or((current_w,current_h));
             let window_text=format!("PRESET: {} x {}  {}",selected.0,selected.1,if *resolution_open {"▲"}else{"▼"});
-            let preset_button_clicked=menu_button(&window_text,panel_y+164.0);
+            let preset_button_clicked=menu_button("preset",&window_text,panel_y+164.0);
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button(&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) {
+            if !*resolution_open && menu_button("layout",&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) {
                 let mode=read_display_layout().next();
                 save_display_layout(mode);
                 let (w,h)=if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)};
@@ -1157,59 +1156,62 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
                 if active_theme()==Theme::Futuristic {set_theme(Theme::Modern);save_theme(Theme::Modern);}
                 layout::reload();
             }
-            if !*resolution_open && menu_button("TOGGLE FULLSCREEN",panel_y+308.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
-            menu_label("INTERFACE",750.0,panel_y+329.0,22.0,MUTED);
-            if !*resolution_open && menu_button(if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
-            if !*resolution_open && menu_button(&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
+            if !*resolution_open && menu_button("fullscreen","TOGGLE FULLSCREEN",panel_y+308.0){*fullscreen=!*fullscreen;set_fullscreen(*fullscreen);}
+            menu_runtime::label("interface_heading","INTERFACE",menu_model::Bounds{x:750.,y:panel_y+329.-22.,w:420.,h:30.},22.,MUTED,false);
+            if !*resolution_open && menu_button("recent_moves",if *show_moves {"RECENT MOVES: ON"}else{"RECENT MOVES: OFF"},panel_y+350.0){*show_moves=!*show_moves;}
+            if !*resolution_open && menu_button("speed",&format!("GAME SPEED: {}",active_game_speed().name()),panel_y+422.0){
                 let next=active_game_speed().next();set_game_speed(next);save_game_speed(next);
             }
-            menu_label("APPEARANCE",750.0,panel_y+515.0,22.0,MUTED);
+            menu_runtime::label("appearance_heading","APPEARANCE",menu_model::Bounds{x:750.,y:panel_y+515.-22.,w:420.,h:30.},22.,MUTED,false);
             if !*resolution_open {
                 if cfg!(feature="developer-tools") {
-                    if menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
+                    if menu_button("theme",&format!("THEME: {}",active_theme().name()),panel_y+538.0){
                         let allowed=read_display_layout()==DisplayLayout::Desktop && read_display_layout().aspect(read_selected_resolution().unwrap_or((1600,1000)).0,read_selected_resolution().unwrap_or((1600,1000)).1)=="16_10";
                         let mut next=active_theme().next();
                         if !allowed && next==Theme::Futuristic {next=Theme::Playful;}
                         set_theme(next);save_theme(next);
                     }
                 }else{
-                    neon_metal_button(730.,panel_y+538.,460.,64.,false,false);
+                    let r=menu_runtime::bounds("theme",menu_model::Bounds{x:730.,y:panel_y+538.,w:460.,h:64.});
+                    neon_metal_button(r.x,r.y,r.w,r.h,false,false);
                     let text="THEME: NEON FORGE";
-                    menu_label(text,960.-menu_text_width(text,28)/2.,panel_y+580.,28.,MUTED);
+                    menu_runtime::label("theme",text,r,28.,MUTED,false);
                     let note="Theme changes are planned in a future version";
                     menu_label(note,960.-menu_text_width(note,16)/2.,panel_y+625.,16.,MUTED);
                 }
             }
-            if cfg!(feature="developer-tools") && !*resolution_open && menu_button("DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
-            if !*resolution_open && menu_button("BACK",panel_y+682.0){return Some(MenuScreen::Home);}
-            if has_game && !*resolution_open && menu_button("RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
+            if cfg!(feature="developer-tools") && !*resolution_open && menu_button("developer_tools","DEVELOPER TOOLS",panel_y+610.0){return Some(MenuScreen::DeveloperTools);}
+            if !*resolution_open && menu_button("back","BACK",panel_y+682.0){return Some(MenuScreen::Home);}
+            if has_game && !*resolution_open && menu_button("resume","RESUME GAME",panel_y+754.0){return Some(MenuScreen::Resume);}
             // Draw the expanded list last, above the other settings controls.
             if *resolution_open {
                 if resolution_picker(834.0,panel_y+228.0) {*resolution_open=false;}
                 // Do not interpret the click that opened the picker as an outside click.
                 if !preset_button_clicked && is_mouse_button_pressed(MouseButton::Left) {
                     let (mx,my)=game_mouse();
-                    let on_preset_button=mx>=730.0&&mx<=1190.0&&my>=panel_y+164.0&&my<=panel_y+228.0;
-                    let on_picker=mx>=834.0&&mx<=1086.0&&my>=panel_y+228.0&&my<=panel_y+228.0+39.0+read_display_layout().presets().len() as f32*54.0+8.0;
+                    let preset=menu_runtime::bounds("preset",menu_model::Bounds{x:730.,y:panel_y+164.,w:460.,h:64.});
+                    let on_preset_button=mx>=preset.x&&mx<=preset.x+preset.w&&my>=preset.y&&my<=preset.y+preset.h;
+                    let popup=menu_runtime::page_bounds("resolution_choices","panel",menu_model::Bounds{x:834.,y:panel_y+228.,w:252.,h:47.+read_display_layout().presets().len() as f32*54.});
+                    let on_picker=mx>=popup.x&&mx<=popup.x+popup.w&&my>=popup.y&&my<=popup.y+popup.h;
                     if !on_preset_button && !on_picker {*resolution_open=false;}
                 }
             }
         }
         MenuScreen::DeveloperTools=>{
-            menu_label("Visual previews do not affect gameplay.",720.0,365.0+submenu_offset,22.0,MUTED);
-            if menu_button("UI WORKSHOP",475.0+submenu_offset){return Some(MenuScreen::UiWorkshop);}
-            if menu_button("BACK TO SETTINGS",575.0+submenu_offset){return Some(MenuScreen::Settings);}
+            menu_runtime::label("note","Visual previews do not affect gameplay.",menu_model::Bounds{x:670.,y:310.,w:580.,h:44.},22.,MUTED,false);
+            if menu_button("workshop","UI WORKSHOP",475.0+submenu_offset){return Some(MenuScreen::UiWorkshop);}
+            if menu_button("back","BACK TO SETTINGS",575.0+submenu_offset){return Some(MenuScreen::Settings);}
         }
         MenuScreen::UiWorkshop=>{
             // Preview rendering happens in the main loop so it can use the workshop state.
-            if menu_button("BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
+            if menu_button("back","BACK TO DEVELOPER TOOLS",950.0+submenu_offset){return Some(MenuScreen::DeveloperTools);}
         }
         MenuScreen::ConfirmNew=>{
             let warning="Start over? Current game progress will be lost.";
-            menu_label(warning,960.0-menu_text_width(warning,22)/2.0,panel_y+185.0,22.0,WHITEISH);
-            if menu_button("YES, NEW GAME",panel_y+245.0){return Some(MenuScreen::Playing);}
-            if menu_button("CANCEL",panel_y+345.0){return Some(MenuScreen::Home);}
-            if has_game && menu_button("RESUME GAME",panel_y+445.0){return Some(MenuScreen::Resume);}
+            menu_runtime::label("warning",warning,menu_model::Bounds{x:660.,y:320.,w:600.,h:52.},22.,WHITEISH,false);
+            if menu_button("confirm","YES, NEW GAME",panel_y+245.0){return Some(MenuScreen::Playing);}
+            if menu_button("cancel","CANCEL",panel_y+345.0){return Some(MenuScreen::Home);}
+            if has_game && menu_button("resume","RESUME GAME",panel_y+445.0){return Some(MenuScreen::Resume);}
         }
         MenuScreen::HowToPlay|MenuScreen::Rules|MenuScreen::Playing|MenuScreen::Resume=>{}
     }
@@ -1217,36 +1219,21 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
 }
 // Presets are restricted to the selected display layout.
 fn resolution_picker(x:f32,y:f32)->bool {
-    let mode=read_display_layout();
-    let presets=mode.presets();
-    let height=39.0+presets.len() as f32*54.0+8.0;
-    draw_rectangle(x,y,252.0,height,active_theme().background());
-    draw_rectangle_lines(x,y,252.0,height,2.0,ACCENT);
-    menu_label(if mode==DisplayLayout::Mobile {"MOBILE RESOLUTIONS"}else{"DESKTOP RESOLUTIONS"},x+12.0,y+27.0,17.0,ACCENT);
-    let (mx,my)=game_mouse();
-    for (index,(w,h)) in presets.iter().enumerate() {
-        let bx=x+12.0;
-        let by=y+39.0+index as f32*54.0;
-        let hover=mx>=bx&&mx<=bx+228.0&&my>=by&&my<=by+48.0;
-        themed_button(bx,by,228.0,48.0,hover);
-        let label=format!("{} x {} ({})",w,h,if mode.aspect(*w,*h)=="19_5_9" {"19.5:9"} else if mode.aspect(*w,*h)=="20_9" {"20:9"} else if mode.aspect(*w,*h)=="16_9" {"16:9"} else {"16:10"});
-        let tw=menu_text_width(&label,17);
-        menu_label(&label,bx+(228.0-tw)/2.0,by+31.0,17.0,WHITEISH);
-        if hover&&is_mouse_button_pressed(MouseButton::Left) {
-            let fitted=fit_window_to_desktop(*w,*h);
-            request_new_screen_size(fitted.0 as f32,fitted.1 as f32);
-            save_window_size(fitted.0,fitted.1);
-            save_selected_resolution(*w,*h);
-            if active_theme()==Theme::Futuristic && (mode!=DisplayLayout::Desktop || mode.aspect(*w,*h)!="16_10") {
-                set_theme(Theme::Modern);save_theme(Theme::Modern);
-            }
-            layout::reload();
-            return true;
+    let previous=menu_runtime::current_page();menu_runtime::begin("resolution_choices");
+    let mode=read_display_layout();let presets=mode.presets();let height=47.+presets.len() as f32*54.;
+    let panel=menu_runtime::bounds("panel",menu_model::Bounds{x,y,w:252.,h:height});
+    draw_rectangle(panel.x,panel.y,panel.w,panel.h,active_theme().background());draw_rectangle_lines(panel.x,panel.y,panel.w,panel.h,2.,ACCENT);
+    menu_runtime::label("title",if mode==DisplayLayout::Mobile{"MOBILE RESOLUTIONS"}else{"DESKTOP RESOLUTIONS"},menu_model::Bounds{x:panel.x+12.,y:panel.y+4.,w:panel.w-24.,h:28.},17.,ACCENT,false);
+    for (index,(w,h)) in presets.iter().enumerate(){
+        let label=format!("{} x {} ({})",w,h,if mode.aspect(*w,*h)=="19_5_9"{"19.5:9"}else if mode.aspect(*w,*h)=="20_9"{"20:9"}else if mode.aspect(*w,*h)=="16_9"{"16:9"}else{"16:10"});
+        if menu_runtime::button_at(&format!("resolution_{index}"),&label,menu_model::Bounds{x:panel.x+12.,y:panel.y+39.+index as f32*54.,w:panel.w-24.,h:48.},17.){
+            let fitted=fit_window_to_desktop(*w,*h);request_new_screen_size(fitted.0 as f32,fitted.1 as f32);save_window_size(fitted.0,fitted.1);save_selected_resolution(*w,*h);
+            if active_theme()==Theme::Futuristic && (mode!=DisplayLayout::Desktop || mode.aspect(*w,*h)!="16_10"){set_theme(Theme::Modern);save_theme(Theme::Modern);}
+            layout::reload();menu_runtime::begin(&previous);return true;
         }
     }
-    false
+    menu_runtime::begin(&previous);false
 }
-// Windows window placement is independent of Macroquad's client-area sizing.
 fn window_conf()->Conf {Conf{window_title:"PhaseUP - Offline Card Game".to_string(),window_width:read_window_size().0,window_height:read_window_size().1,window_resizable:true,..Default::default()}}
 #[macroquad::main(window_conf)]
 async fn main(){
@@ -1259,6 +1246,8 @@ async fn main(){
     macroquad::rand::srand(seed);
     #[cfg(feature="developer-tools")]
     if let Some(output)=std::env::args().skip_while(|a|a!="--layout-smoke").nth(1){layout_smoke::run(&output).await;return;}
+    #[cfg(feature="developer-tools")]
+    if let Some(output)=std::env::args().skip_while(|a|a!="--menu-smoke").nth(1){layout_smoke::menus(&output).await;return;}
     set_theme(read_theme());
     if active_theme()==Theme::Futuristic && (read_display_layout()!=DisplayLayout::Desktop || !read_selected_resolution().is_some_and(|(w,h)|read_display_layout().aspect(w,h)=="16_10")) {
         set_theme(Theme::Modern);

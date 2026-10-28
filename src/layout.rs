@@ -217,6 +217,7 @@ fn parse_layout(data:&str)->Option<serde_json::Value>{
 }
 
 pub(super) fn reload(){
+    crate::menu_runtime::reload();
     let mut values=HashMap::new(); designer::load(None);
     #[cfg(not(target_os="android"))]
     let data=std::fs::read_to_string(crate::selected_layout_file()).ok()

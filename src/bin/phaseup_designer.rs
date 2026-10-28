@@ -1,6 +1,8 @@
 #[path = "../card_model.rs"]
 mod card_model;
 #[path = "../clean_cards.rs"] mod clean_cards;
+#[path = "../menu_model.rs"] mod menu_model;
+#[path = "../menu_designer.rs"] mod menu_designer;
 use card_model::{Card, Kind};
 #[path = "../phases.rs"]
 #[allow(dead_code)]
@@ -91,6 +93,7 @@ enum SizeSync {
 }
 
 struct Designer {
+ capture_path:Option<String>,capture_frames:u8,menu_mode:bool,menu_editor:menu_designer::MenuDesigner,
  elements:Snapshot, selected:BTreeSet<String>,undo:Vec<Snapshot>,redo:Vec<Snapshot>,
  zoom:f32,pan:Vec2,grid:f32,snap_grid:bool,snap_edges:bool,snap_objects:bool,
  drag_start:Option<(Pos2,Snapshot)>,marquee:Option<Pos2>,status:String,
@@ -99,7 +102,8 @@ struct Designer {
 }
 impl Designer {
  fn new()->Self{
-  let mut app=Self{elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
+  let capture_path=std::env::args().skip_while(|a|a!="--menu-capture").nth(1);
+  let mut app=Self{capture_path:capture_path.clone(),capture_frames:0,menu_mode:capture_path.is_some(),menu_editor:menu_designer::MenuDesigner::new(),elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
    zoom:0.0,pan:Vec2::ZERO,grid:8.,snap_grid:true,snap_edges:true,snap_objects:true,
    card_number_size:None,drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None,sync_owner:None};
   app.load();app
@@ -314,6 +318,13 @@ impl Designer {
 }
 impl eframe::App for Designer{
  fn update(&mut self,ctx:&egui::Context,_frame:&mut eframe::Frame){
+  if let Some(path)=self.capture_path.clone(){
+   let image=ctx.input(|i|i.events.iter().find_map(|e|if let egui::Event::Screenshot{image,..}=e{Some(image.clone())}else{None}));
+   if let Some(image)=image{let bytes=image.pixels.chunks(image.size[0]).rev().flat_map(|row|row.iter().flat_map(|c|c.to_array())).collect();let image=macroquad::texture::Image{bytes,width:image.size[0] as u16,height:image.size[1] as u16};image.export_png(&path);self.capture_path=None;ctx.send_viewport_cmd(egui::ViewportCommand::Close);return;}
+   self.capture_frames=self.capture_frames.saturating_add(1);if self.capture_frames==3{ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);}ctx.request_repaint();
+  }
+  egui::TopBottomPanel::top("design_workspace").show(ctx,|ui|{ui.horizontal(|ui|{ui.label("Design:");ui.selectable_value(&mut self.menu_mode,false,"Gameplay");ui.selectable_value(&mut self.menu_mode,true,"Menus");});});
+  if self.menu_mode{self.menu_editor.show(ctx);return;}
   let undo=!self.play && !ctx.wants_keyboard_input() && ctx.input(|i|i.modifiers.command&&i.key_pressed(egui::Key::Z));
   let redo=!self.play && !ctx.wants_keyboard_input() && ctx.input(|i|i.modifiers.command&&i.key_pressed(egui::Key::Y));
   if undo{self.undo();}if redo{self.redo();}
@@ -838,8 +849,9 @@ impl eframe::App for Designer{
 }
 fn main()->eframe::Result<()>{
  // eframe restores saved window bounds before applying these first-run defaults.
- let options=eframe::NativeOptions{persist_window:true,viewport:egui::ViewportBuilder::default().with_title("PhaseUP UI Designer").with_inner_size([1500.,900.]),..Default::default()};
- eframe::run_native("PhaseUP UI Designer",options,Box::new(|_|Ok(Box::new(Designer::new()))))
+ let capture=std::env::args().any(|a|a=="--menu-capture");
+ let options=eframe::NativeOptions{persist_window:!capture,viewport:egui::ViewportBuilder::default().with_title("PhaseUP UI Designer").with_inner_size([1500.,900.]),..Default::default()};
+ eframe::run_native(if capture{"PhaseUP menu capture"}else{"PhaseUP UI Designer"},options,Box::new(|_|Ok(Box::new(Designer::new()))))
 }
 
 #[cfg(test)]

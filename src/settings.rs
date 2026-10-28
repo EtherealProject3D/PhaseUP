@@ -49,6 +49,8 @@ pub(super) fn save_selected_resolution(w:i32,h:i32) {
     let _=std::fs::write(path,format!("{w} {h}\n"));
 }
 pub(super) fn read_selected_resolution()->Option<(i32,i32)> {
+    #[cfg(feature="developer-tools")]
+    if let Some((_,resolution))=DISPLAY_PREVIEW.with(|v|v.get()){return Some(resolution);}
     let data=std::fs::read_to_string(selected_resolution_path()).ok()?;
     let mut parts=data.split_whitespace();
     let w=parts.next()?.parse::<i32>().ok()?;
@@ -179,6 +181,10 @@ pub(super) fn save_cpu_difficulty(level:crate::Difficulty) {
 
 #[derive(Clone,Copy,PartialEq,Eq,Debug)]
 pub(super) enum DisplayLayout { Desktop, Mobile }
+#[cfg(feature="developer-tools")]
+thread_local!{static DISPLAY_PREVIEW:std::cell::Cell<Option<(DisplayLayout,(i32,i32))>>=const{std::cell::Cell::new(None)};}
+#[cfg(feature="developer-tools")]
+pub(super) fn preview_display(value:Option<(DisplayLayout,(i32,i32))>){DISPLAY_PREVIEW.with(|v|v.set(value));}
 impl DisplayLayout {
     pub(super) fn name(self)->&'static str {match self {Self::Desktop=>"DESKTOP",Self::Mobile=>"MOBILE"}}
     pub(super) fn next(self)->Self {match self {Self::Desktop=>Self::Mobile,Self::Mobile=>Self::Desktop}}
@@ -199,6 +205,8 @@ impl DisplayLayout {
 }
 pub(super) fn display_layout_path()->std::path::PathBuf {window_size_path().with_file_name("display_layout.txt")}
 pub(super) fn read_display_layout()->DisplayLayout {
+    #[cfg(feature="developer-tools")]
+    if let Some((mode,_))=DISPLAY_PREVIEW.with(|v|v.get()){return mode;}
     if std::fs::read_to_string(display_layout_path()).is_ok_and(|s|s.trim()=="mobile"){DisplayLayout::Mobile}else{DisplayLayout::Desktop}
 }
 pub(super) fn save_display_layout(mode:DisplayLayout){
