@@ -215,6 +215,10 @@ impl Designer {
     // Older layouts may contain a header entry, but their element positions
     // must remain exactly as authored by the user.
     self.elements.remove("header");
+    // Standalone top-right menu control, independent of the removed header.
+    self.elements.entry("menu_button".to_owned()).or_insert(Box2{
+     x:(target.x-144.).max(0.),y:16.,w:120.,h:48.
+    });
     self.toggle_cpu_cards(false);
    }
  }
