@@ -322,6 +322,11 @@ pub(super) fn compact_hand(count:usize,area:Rect)->(f32,f32,f32){
 }
 pub(super) fn hand_layout(count:usize)->(Rect,f32){
     let panel=rect("hand_panel",Rect{x:12.,y:971.,w:1896.,h:217.});
+    if crate::read_display_layout()==crate::DisplayLayout::Mobile {
+        let area=rect("hand_cards",Rect{x:panel.x,y:panel.y,w:panel.w,h:panel.h});
+        let (x,w,step)=compact_hand(count,area);
+        return (Rect{x,y:area.y,w,h:area.h},step);
+    }
     let width=(1872./count.max(1) as f32).min(75.);
     let step=if count>1 {((1872.-width)/(count-1) as f32).min(81.)}else{0.};
     let row_width=width+step*count.saturating_sub(1) as f32;
