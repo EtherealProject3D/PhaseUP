@@ -37,6 +37,16 @@ Mobile resolution choices are 2400×1080 (20:9) and 2340×1080 (19.5:9), one pre
 per supported mobile aspect. Logical layout coordinates still come from the
 saved canvas and scale to the actual fitted window/device viewport.
 
+Modern & Clean uses the chosen solid-color card faces and two-way mirrored-P
+monogram backs. Gameplay and the designer share their palette and normalized
+monogram geometry. Hand/discard cards have a central value plus a corner index;
+laid groups retain corner-only values. Yellow cards use dark ink for contrast,
+while the other colors use cream. Editable card-number sizes still apply.
+The draw pile has a compact version of the same back to leave space for its
+editable captions. Shapes are rendered directly, without new texture assets.
+These changes have been captured on Windows; Android device testing remains
+separate and should use a build with `developer-tools` to enable this theme.
+
 ## Validation
 
 Run automated tests and a release build:

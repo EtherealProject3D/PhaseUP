@@ -10,6 +10,7 @@ const WHITEISH: Color = Color::new(0.92, 0.96, 1., 1.);
 const MUTED: Color = Color::new(0.60, 0.68, 0.78, 1.);
 
 mod card_model;
+mod clean_cards;
 use card_model::{Card, Kind};
 struct Player { hand: Vec<Card>, phase: usize, laid: bool, score: u32, table: Vec<Vec<Card>> }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -447,7 +448,9 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 let cy=card_area.y;
                 let card_pos=layout::rect(&format!("player_{i}_{}_laid_{}_card_{}",if p.table.len()==1 {"single"}else{"double"},j+1,k+1),layout::Rect{x:cx,y:cy,w:card_w,h:card_h});
                 let (cx,cy)=(card_pos.x,card_pos.y);
-                if active_theme()==Theme::Futuristic {
+                if active_theme()==Theme::Modern {
+                    clean_card_face(*card,cx,cy,card_pos.w,card_pos.h,true,false);
+                } else if active_theme()==Theme::Futuristic {
                     let _=card_ui(*card,cx,cy,card_pos.w,card_pos.h,false);
                 } else {
                     let color=color_for(card.kind);
@@ -489,6 +492,11 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     if active_theme()==Theme::Futuristic && neon_draw_back(deck_x,pile_y,pile_w,pile_h) {
         let count_text=format!("{} left",g.deck.len());
         editable_label("draw_remaining_count",&count_text,deck_x+(pile_w-menu_text_width(&count_text,17))/2.0+count_tx,pile_y+pile_h+22.0+count_ty,17.0,WHITEISH);
+    } else if active_theme()==Theme::Modern {
+        for layer in (0..g.deck.len().clamp(1,3)).rev(){let offset=layer as f32*3.;clean_card_back(deck_x+offset,pile_y+offset,pile_w,pile_h,true);}
+        if g.stage==Stage::Draw {draw_rectangle_lines(deck_x,pile_y,pile_w,pile_h,2.,YELLOW);}
+        editable_label("draw_card_text","DRAW",deck_x,pile_y+pile_h*0.55,22.,WHITEISH);
+        editable_label("draw_count_text",&format!("{} left",g.deck.len()),deck_x,pile_y+pile_h*0.7,17.,WHITEISH);
     } else {
     // Offset layers expose the thickness of the remaining draw deck.
     let layers=g.deck.len().min(3);

@@ -1,5 +1,6 @@
 #[path = "../card_model.rs"]
 mod card_model;
+#[path = "../clean_cards.rs"] mod clean_cards;
 use card_model::{Card, Kind};
 #[path = "../phases.rs"]
 #[allow(dead_code)]

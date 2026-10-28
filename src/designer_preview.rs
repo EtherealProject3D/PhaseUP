@@ -221,8 +221,8 @@ impl Preview {
             let key=format!("cpu_{i}_hand");let r=area(&key);
             if show_cpu {
                 let cards:Vec<_>=(0..10).map(|id|Card{id,kind:Kind::Skip}).collect();
-                for (_,r) in styled_row(&cards,r.shrink(6.*z),z,&BTreeSet::new(),styles.get(&key).copied().unwrap_or_default()) {ui.painter().rect_filled(r,2.,Color32::from_rgb(45,70,95));ui.painter().rect_stroke(r,2.,Stroke::new(1.0_f32,Color32::LIGHT_BLUE));}
-                label(ui,&key,r,"HAND",16.);
+                for (_,r) in styled_row(&cards,r.shrink(6.*z),z,&BTreeSet::new(),styles.get(&key).copied().unwrap_or_default()) {paint_back(ui,r,z,false); }
+
             }
             for g in 1..=2 {
                 let key=format!("cpu_{i}_laid_{g}");let r=area(&key);
@@ -263,6 +263,7 @@ for (card,card_rect) in laid_cards {
             }
         }
         if elements.contains_key("header") { label(ui,"header",area("header"),"PHASE-UP  |  PLAIN LAYOUT PROTOTYPE",30.); }
+        paint_back(ui,area("draw"),z,true);
         label(ui,"draw",area("draw"),"DRAW",22.);
         if elements.contains_key("draw_count"){label(ui,"draw_count",area("draw_count"),&format!("{} left",self.remaining),17.);}
         if let Some(card)=self.discard {paint_card(ui,card,area("discard"),z,false,number_size,false);}
@@ -335,14 +336,33 @@ fn row(cards:&[Card],r:Rect,z:f32,selected:&BTreeSet<u32>)->Vec<(Card,Rect)> {
     let start=r.center().x-(w+step*(cards.len()-1) as f32)/2.;
     cards.iter().enumerate().map(|(i,c)|(*c,Rect::from_min_size(Pos2::new(start+i as f32*step,r.center().y-h/2.-if selected.contains(&c.id){12.*z}else{0.}),Vec2::new(w,h)))).collect()
 }
+fn paint_back(ui:&egui::Ui,r:Rect,z:f32,compact:bool){
+    use super::clean_cards as style;
+    let r=Rect::from_center_size(r.center(),card_size(r.size()));
+    let rgb=|rgb:[u8;3]|Color32::from_rgb(rgb[0],rgb[1],rgb[2]);
+    let radius=(r.width()*0.08).min(10.*z);let border=(r.width()*0.025).max(z);
+    ui.painter().rect_filled(r,radius,rgb(style::CREAM));
+    ui.painter().rect_filled(r.shrink(border),(radius-border).max(0.),rgb(style::NAVY));
+    let pos=|p:[f32;2],mirrored:bool|{let p=style::mark_point(p,mirrored,compact);r.min+Vec2::new(p[0]*r.width(),p[1]*r.height())};
+    let width=r.width()*if compact{0.045}else{0.07};
+    for mirrored in [false,true]{for (path,color) in [(&style::P_BOWL[..],style::CREAM),(&style::P_STEM[..],style::TEAL)]{
+        ui.painter().add(egui::Shape::line(path.iter().map(|p|pos(*p,mirrored)).collect(),Stroke::new(width,rgb(color))));
+    }}
+    let c=pos([0.5,0.5],false);let d=r.width()*if compact{0.035}else{0.055};
+    ui.painter().add(egui::Shape::convex_polygon(vec![c+Vec2::new(0.,-d),c+Vec2::new(d,0.),c+Vec2::new(0.,d),c+Vec2::new(-d,0.)],rgb(style::TEAL),Stroke::NONE));
+}
 fn card_label(c:Card)->String {match c.kind {Kind::Number(n,_)=>n.to_string(),Kind::Wild=>"W".into(),Kind::Skip=>"S".into()}}
 fn paint_card(ui:&egui::Ui,c:Card,r:Rect,z:f32,pinned:bool,number_size:Option<f32>,corner:bool) {
     let r=Rect::from_center_size(r.center(),card_size(r.size()));
-    let color=match c.kind {Kind::Number(_,0)=>Color32::from_rgb(135,48,50),Kind::Number(_,1)=>Color32::from_rgb(40,85,140),Kind::Number(_,2)=>Color32::from_rgb(130,105,35),Kind::Number(_,_)=>Color32::from_rgb(40,115,70),Kind::Wild=>Color32::from_rgb(110,55,140),Kind::Skip=>Color32::GRAY};
-    ui.painter().rect_filled(r,3.,color);ui.painter().rect_stroke(r,3.,Stroke::new(1.0_f32,Color32::WHITE));
-    let size=number_size.unwrap_or(if corner{28.}else{32.});
-    let (position,align)=if corner{(r.min+Vec2::new(8.,8.)*z,Align2::LEFT_TOP)}else{(r.center(),Align2::CENTER_CENTER)};
-    ui.painter().text(position,align,card_label(c),FontId::proportional((size*z).max(1.)),Color32::WHITE);
+    let rgb=|rgb:[u8;3]|Color32::from_rgb(rgb[0],rgb[1],rgb[2]);
+    let radius=(r.width()*0.08).min(10.*z);let border=(r.width()*0.025).max(z);
+    ui.painter().rect_filled(r,radius,rgb(super::clean_cards::CREAM));
+    ui.painter().rect_filled(r.shrink(border),(radius-border).max(0.),rgb(super::clean_cards::face(c.kind)));
+    let size=number_size.unwrap_or(if corner{28.}else{(r.height()/z*0.36).min(r.width()/z*0.6)});
+    let ink=rgb(super::clean_cards::ink(c.kind));
+    if !corner{ui.painter().text(r.center(),Align2::CENTER_CENTER,card_label(c),FontId::proportional((size*z).max(1.)),ink);}
+    let index_size=if corner{size}else{(size*0.43).clamp(8.,24.)};
+    ui.painter().text(r.min+Vec2::new(r.width()*0.09,r.height()*0.06),Align2::LEFT_TOP,card_label(c),FontId::proportional((index_size*z).max(1.)),ink);
     if pinned {ui.painter().circle_filled(r.center_bottom()-Vec2::new(0.,6.*z),3.*z,Color32::WHITE);}
 }
 

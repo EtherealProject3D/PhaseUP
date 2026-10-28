@@ -419,12 +419,48 @@ pub(super) fn neon_frame(x:f32,y:f32,w:f32,h:f32,bright:bool){
     }
 }
 
+fn clean_rgb(rgb:[u8;3])->Color {Color::from_rgba(rgb[0],rgb[1],rgb[2],255)}
+fn clean_round(x:f32,y:f32,w:f32,h:f32,r:f32,color:Color){
+    let r=r.min(w/2.).min(h/2.).max(0.);
+    draw_rectangle(x+r,y,w-2.*r,h,color);draw_rectangle(x,y+r,w,h-2.*r,color);
+    for (cx,cy) in [(x+r,y+r),(x+w-r,y+r),(x+r,y+h-r),(x+w-r,y+h-r)]{draw_circle(cx,cy,r,color);}
+}
+pub(super) fn clean_card_face(card:Card,x:f32,y:f32,w:f32,h:f32,corner:bool,selected:bool){
+    let r=(w*0.08).min(10.);let border=(w*0.025).max(1.);
+    if selected{clean_round(x-2.,y-2.,w+4.,h+4.,r+2.,ACCENT);}
+    clean_round(x,y,w,h,r,clean_rgb(crate::clean_cards::CREAM));
+    clean_round(x+border,y+border,w-2.*border,h-2.*border,(r-border).max(0.),clean_rgb(crate::clean_cards::face(card.kind)));
+    let value=card_text(card.kind);let ink=clean_rgb(crate::clean_cards::ink(card.kind));
+    let size=layout::designer::card_number_size(if corner{28.}else{(h*0.36).min(w*0.6)});
+    if !corner{let m=menu_text_dimensions(&value,size as u16);menu_label(&value,x+(w-m.width)/2.,y+(h-m.height)/2.+m.offset_y,size,ink);}
+    let index_size=if corner{size}else{(size*0.43).clamp(8.,24.)};
+    let m=menu_text_dimensions(&value,index_size as u16);
+    menu_label(&value,x+w*0.09,y+h*0.06+m.offset_y,index_size,ink);
+}
+pub(super) fn clean_card_back(x:f32,y:f32,w:f32,h:f32,compact:bool){
+    use crate::clean_cards as style;
+    let r=(w*0.08).min(10.);let border=(w*0.025).max(1.);
+    clean_round(x,y,w,h,r,clean_rgb(style::CREAM));
+    clean_round(x+border,y+border,w-2.*border,h-2.*border,(r-border).max(0.),clean_rgb(style::NAVY));
+    let thickness=w*if compact{0.045}else{0.07};
+    for mirrored in [false,true]{
+        for (path,color) in [(&style::P_BOWL[..],style::CREAM),(&style::P_STEM[..],style::TEAL)]{
+            for segment in path.windows(2){let a=style::mark_point(segment[0],mirrored,compact);let b=style::mark_point(segment[1],mirrored,compact);
+                draw_line(x+a[0]*w,y+a[1]*h,x+b[0]*w,y+b[1]*h,thickness,clean_rgb(color));
+            }
+        }
+    }
+    let center=style::mark_point([0.5,0.5],false,compact);let cx=x+center[0]*w;let cy=y+center[1]*h;let d=w*if compact{0.035}else{0.055};
+    draw_triangle(vec2(cx,cy-d),vec2(cx+d,cy),vec2(cx,cy+d),clean_rgb(style::TEAL));
+    draw_triangle(vec2(cx,cy-d),vec2(cx-d,cy),vec2(cx,cy+d),clean_rgb(style::TEAL));
+}
 pub(super) fn selected_card_lift(selected:bool)->f32 {
     if !selected {0.}else if layout::designer::mobile() || active_theme()!=Theme::Futuristic{15.}else{0.}
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=y-selected_card_lift(selected);let c=color_for(card.kind);
-    if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){5}else{6},x,yy,w,h) {
+    if active_theme()==Theme::Modern {clean_card_face(card,x,yy,w,h,false,selected);}
+    else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){5}else{6},x,yy,w,h) {
         // Special cards share the Neon Forge texture family until dedicated art is available.
         let symbol=card_text(card.kind);
         let size=layout::designer::card_number_size(if w<45.0{22.}else{35.}) as u16;
@@ -499,7 +535,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         let t=card_text(card.kind);let size=layout::designer::card_number_size(if w<45.0{23.0}else{32.0});let dims=measure_text(&t,None,size as u16,1.0);
         label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     }
-    if selected && layout::designer::mobile(){draw_rectangle_lines(x-2.,yy-2.,w+4.,h+4.,4.,ACCENT);}
+    if selected && layout::designer::mobile() && active_theme()!=Theme::Modern{draw_rectangle_lines(x-2.,yy-2.,w+4.,h+4.,4.,ACCENT);}
     let m=game_mouse();!board_input_blocked()&&!layout_editor::pointer_over_tools()&&m.0>=x&&m.0<=x+w&&m.1>=yy&&m.1<=yy+h&&is_mouse_button_pressed(MouseButton::Left)
 }
 pub(super) fn column_hand_width(count:usize,card_w:f32)->f32 {
@@ -509,6 +545,7 @@ pub(super) fn neon_draw_back(x:f32,y:f32,w:f32,h:f32)->bool {
     active_theme()==Theme::Futuristic && neon_card_texture(4,x,y,w,h)
 }
 pub(super) fn cpu_card_back(x:f32,y:f32,w:f32,h:f32) {
+    if active_theme()==Theme::Modern{clean_card_back(x,y,w,h,false);return;}
     if active_theme()==Theme::Futuristic && neon_card_texture(4,x,y,w,h){return;}
     draw_rectangle(x+2.0,y+3.0,w,h,Color::new(0.0,0.0,0.0,0.28));
     draw_rectangle(x,y,w,h,WHITEISH);
