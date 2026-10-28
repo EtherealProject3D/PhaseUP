@@ -273,6 +273,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     set_camera(&camera);
     if active_theme()==Theme::Futuristic {neon_game_background(sw,sh);}
     expire_human_flights(g);
+    layout::designer::draw_panel_backgrounds();
+    layout::designer::draw_phase_status(g.players[0].laid,g.staged_phase_ready());
     if active_theme()==Theme::Futuristic {
         let header=layout::rect("upper_banner",layout::Rect{x:12.0,y:8.0,w:sw-24.0,h:48.0});
         neon_upper_banner(header.x,header.y,header.w,header.h);
@@ -900,6 +902,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             }
         }
     }
+    layout::designer::draw_panel_borders();
     // Keep the board visible until the winning discard reaches the pile.
     // The round result is already calculated, but its dialog waits for the flight.
     let discard_in_motion=g.human_discard_flight.is_some()||g.cpu_discard_flight.is_some();

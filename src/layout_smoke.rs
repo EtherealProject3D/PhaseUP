@@ -68,7 +68,13 @@ pub(super) async fn run(output: &str) {
                             ],
                         ];
                     }
-                    game.selected=game.players[0].hand.iter().filter(|c|!game.staged.iter().any(|group|group.contains(&c.id))).take(2).map(|c|c.id).collect();
+                    game.selected = game.players[0]
+                        .hand
+                        .iter()
+                        .filter(|c| !game.staged.iter().any(|group| group.contains(&c.id)))
+                        .take(2)
+                        .map(|c| c.id)
+                        .collect();
                     draw_game(&mut game, false, true, false, false);
                     let path = std::path::Path::new(output).join(format!(
                         "{aspect}_{}_{}_{}.png",
@@ -78,6 +84,20 @@ pub(super) async fn run(output: &str) {
                     ));
                     get_screen_data().export_png(path.to_str().unwrap());
                     next_frame().await;
+                    if !laid {
+                        let id = game.staged[0][0];
+                        game.unstage_card(id);
+                        draw_game(&mut game, false, true, false, false);
+                        let building = path.with_file_name(
+                            path.file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .replace("_staged.png", "_building.png"),
+                        );
+                        get_screen_data().export_png(building.to_str().unwrap());
+                        next_frame().await;
+                    }
                 }
             }
         }

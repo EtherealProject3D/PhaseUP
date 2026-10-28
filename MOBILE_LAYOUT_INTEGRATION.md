@@ -36,8 +36,8 @@ layouts:
 cargo run --release --features developer-tools -- --layout-smoke output/mobile-integration
 ```
 
-This exits after producing sixteen PNGs: both mobile aspects, expanded/collapsed
-CPU hands, single/double requirements, and staged/laid human phases. It does not
+This exits after producing twenty-four PNGs: both mobile aspects, expanded/collapsed
+CPU hands, single/double requirements, and building/ready/laid human phases. It does not
 start the regular game or save application settings. Captures are local review
 artifacts and are not committed.
 

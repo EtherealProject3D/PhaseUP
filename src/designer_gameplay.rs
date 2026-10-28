@@ -41,6 +41,50 @@ pub(crate) fn show_cpu() -> bool {
 pub(crate) fn separate() -> bool {
     element("staging").is_some()
 }
+
+// Parent panels are authored elements too, not just containers for child boxes.
+fn panel_rects() -> Vec<Rect> {
+    [
+        "header", "cpu_1", "cpu_2", "cpu_3", "phase", "staging", "hand",
+    ]
+    .into_iter()
+    .filter_map(element)
+    .collect()
+}
+pub(crate) fn draw_panel_backgrounds() {
+    for r in panel_rects() {
+        crate::draw_rectangle(r.x, r.y, r.w, r.h, crate::active_theme().panel());
+    }
+}
+pub(crate) fn draw_panel_borders() {
+    for r in panel_rects() {
+        crate::draw_rectangle_lines(
+            r.x,
+            r.y,
+            r.w,
+            r.h,
+            1.5,
+            crate::Color::new(0.43, 0.43, 0.43, 1.),
+        );
+    }
+}
+pub(crate) fn phase_status(laid: bool, ready: bool) -> &'static str {
+    if laid {
+        "PHASE IN PLAY"
+    } else if ready {
+        "READY — NOT IN PLAY"
+    } else {
+        "BUILD YOUR PHASE — NOT IN PLAY"
+    }
+}
+pub(crate) fn draw_phase_status(laid: bool, ready: bool) {
+    let key = if separate() && !laid {
+        "staging"
+    } else {
+        "phase"
+    };
+    label(key, phase_status(laid, ready), 22., crate::WHITEISH);
+}
 fn read(v: &Value) -> Option<Rect> {
     let r = Rect {
         x: v["x"].as_f64()? as f32,
@@ -248,7 +292,7 @@ pub(crate) fn label(key: &str, text: &str, default: f32, color: crate::Color) ->
     let content = &spec.text;
     let band = if key.contains("group_") || key.contains("_laid_") {
         24.
-    } else if key == "hand" || key.starts_with("cpu_") {
+    } else if ["hand", "phase", "staging"].contains(&key) || key.starts_with("cpu_") {
         32.
     } else {
         r.h
@@ -416,6 +460,33 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn designer_parent_panels_and_phase_status_are_preserved() {
+        let j: Value = serde_json::from_str(include_str!(
+            "../assets/layouts/prototype_mobile_compact_20_9.json"
+        ))
+        .unwrap();
+        load(Some(&j));
+        for key in ["cpu_1", "cpu_2", "cpu_3", "phase", "hand"] {
+            let r = element(key).unwrap();
+            assert!(
+                panel_rects()
+                    .iter()
+                    .any(|p| (p.x, p.y, p.w, p.h) == (r.x, r.y, r.w, r.h)),
+                "{key}"
+            );
+        }
+        assert_eq!(phase_status(false, false), "BUILD YOUR PHASE — NOT IN PLAY");
+        assert_eq!(phase_status(false, true), "READY — NOT IN PLAY");
+        assert_eq!(phase_status(true, false), "PHASE IN PLAY");
+        assert_eq!(phase_status(true, true), "PHASE IN PLAY");
+        assert_eq!(
+            label_spec("phase", phase_status(false, false), 22.).size,
+            30.
+        );
+        load(None);
+        assert!(panel_rects().is_empty());
+    }
     #[test]
     fn mobile_selection_toggles_independently_with_an_immediate_fixed_raise() {
         use crate::*;
