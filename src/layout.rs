@@ -139,11 +139,6 @@ pub(super) fn editor_items_for(g:&crate::Game)->Vec<(String,Rect)>{
     }
     items
 }
-pub(super) fn default_rect(name:&str)->Option<Rect>{
-    editor_items().into_iter().find(|(key,_)|*key==name).map(|(_,r)|r)
-}
-pub(super) fn at(name:&str,default:Rect)->Rect{rect(name,default)}
-
 pub(super) fn rect(name:&str, default:Rect)->Rect {
     let default=designer::mapped(name).unwrap_or(default); record(name,default);
     OVERRIDES.with(|m|m.borrow().get(name).copied().unwrap_or(default))

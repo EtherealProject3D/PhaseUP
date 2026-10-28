@@ -417,7 +417,7 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 mod tests {
     use super::*;
     #[test]
-    fn mobile_selection_toggles_independently_and_keeps_cards_stationary() {
+    fn mobile_selection_toggles_independently_with_an_immediate_fixed_raise() {
         use crate::*;
         let j: Value = serde_json::from_str(include_str!(
             "../assets/layouts/prototype_mobile_compact_20_9.json"
@@ -431,7 +431,8 @@ mod tests {
             g.toggle_hand_selection(*id);
         }
         assert_eq!(g.selected, ids);
-        assert_eq!(selected_card_lift(true), 0.);
+        assert_eq!(selected_card_lift(true), 15.);
+        assert_eq!(selected_card_lift(false), 0.);
         let before = g.discard.len();
         g.discard_selected();
         assert_eq!(g.discard.len(), before);

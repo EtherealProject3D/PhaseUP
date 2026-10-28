@@ -337,8 +337,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             let group_count=PHASES[phase].len();
             let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(group_count).x,layout::human_phase_panel(group_count).y,layout::human_phase_panel(group_count).w,layout::human_phase_panel(group_count).h,group_count==1);
             for j in 0..group_count {
-                let width=if i==0 {if group_count==1 {800.0}else{397.0}}else{if group_count==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-                let base_x=x+j as f32*if i==0 {403.0}else{312.0};
                 let group_rect=if i==0 {layout::human_phase_group(j,group_count)}else{layout::cpu_group(i,j,group_count,y)};
                 let gx=group_rect.x;
                 let y=group_rect.y;
@@ -369,8 +367,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let player_art=i==0 && active_theme()==Theme::Futuristic && neon_player_phase_panel(layout::human_phase_panel(p.table.len()).x,layout::human_phase_panel(p.table.len()).y,layout::human_phase_panel(p.table.len()).w,layout::human_phase_panel(p.table.len()).h,p.table.len()==1);
         for (j,group) in p.table.iter().enumerate() {
             let yy=if i==0 {y+12.0}else{y+9.0};
-            let width=if i==0 {if p.table.len()==1 {800.0}else{397.0}}else{if p.table.len()==1 {((sw-50.0)/3.0-8.0).max(95.0)}else{305.0}};
-            let base_x=if i==0 {x+j as f32*403.0}else{x+j as f32*312.0};
             let group_rect=if i==0 {layout::human_phase_group(j,p.table.len())}else{layout::cpu_group(i,j,p.table.len(),yy)};
             let x=group_rect.x;
             let yy=group_rect.y;
@@ -413,9 +409,6 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
             // Keep card artwork at its normal size. As the group grows, reduce
             // the horizontal stride rather than shrinking the cards. The final
             // card always fits inside the group frame.
-            let inset=if i==0 && player_art {16.0}
-                else if i>0 && has_neon_cpu_panel(){if j==0 {6.0}else{2.0}}
-                else {6.0};
             // The neon panel has a thick decorative frame and the card artwork
             // visually extends beyond its nominal 55px hitbox. Reserve equal
             // safe margins on both sides before distributing the stack.
@@ -1028,7 +1021,7 @@ fn draw_cpu_bounds(g:&Game) {
                         draw_rectangle_lines(stack_x,cy,stack_w,84.0,2.0,orange);
                         draw_text(&format!("STACK x={:.0} w={:.0}",stack_x,stack_w),stack_x,cy+98.0,13.0,orange);
                     }
-                    for (k,card) in cards.iter().enumerate(){
+                    for k in 0..cards.len(){
                         let default=layout::Rect{x:stack_x+k as f32*step,y:cy,w:card_w,h:84.0};
                         let actual=default;
                         draw_rectangle_lines(actual.x,actual.y,actual.w,actual.h,1.0,orange);

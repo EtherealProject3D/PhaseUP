@@ -420,7 +420,7 @@ pub(super) fn neon_frame(x:f32,y:f32,w:f32,h:f32,bright:bool){
 }
 
 pub(super) fn selected_card_lift(selected:bool)->f32 {
-    if selected && !layout::designer::mobile() && active_theme()!=Theme::Futuristic{15.}else{0.}
+    if !selected {0.}else if layout::designer::mobile() || active_theme()!=Theme::Futuristic{15.}else{0.}
 }
 pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     let yy=y-selected_card_lift(selected);let c=color_for(card.kind);
