@@ -193,26 +193,27 @@ pub(crate) fn hand_card(count: usize, index: usize) -> Option<Rect> {
     });
     Some(r)
 }
-pub(crate) fn label(key: &str, text: &str, default: f32, color: crate::Color) -> bool {
-    let Some(r) = element(key) else {
-        return false;
-    };
+#[derive(Debug, PartialEq)]
+struct LabelSpec {
+    text: String,
+    size: f32,
+    dx: f32,
+    dy: f32,
+}
+
+fn label_spec(key: &str, text: &str, default: f32) -> LabelSpec {
     DOCUMENT.with(|d| {
         let d = d.borrow();
-        let Some(j) = d.as_ref() else {
-            return;
-        };
-        let s = &j["labels"][key];
-        let num = |name: &str, fallback: f32| {
-            s[name]
-                .as_f64()
+        let style = d.as_ref().map(|j| &j["labels"][key]);
+        let number = |name: &str, fallback: f32| {
+            style
+                .and_then(|s| s[name].as_f64())
                 .filter(|v| v.is_finite())
                 .map(|v| v as f32)
                 .unwrap_or(fallback)
         };
-        let size = num("size", default).clamp(9., 200.);
-        let custom = s["text"].as_str().unwrap_or("");
-        let content = if custom.is_empty() {
+        let custom = style.and_then(|s| s["text"].as_str()).unwrap_or("");
+        let text = if custom.is_empty() {
             text.to_owned()
         } else {
             PHASE.with(|phase| {
@@ -222,41 +223,56 @@ pub(crate) fn label(key: &str, text: &str, default: f32, color: crate::Color) ->
                     .replace("{phase_name}", crate::phase_name(phase.get()))
             })
         };
-        let band = if key.contains("group_") || key.contains("_laid_") {
-            24.
-        } else if key == "hand" || key.starts_with("cpu_") {
-            32.
+        LabelSpec {
+            text,
+            size: number("size", default).max(8.),
+            dx: number("dx", 0.),
+            dy: number("dy", 0.),
+        }
+    })
+}
+
+pub(crate) fn label(key: &str, text: &str, default: f32, color: crate::Color) -> bool {
+    let Some(r) = element(key) else {
+        return false;
+    };
+    let spec = label_spec(key, text, default);
+    let size = spec.size;
+    let content = &spec.text;
+    let band = if key.contains("group_") || key.contains("_laid_") {
+        24.
+    } else if key == "hand" || key.starts_with("cpu_") {
+        32.
+    } else {
+        r.h
+    };
+    let available = (r.w - 16.).max(1.);
+    let mut lines = vec![String::new()];
+    for word in content.split_whitespace() {
+        let last = lines.last_mut().unwrap();
+        let next = if last.is_empty() {
+            word.to_owned()
         } else {
-            r.h
+            format!("{last} {word}")
         };
-        let available = (r.w - 16.).max(1.);
-        let mut lines = vec![String::new()];
-        for word in content.split_whitespace() {
-            let last = lines.last_mut().unwrap();
-            let next = if last.is_empty() {
-                word.to_owned()
-            } else {
-                format!("{last} {word}")
-            };
-            if !last.is_empty() && crate::menu_text_width(&next, size as u16) > available {
-                lines.push(word.to_owned());
-            } else {
-                *last = next;
-            }
+        let wrap = key == "phase_action";
+        if wrap && !last.is_empty() && crate::menu_text_width(&next, size as u16) > available {
+            lines.push(word.to_owned());
+        } else {
+            *last = next;
         }
-        let size = size.min((r.h / lines.len().max(1) as f32 / 1.1).max(9.));
-        let top = r.y + (band - size * 1.1 * lines.len() as f32) / 2.;
-        for (index, line) in lines.iter().enumerate() {
-            let width = crate::menu_text_width(line, size as u16);
-            crate::menu_label(
-                line,
-                r.x + (r.w - width) / 2. + num("dx", 0.),
-                top + (index as f32 + 0.85) * size * 1.1 + num("dy", 0.),
-                size,
-                color,
-            );
-        }
-    });
+    }
+    let top = r.y + (band - size * 1.1 * lines.len() as f32) / 2.;
+    for (index, line) in lines.iter().enumerate() {
+        let width = crate::menu_text_width(line, size as u16);
+        crate::menu_label(
+            line,
+            r.x + (r.w - width) / 2. + spec.dx,
+            top + (index as f32 + 0.85) * size * 1.1 + spec.dy,
+            size,
+            color,
+        );
+    }
     true
 }
 
@@ -302,6 +318,20 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
     if !active() {
         return false;
     }
+    if key.starts_with("draw_count_text") || key.starts_with("draw_remaining_count") {
+        if let Some(r) = element("draw") {
+            let style = label_spec("draw", "DRAW", 30.);
+            let width = crate::menu_text_width(text, size as u16);
+            crate::menu_label(
+                text,
+                r.x + (r.w - width) / 2. + style.dx,
+                r.y + r.h / 2. + style.size * 0.65 + size + style.dy,
+                size,
+                color,
+            );
+            return true;
+        }
+    }
     if key.starts_with("version_text")
         || key.starts_with("round_turn_text")
         || key.contains("_not_laid")
@@ -314,8 +344,10 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
         || key.starts_with("lay_phase_button")
     {
         Some("phase_action")
-    } else if key.starts_with("draw_title") {
+    } else if key.starts_with("draw_card_text") {
         Some("draw")
+    } else if key.starts_with("draw_title") {
+        return true;
     } else if key.starts_with("discard_title") {
         Some("discard")
     } else if key.starts_with("logo_text") {
@@ -377,6 +409,45 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn saved_text_settings_reach_group_hand_draw_and_action_labels() {
+        let mut j: Value = serde_json::from_str(include_str!(
+            "../assets/layouts/prototype_mobile_compact_20_9.json"
+        ))
+        .unwrap();
+        for key in [
+            "phase_2_group_1",
+            "cpu_1_laid_1",
+            "hand",
+            "draw",
+            "phase_action",
+        ] {
+            j["labels"][key] = serde_json::json!({"text":"{value} / {phase_number}","size":48.,"dx":17.,"dy":-11.});
+        }
+        load(Some(&j));
+        set_phase(1);
+        for key in [
+            "phase_2_group_1",
+            "cpu_1_laid_1",
+            "hand",
+            "draw",
+            "phase_action",
+        ] {
+            assert_eq!(
+                label_spec(key, "SET OF 3", 18.),
+                LabelSpec {
+                    text: "SET OF 3 / 2".into(),
+                    size: 48.,
+                    dx: 17.,
+                    dy: -11.
+                }
+            );
+        }
+        j["labels"]["draw"]["size"] = 8.into();
+        load(Some(&j));
+        assert_eq!(label_spec("draw", "DRAW", 19.).size, 8.);
+        load(None);
+    }
     #[test]
     fn saved_mobile_documents_map_without_mutation() {
         for source in [

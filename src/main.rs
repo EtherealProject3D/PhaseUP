@@ -348,7 +348,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     draw_rectangle_lines(gx,y,width,group_rect.h,1.0,Color::new(0.22,0.29,0.35,1.0));
                 }
                 if !player_art && active_theme()==Theme::Futuristic && (i==0 || !has_neon_cpu_panel()) {neon_frame(gx,y,width,116.0,false);}
-                let desc=format!("{}  -  {} cards",requirement(phase,j).to_uppercase(),PHASES[phase][j]);
+                let desc=requirement_label(phase,j);
                 // Single-requirement phases occupy the full CPU frame: center
                 // their labels across both decorative lower panels.
                 let cpu_full_span=i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && group_count==1;
@@ -362,7 +362,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 editable_label(&format!("player_{i}_{}_not_laid",if group_count==1 {"single"}else{"double"}),"NOT LAID",not_laid_x,y+if player_art {72.0}else if i>0 && has_neon_cpu_panel(){83.0}else{62.0},17.0,Color::new(0.33,0.41,0.48,1.0));
             }
         }
-        if !p.laid { if i==0 && layout::designer::active() && !layout::designer::separate(){continue;}continue;}
+        if !p.laid {continue;}
         let x=if i==0 {sw/2.0-400.0}else if active_theme()==Theme::Futuristic && has_neon_cpu_panel(){32.0+(i-1) as f32*632.0}else{24.0+(i-1) as f32*((sw-50.0)/3.0)};
         let y=if i==0 {sh-544.0}else{table_y+10.0};
         if i==0 {editable_label(if p.table.len()==1 {"human_single_laid_title"}else{"human_double_laid_title"},"YOUR LAID PHASE",x,y,17.0,player_color(i));}
@@ -381,7 +381,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                 draw_rectangle(x,yy,width,group_rect.h,if can_place {Color::new(0.13,0.34,0.29,1.0)}else{PANEL});
                 draw_rectangle_lines(x,yy,width,group_rect.h,if can_place {3.0}else{1.0},if can_place {ACCENT}else{MUTED});
             }
-            let desc=format!("{}  -  {} cards",requirement(p.phase.min(PHASES.len()-1),j).to_uppercase(),group.len());
+            let desc=requirement_label(p.phase,j);
             let desc_x=if i>0 && active_theme()==Theme::Futuristic && has_neon_cpu_panel() && p.table.len()==1 {
                 {let panel=layout::cpu_panel(i);panel.x+(panel.w-menu_text_width(&desc,17))/2.0}
             } else if i>0 && has_neon_cpu_panel(){x+(width-menu_text_width(&desc,17))/2.0}else if player_art {x+(width-menu_text_width(&desc,17))/2.0}else{x+8.0};
@@ -609,7 +609,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         let ids=g.staged[group].clone();
         let cards:Vec<Card>=ids.iter().filter_map(|id|g.players[0].hand.iter().find(|c|c.id==*id).copied()).collect();
         let ready=cards.len()>=groups[group] && valid_group(&cards,requirement(g.players[0].phase.min(PHASES.len()-1),group));
-        let label=format!("STAGE {} {} / {}{}",requirement(g.players[0].phase.min(PHASES.len()-1),group).to_uppercase(),cards.len(),groups[group],if ready{"  READY"}else{""});
+        let label=requirement_label(g.players[0].phase,group);
         let label_key=layout::staging_label_key(group,groups.len(),ready);
         editable_label_id(&label_key,&label,x+(stage_w-menu_text_width(&label,16))/2.0,y+20.0,16.0,if ready{GREEN}else{WHITEISH});
         let dragged_id=g.staged_drag.or(g.drag).and_then(|(id,sx,sy)|{
