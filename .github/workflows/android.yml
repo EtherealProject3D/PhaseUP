@@ -1,8 +1,16 @@
 name: Android APK (flight build)
 
 on:
+  push:
+    tags:
+      - 'android-dev-*'
   workflow_dispatch:
     inputs:
+      development:
+        description: "Enable the development tools and mobile test theme"
+        required: false
+        default: false
+        type: boolean
       release_tag:
         description: "Optional existing version tag to attach this APK to a release draft"
         required: false
@@ -15,32 +23,77 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: android-rust-1.95
       - name: Configure Android SDK and Rust
         run: |
           set -euxo pipefail
           echo "ANDROID_HOME=$ANDROID_HOME"
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358"
           rustup toolchain install 1.95.0 --profile minimal
           rustup +1.95.0 target add aarch64-linux-android
-          echo "NDK_HOME=$ANDROID_HOME/ndk/$(ls "$ANDROID_HOME/ndk" | sort -V | tail -1)" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+      - name: Cache APK builder
+        id: apk-builder
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-quad-apk
+          key: apk-builder-${{ runner.os }}-rust1.95-bdb61325ce1aecf09ed8969690f53c86c846c118
       - name: Install cargo-quad-apk
-        run: cargo +1.95.0 install --git https://github.com/hoklims/cargo-quad-apk --locked cargo-quad-apk
+        if: steps.apk-builder.outputs.cache-hit != 'true'
+        run: cargo +1.95.0 install --git https://github.com/hoklims/cargo-quad-apk --rev bdb61325ce1aecf09ed8969690f53c86c846c118 --locked cargo-quad-apk
       - name: Build sideloadable APK
-        run: cargo +1.95.0 quad-apk build --release
+        env:
+          DEVELOPMENT: ${{ startsWith(github.ref_name, 'android-dev-') || inputs.development }}
+        run: |
+          if [ "$DEVELOPMENT" = "true" ]; then
+            cargo +1.95.0 quad-apk build --release --features developer-tools
+          else
+            cargo +1.95.0 quad-apk build --release
+          fi
       - name: List APK outputs
         run: find target/android-artifacts/release/apk -type f -name '*.apk' -print
+      - name: Verify and package test APK
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib, shutil, subprocess, tomllib, zipfile
+          package = tomllib.loads(pathlib.Path('Cargo.toml').read_text())['package']
+          android = package['metadata']['android']
+          version = android.get('version_name', package['version'])
+          apks = list(pathlib.Path('target/android-artifacts/release/apk').glob('*.apk'))
+          assert len(apks) == 1, f'Expected one APK, found {apks}'
+          with zipfile.ZipFile(apks[0]) as apk:
+              assert apk.testzip() is None
+              assert 'lib/arm64-v8a/libmain.so' in apk.namelist() or any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in apk.namelist())
+              for layout in ['prototype_mobile_compact_20_9.json', 'prototype_mobile_compact_19_5_9.json', 'menus_mobile_20_9.json', 'menus_mobile_19_5_9.json']:
+                  data = pathlib.Path('assets/layouts', layout).read_bytes()
+                  assert apk.read('assets/layouts/' + layout) == data, 'Saved layout mismatch: ' + layout
+                  print(layout, hashlib.sha256(data).hexdigest())
+          output = pathlib.Path('deliverables'); output.mkdir(exist_ok=True)
+          destination = output / f'PhaseUP-v{version}-Android-arm64.apk'
+          shutil.copyfile(apks[0], destination)
+          checksum = hashlib.sha256(destination.read_bytes()).hexdigest()
+          destination.with_suffix('.apk.sha256').write_text(f'{checksum}  {destination.name}\n')
+          print('APK SHA256:', checksum)
+          PY
+          apk=$(find deliverables -name '*.apk' -print -quit)
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" > deliverables/APK-info.txt
+          head -n 8 deliverables/APK-info.txt
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PhaseUP-Android-APK
-          path: target/android-artifacts/release/apk/*.apk
+          path: deliverables/*
           if-no-files-found: error
 
   release-apk:
-    if: inputs.release_tag != ''
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
     needs: android
     runs-on: ubuntu-latest
     permissions:

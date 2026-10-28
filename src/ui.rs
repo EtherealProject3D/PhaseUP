@@ -21,6 +21,8 @@ pub(super) async fn load_menu_fonts(){
         MENU_FONTS.with(|f|f.borrow_mut()[1]=Some(font));
     }
     if let Ok(font)=load_ttf_font(&format!("{}fonts/Oxanium-Medium.ttf",asset_prefix())).await {
+        #[cfg(target_os="android")]
+        MENU_FONTS.with(|fonts|fonts.borrow_mut()[0]=Some(font.clone()));
         NEON_BODY_FONT.with(|f|*f.borrow_mut()=Some(font));
     }
 }

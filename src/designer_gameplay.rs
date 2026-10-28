@@ -505,6 +505,8 @@ mod tests {
             "../assets/layouts/prototype_mobile_compact_20_9.json"
         ))
         .unwrap();
+        // Exercise an older document without changing the user's saved size.
+        j.as_object_mut().unwrap().remove("card_number_size");
         load(Some(&j));
         assert_eq!(card_number_size(28.), 28.);
         assert_eq!(card_number_size(32.), 32.);

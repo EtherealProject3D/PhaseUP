@@ -7,6 +7,10 @@ fn mobile_offers_one_resolution_for_each_saved_aspect(){
     let aspects:HashSet<_>=mode.presets().iter().map(|(w,h)|mode.aspect(*w,*h)).collect();
     assert_eq!(aspects,HashSet::from(["20_9","19_5_9"]));
 }
+#[test]
+fn android_viewports_choose_the_closest_saved_mobile_aspect(){
+    for (w,h,expected) in [(2400.,1080.,(2400,1080)),(2340.,1080.,(2340,1080)),(2535.,1170.,(2340,1080)),(2600.,1170.,(2400,1080)),(2400.,1008.,(2400,1080)),(0.,0.,(2400,1080))]{assert_eq!(mobile_resolution_for_viewport(w,h),expected);}
+}
 
 fn number(id:u32,n:u8,color:u8)->Card {Card{id,kind:Kind::Number(n,color)}}
 fn wild(id:u32)->Card {Card{id,kind:Kind::Wild}}

@@ -1145,7 +1145,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if preset_button_clicked {
                 *resolution_open=!*resolution_open;
             }
-            if !*resolution_open && menu_button("layout",&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) {
+            if !*resolution_open && menu_button("layout",&format!("LAYOUT: {}",read_display_layout().name()),panel_y+236.0) && !cfg!(target_os="android") {
                 let mode=read_display_layout().next();
                 save_display_layout(mode);
                 let (w,h)=if mode==DisplayLayout::Mobile {(2400,1080)}else{(1600,1000)};

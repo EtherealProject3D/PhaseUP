@@ -3,6 +3,7 @@
     "height": 1200.0,
     "width": 2666.666748046875
   },
+  "card_number_size": 40.0,
   "cpu_collapsed": {
     "cpu_1": {
       "height": 280.0,
@@ -236,25 +237,31 @@
       "height": 210.0,
       "width": 165.0,
       "x": 1377.0,
-      "y": 353.0
+      "y": 351.0
     },
     "discard_action": {
       "height": 80.0,
       "width": 275.0,
       "x": 2336.0,
-      "y": 1045.0
+      "y": 1010.0
     },
     "draw": {
       "height": 210.0,
       "width": 165.0,
       "x": 1123.0,
-      "y": 353.0
+      "y": 351.0
+    },
+    "draw_count": {
+      "height": 24.0,
+      "width": 165.0,
+      "x": 1120.0,
+      "y": 607.0
     },
     "hand": {
-      "height": 224.0,
+      "height": 245.0,
       "width": 1889.0,
       "x": 389.0,
-      "y": 949.0
+      "y": 928.0
     },
     "menu_button": {
       "height": 60.0,
@@ -263,34 +270,34 @@
       "y": 32.0
     },
     "phase": {
-      "height": 245.0,
+      "height": 261.0,
       "width": 1889.0,
       "x": 389.0,
-      "y": 650.0
+      "y": 640.0
     },
     "phase_1_group_1": {
-      "height": 196.0,
+      "height": 209.0,
       "width": 1856.0,
       "x": 406.0,
-      "y": 690.0
+      "y": 683.0
     },
     "phase_2_group_1": {
-      "height": 196.0,
+      "height": 205.0,
       "width": 922.0,
       "x": 406.0,
-      "y": 690.0
+      "y": 683.0
     },
     "phase_2_group_2": {
-      "height": 196.0,
+      "height": 205.0,
       "width": 922.0,
       "x": 1339.0,
-      "y": 690.0
+      "y": 683.0
     },
     "phase_action": {
-      "height": 310.0,
+      "height": 261.0,
       "width": 310.0,
       "x": 2316.0,
-      "y": 650.0
+      "y": 640.0
     },
     "sort_colors": {
       "height": 100.0,
@@ -356,7 +363,7 @@
     },
     "hand": {
       "dx": -3.0,
-      "dy": 6.0,
+      "dy": 11.0,
       "gap": 15.0,
       "height": 160.0
     },
@@ -374,13 +381,13 @@
     },
     "phase_2_group_1": {
       "dx": 0.0,
-      "dy": 4.0,
+      "dy": 2.0,
       "gap": 15.0,
       "height": 150.0
     },
     "phase_2_group_2": {
       "dx": 0.0,
-      "dy": 4.0,
+      "dy": 1.0,
       "gap": 15.0,
       "height": 150.0
     }
@@ -442,8 +449,8 @@
     },
     "discard": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 130.0,
+      "size": 30.0,
       "text": ""
     },
     "discard_action": {
@@ -454,13 +461,19 @@
     },
     "draw": {
       "dx": 0.0,
+      "dy": 130.0,
+      "size": 30.0,
+      "text": ""
+    },
+    "draw_count": {
+      "dx": 0.0,
       "dy": 0.0,
       "size": 30.0,
       "text": ""
     },
     "hand": {
       "dx": 0.0,
-      "dy": 8.0,
+      "dy": 5.0,
       "size": 30.0,
       "text": ""
     },
@@ -473,7 +486,7 @@
     "menu_button": {
       "dx": 0.0,
       "dy": 0.0,
-      "size": null,
+      "size": 30.0,
       "text": ""
     },
     "phase": {
