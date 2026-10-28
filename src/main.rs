@@ -1162,7 +1162,7 @@ fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mu
             if !*resolution_open {
                 if cfg!(feature="developer-tools") {
                     if menu_button(&format!("THEME: {}",active_theme().name()),panel_y+538.0){
-                        let allowed=read_display_layout()==DisplayLayout::Desktop && read_selected_resolution().is_some_and(|(w,h)|read_display_layout().aspect(w,h)=="16_10");
+                        let allowed=read_display_layout()==DisplayLayout::Desktop && read_display_layout().aspect(read_selected_resolution().unwrap_or((1600,1000)).0,read_selected_resolution().unwrap_or((1600,1000)).1)=="16_10";
                         let mut next=active_theme().next();
                         if !allowed && next==Theme::Futuristic {next=Theme::Playful;}
                         set_theme(next);save_theme(next);
