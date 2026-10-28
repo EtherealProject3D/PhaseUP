@@ -1,6 +1,13 @@
 use crate::*;
 use std::collections::HashSet;
 
+#[test]
+fn mobile_offers_one_resolution_for_each_saved_aspect(){
+    let mode=DisplayLayout::Mobile;assert_eq!(mode.presets(),&[(2400,1080),(2340,1080)]);
+    let aspects:HashSet<_>=mode.presets().iter().map(|(w,h)|mode.aspect(*w,*h)).collect();
+    assert_eq!(aspects,HashSet::from(["20_9","19_5_9"]));
+}
+
 fn number(id:u32,n:u8,color:u8)->Card {Card{id,kind:Kind::Number(n,color)}}
 fn wild(id:u32)->Card {Card{id,kind:Kind::Wild}}
 fn skip(id:u32)->Card {Card{id,kind:Kind::Skip}}

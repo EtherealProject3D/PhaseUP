@@ -42,6 +42,9 @@ fn card_size(bounds:Vec2)->Vec2 {
 }
 
 pub(super) fn add_children(elements:&mut Snapshot) {
+    if let Some(draw)=elements.get("draw").copied(){
+        elements.entry("draw_count".into()).or_insert(Box2{x:draw.x,y:draw.y+draw.h/2.+19.5,w:draw.w,h:24.});
+    }
     for parent in ["phase","staging"] {
         let Some(p)=elements.get(parent).copied() else {continue};
         for count in 1..=2 {
@@ -56,7 +59,8 @@ pub(super) fn add_children(elements:&mut Snapshot) {
     }
 }
 pub(super) fn parent(name:&str)->Option<String> {
-    if name.starts_with("phase_")&&name.contains("_group_"){Some("phase".into())}
+    if name=="draw_count"{Some("draw".into())}
+    else if name.starts_with("phase_")&&name.contains("_group_"){Some("phase".into())}
     else if name.starts_with("staging_"){Some("staging".into())}
     else if name.starts_with("cpu_")&&name.matches('_').count()>1 {Some(name[..5].into())}else{None}
 }
@@ -91,6 +95,7 @@ pub(super) fn layout(separate: bool) -> Snapshot {
 }
 
 pub(super) struct Preview {
+    remaining:usize,
     phase: usize, hand: Vec<Card>, groups: [Vec<Card>;2], selected: BTreeSet<u32>,
     pinned: BTreeSet<u32>, last_sort: Option<usize>, laid: bool, ended: bool,
     dragging: Option<u32>, discard: Option<Card>, message: String,
@@ -130,7 +135,7 @@ impl Preview {
             }
         }
         while hand.len()<11 {hand.push(Card{id:hand.len() as u32,kind:Kind::Number(12,2)});}
-        Self{phase,hand,groups:[vec![],vec![]],selected:BTreeSet::new(),pinned:BTreeSet::new(),last_sort:None,laid:false,ended:false,dragging:None,discard:None,message:"Preview starts after drawing. Build your phase, play it, then discard.".into()}
+        Self{remaining:67,phase,hand,groups:[vec![],vec![]],selected:BTreeSet::new(),pinned:BTreeSet::new(),last_sort:None,laid:false,ended:false,dragging:None,discard:None,message:"Preview starts after drawing. Build your phase, play it, then discard.".into()}
     }
     fn ready(&self)->bool {
         !self.laid && PHASES[self.phase].iter().enumerate().all(|(g,&n)|
@@ -177,6 +182,7 @@ impl Preview {
     pub(super) fn controls(&mut self,ui:&mut egui::Ui) {
         ui.heading("Plain prototype");
         ui.label("Interaction sandbox, not a live game.");
+        ui.horizontal(|ui|{ui.label("Cards remaining (preview)");ui.add(egui::DragValue::new(&mut self.remaining).range(0..=108));});
         let mut p=self.phase;
         egui::ComboBox::from_label("Phase").selected_text(format!("{}: {}",p+1,phase_name(p))).show_ui(ui,|ui|{for n in 0..10 {ui.selectable_value(&mut p,n,format!("{}: {}",n+1,phase_name(n)));}});
         if p!=self.phase {*self=Self::new(p);}
@@ -203,6 +209,7 @@ impl Preview {
         let mut panels:Vec<_>=elements.iter().filter(|(n,_)|self.visible(n,show_cpu,separate)).collect();
         panels.sort_by_key(|(n,_)|usize::from(parent(n).is_some()));
         for (name,b) in panels {
+            if name=="draw_count"{continue;}
             let bounds=screen(*b);
             let r=if name=="draw"||name=="discard"{Rect::from_center_size(bounds.center(),card_size(bounds.size()))}else{bounds};
             ui.painter().rect_filled(r,3.,Color32::from_rgb(32,39,48));
@@ -257,6 +264,7 @@ for (card,card_rect) in laid_cards {
         }
         if elements.contains_key("header") { label(ui,"header",area("header"),"PHASE-UP  |  PLAIN LAYOUT PROTOTYPE",30.); }
         label(ui,"draw",area("draw"),"DRAW",22.);
+        if elements.contains_key("draw_count"){label(ui,"draw_count",area("draw_count"),&format!("{} left",self.remaining),17.);}
         if let Some(card)=self.discard {paint_card(ui,card,area("discard"),z,false,number_size,false);}
         else {label(ui,"discard",area("discard"),"DISCARD",28.);}
         let phase_area=area("phase");
@@ -341,6 +349,11 @@ fn paint_card(ui:&egui::Ui,c:Card,r:Rect,z:f32,pinned:bool,number_size:Option<f3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn remaining_count_is_an_editable_child_of_the_draw_pile(){
+        let mut e=layout(false);assert_eq!(parent("draw_count"),Some("draw".into()));
+        e.remove("draw_count");e.get_mut("draw").unwrap().x+=120.;add_children(&mut e);
+        assert_eq!(e["draw_count"].x,e["draw"].x);assert_eq!(e["draw_count"].w,e["draw"].w);
+    }
     #[test] fn resizing_one_card_resizes_its_hand_and_preserves_the_chosen_anchor(){
         let p=Preview::new(0);let e=layout(false);
         let before=p.hand_items(&e,&Default::default(),true);

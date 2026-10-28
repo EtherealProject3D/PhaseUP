@@ -132,7 +132,21 @@ pub(crate) fn element(key: &str) -> Option<Rect> {
                 return Some(r);
             }
         }
-        read(&j["elements"][key])
+        read(&j["elements"][key]).or_else(|| {
+            if key != "draw_count" {
+                return None;
+            }
+            let draw = read(&j["elements"]["draw"])?;
+            let size = j["labels"]["draw"]["size"].as_f64().unwrap_or(30.) as f32;
+            let dx = j["labels"]["draw"]["dx"].as_f64().unwrap_or(0.) as f32;
+            let dy = j["labels"]["draw"]["dy"].as_f64().unwrap_or(0.) as f32;
+            Some(Rect {
+                x: draw.x + dx,
+                y: draw.y + draw.h / 2. + size * 0.65 + dy,
+                w: draw.w,
+                h: 24.,
+            })
+        })
     })
 }
 pub(crate) fn mapped(key: &str) -> Option<Rect> {
@@ -380,18 +394,7 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
         return false;
     }
     if key.starts_with("draw_count_text") || key.starts_with("draw_remaining_count") {
-        if let Some(r) = element("draw") {
-            let style = label_spec("draw", "DRAW", 30.);
-            let width = crate::menu_text_width(text, size as u16);
-            crate::menu_label(
-                text,
-                r.x + (r.w - width) / 2. + style.dx,
-                r.y + r.h / 2. + style.size * 0.65 + size + style.dy,
-                size,
-                color,
-            );
-            return true;
-        }
+        return label("draw_count", text, size, color);
     }
     if key.starts_with("version_text")
         || key.starts_with("round_turn_text")
@@ -470,6 +473,32 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn draw_count_has_its_own_saved_geometry_and_text_style() {
+        let mut j: Value = serde_json::from_str(include_str!(
+            "../assets/layouts/prototype_mobile_compact_20_9.json"
+        ))
+        .unwrap();
+        load(Some(&j));
+        assert!(element("draw_count").is_some());
+        j["elements"]["draw_count"] =
+            serde_json::json!({"x":1100.,"y":600.,"width":200.,"height":40.});
+        j["labels"]["draw_count"] =
+            serde_json::json!({"text":"Cards: {value}","size":24.,"dx":7.,"dy":-3.});
+        load(Some(&j));
+        let r = element("draw_count").unwrap();
+        assert_eq!((r.x, r.y, r.w, r.h), (1100., 600., 200., 40.));
+        assert_eq!(
+            label_spec("draw_count", "63 left", 17.),
+            LabelSpec {
+                text: "Cards: 63 left".into(),
+                size: 24.,
+                dx: 7.,
+                dy: -3.
+            }
+        );
+        load(None);
+    }
     #[test]
     fn card_number_size_uses_saved_value_and_keeps_legacy_defaults() {
         let mut j: Value = serde_json::from_str(include_str!(

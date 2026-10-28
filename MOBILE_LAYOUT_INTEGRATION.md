@@ -27,6 +27,16 @@ F5. **Reset number size** restores the existing hand/laid defaults. The setting
 is stored as the optional `card_number_size` field; older files keep their current
 appearance. Saved card/panel geometry is unaffected.
 
+The `draw_count (cards remaining)` element is available in the editor's element
+list. It has independent position, bounds, text size and text offsets; blank text
+uses the live game's remaining deck count. The editor shows a sample count that
+can be adjusted in its preview controls. Moving the draw panel also moves this
+child label. Older documents receive an in-memory default until saved.
+
+Mobile resolution choices are 2400×1080 (20:9) and 2340×1080 (19.5:9), one preset
+per supported mobile aspect. Logical layout coordinates still come from the
+saved canvas and scale to the actual fitted window/device viewport.
+
 ## Validation
 
 Run automated tests and a release build:

@@ -185,7 +185,7 @@ impl DisplayLayout {
     pub(super) fn presets(self)->&'static [(i32,i32)] {
         match self {
             Self::Desktop=>&[(1280,800),(1440,900),(1600,1000),(1920,1200),(2560,1600),(1280,720),(1600,900),(1920,1080),(2560,1440)],
-            Self::Mobile=>&[(2000,900),(2400,1080),(2600,1170),(2340,1080),(2535,1170)]
+            Self::Mobile=>&[(2400,1080),(2340,1080)]
         }
     }
     pub(super) fn aspect(self,w:i32,h:i32)->&'static str {

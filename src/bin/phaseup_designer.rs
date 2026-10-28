@@ -348,7 +348,7 @@ impl eframe::App for Designer{
     let names:Vec<String>=self.elements.keys().filter(|n|self.preview.visible(n,self.show_cpu,self.separate)).cloned().collect();
     for name in names{
      let selected=self.selected.contains(&name);
-     if ui.selectable_label(selected,&name).clicked(){
+     if ui.selectable_label(selected,if name=="draw_count"{"draw_count (cards remaining)"}else{&name}).clicked(){
       self.selected_card=None;
       let multi=ui.input(|i|i.modifiers.ctrl||i.modifiers.command);
       if !multi{self.selected.clear();}
@@ -566,10 +566,10 @@ impl eframe::App for Designer{
    }
    if self.selected.len()==1 {
     let name=self.selected.iter().next().unwrap().clone();
-    let label=self.texts.entry(name).or_default();
+    let label=self.texts.entry(name.clone()).or_default();
     ui.heading("Text");ui.label("Blank = live game label. {value} = live label, {phase_number} = current phase number, {phase_name} = current phase name.");
     ui.text_edit_singleline(&mut label.text);
-    let mut size=label.size.unwrap_or(22.);
+    let mut size=label.size.unwrap_or(if name=="draw_count"{17.}else{22.});
     if wheel_drag_value(ui,&mut size,8.0,80.0){label.size=Some(size);}
     wheel_drag_value(ui,&mut label.dx,-10000.0,10000.0);
     wheel_drag_value(ui,&mut label.dy,-10000.0,10000.0);
