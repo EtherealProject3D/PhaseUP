@@ -455,7 +455,8 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
                     draw_rectangle(cx,cy,card_w,card_h,WHITEISH);
                     draw_rectangle(cx+3.0,cy+3.0,card_w-6.0,card_h-6.0,color);
                     let value=card_text(card.kind);
-                    editable_label("plain_card_value",&value,cx+8.0,cy+36.0,28.0,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
+                    let number_size=layout::designer::card_number_size(28.);
+                    editable_label("plain_card_value",&value,cx+8.0,cy+8.0+number_size,number_size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
                 }
             }
             if can_place && active_theme()!=Theme::Futuristic {editable_label("hit_instruction","CLICK TO ADD",x+7.0,yy+114.0,12.0,ACCENT);}

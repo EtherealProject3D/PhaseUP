@@ -41,6 +41,16 @@ pub(crate) fn show_cpu() -> bool {
 pub(crate) fn separate() -> bool {
     element("staging").is_some()
 }
+pub(crate) fn card_number_size(default: f32) -> f32 {
+    DOCUMENT.with(|d| {
+        d.borrow()
+            .as_ref()
+            .and_then(|j| j["card_number_size"].as_f64())
+            .filter(|size| size.is_finite() && (8.0..=96.0).contains(size))
+            .map(|size| size as f32)
+            .unwrap_or(default)
+    })
+}
 
 // Parent panels are authored elements too, not just containers for child boxes.
 fn panel_rects() -> Vec<Rect> {
@@ -460,6 +470,31 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn card_number_size_uses_saved_value_and_keeps_legacy_defaults() {
+        let mut j: Value = serde_json::from_str(include_str!(
+            "../assets/layouts/prototype_mobile_compact_20_9.json"
+        ))
+        .unwrap();
+        load(Some(&j));
+        assert_eq!(card_number_size(28.), 28.);
+        assert_eq!(card_number_size(32.), 32.);
+        j["card_number_size"] = 48.into();
+        load(Some(&j));
+        assert_eq!(card_number_size(28.), 48.);
+        assert_eq!(card_number_size(32.), 48.);
+        for invalid in [
+            Value::Null,
+            serde_json::json!(200),
+            serde_json::json!(-1),
+            serde_json::json!("48"),
+        ] {
+            j["card_number_size"] = invalid;
+            load(Some(&j));
+            assert_eq!(card_number_size(28.), 28.);
+        }
+        load(None);
+    }
     #[test]
     fn designer_parent_panels_and_phase_status_are_preserved() {
         let j: Value = serde_json::from_str(include_str!(

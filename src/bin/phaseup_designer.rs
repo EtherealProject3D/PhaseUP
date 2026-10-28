@@ -93,14 +93,14 @@ struct Designer {
  elements:Snapshot, selected:BTreeSet<String>,undo:Vec<Snapshot>,redo:Vec<Snapshot>,
  zoom:f32,pan:Vec2,grid:f32,snap_grid:bool,snap_edges:bool,snap_objects:bool,
  drag_start:Option<(Pos2,Snapshot)>,marquee:Option<Pos2>,status:String,
- path:PathBuf, preview:designer_preview::Preview, play:bool, separate:bool, center_guides:bool, desktop:bool,show_cpu:bool,cpu_laid:bool,texts:BTreeMap<String,LabelStyle>,cpu_expanded:Snapshot,cpu_collapsed:Snapshot,aspect:usize,hand_styles:designer_preview::HandStyles,selected_card:Option<(String,usize)>,resize_anchor:usize,hand_undo:Vec<designer_preview::HandStyles>,hand_redo:Vec<designer_preview::HandStyles>,card_resize:Option<(f32,designer_preview::HandStyle)>,card_move:Option<(Pos2,designer_preview::HandStyles)>,cpu_counts:BTreeMap<String,usize>,grid_vertical:bool,grid_horizontal:bool,grid_columns:usize,grid_rows:usize,
+ card_number_size:Option<f32>,path:PathBuf, preview:designer_preview::Preview, play:bool, separate:bool, center_guides:bool, desktop:bool,show_cpu:bool,cpu_laid:bool,texts:BTreeMap<String,LabelStyle>,cpu_expanded:Snapshot,cpu_collapsed:Snapshot,aspect:usize,hand_styles:designer_preview::HandStyles,selected_card:Option<(String,usize)>,resize_anchor:usize,hand_undo:Vec<designer_preview::HandStyles>,hand_redo:Vec<designer_preview::HandStyles>,card_resize:Option<(f32,designer_preview::HandStyle)>,card_move:Option<(Pos2,designer_preview::HandStyles)>,cpu_counts:BTreeMap<String,usize>,grid_vertical:bool,grid_horizontal:bool,grid_columns:usize,grid_rows:usize,
  sync_draft:Option<SizeSync>,sync_last_change:f64,sync_prompt:Option<SizeSync>,sync_owner:Option<String>
 }
 impl Designer {
  fn new()->Self{
   let mut app=Self{elements:defaults(),selected:BTreeSet::new(),undo:vec![],redo:vec![],
    zoom:0.0,pan:Vec2::ZERO,grid:8.,snap_grid:true,snap_edges:true,snap_objects:true,
-   drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None,sync_owner:None};
+   card_number_size:None,drag_start:None,marquee:None,status:String::new(),path:PATH.into(),preview:designer_preview::Preview::new(0),play:true,separate:false,center_guides:true,desktop:false,show_cpu:true,cpu_laid:false,texts:BTreeMap::new(),cpu_expanded:Snapshot::new(),cpu_collapsed:Snapshot::new(),aspect:0,hand_styles:Default::default(),selected_card:None,resize_anchor:0,hand_undo:vec![],hand_redo:vec![],card_resize:None,card_move:None,cpu_counts:BTreeMap::new(),grid_vertical:false,grid_horizontal:false,grid_columns:4,grid_rows:2,sync_draft:None,sync_last_change:0.,sync_prompt:None,sync_owner:None};
   app.load();app
  }
  fn board_size(&self)->Vec2{canvas(self.desktop,self.aspect)}
@@ -153,6 +153,7 @@ impl Designer {
  fn load(&mut self){
   if !self.desktop {self.separate=false;self.path=profile_path(false,false,self.aspect);}
   self.sync_draft=None;self.sync_prompt=None;self.sync_last_change=0.0;self.sync_owner=None;
+  self.card_number_size=None;
   self.hand_styles.clear();self.selected_card=None;self.card_move=None;self.hand_undo.clear();self.hand_redo.clear();self.cpu_counts.clear();
    for cpu in 1..=3 {
     for group in 1..=2 {
@@ -179,6 +180,7 @@ impl Designer {
      for key in self.elements.keys().cloned().collect::<Vec<_>>() {if designer_preview::parent(&key).is_some(){self.elements.remove(&key);}}
      designer_preview::add_children(&mut self.elements);
      if let Some(map)=root["elements"].as_object(){for (name,v) in map{if let Some(b)=Box2::from_json(v){self.elements.insert(name.clone(),b);}}}
+     self.card_number_size=root["card_number_size"].as_f64().filter(|size|size.is_finite() && (8.0..=96.0).contains(size)).map(|size|size as f32);
      if let Some(map)=root["labels"].as_object(){for (key,v) in map{self.texts.insert(key.clone(),LabelStyle{text:v["text"].as_str().unwrap_or("").into(),size:v["size"].as_f64().map(|n|n as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32});}}
      if let Some(map)=root["hand_card_styles"].as_object(){for (key,v) in map {
       self.hand_styles.insert(key.clone(),designer_preview::HandStyle{height:v["height"].as_f64().filter(|h|h.is_finite()&&*h>=10.&&*h<=1000.).map(|h|h as f32),dx:v["dx"].as_f64().unwrap_or(0.) as f32,dy:v["dy"].as_f64().unwrap_or(0.) as f32,gap:v["gap"].as_f64().filter(|g|g.is_finite()&&*g>=0.&&*g<=200.).map(|g|g as f32)});
@@ -249,6 +251,7 @@ impl Designer {
    }
   root["hand_card_styles"]=serde_json::Value::Object(self.hand_styles.iter().map(|(key,s)|(key.clone(),serde_json::json!({"height":s.height.map(|v|v.round()),"dx":s.dx.round(),"dy":s.dy.round(),"gap":s.gap}))).collect());
   root["guides"]=serde_json::json!({"vertical":self.grid_vertical,"horizontal":self.grid_horizontal,"columns":self.grid_columns,"rows":self.grid_rows});
+  root["card_number_size"]=serde_json::json!(self.card_number_size);
   root["labels"]=serde_json::Value::Object(self.texts.iter().map(|(k,v)|(k.clone(),serde_json::json!({"text":v.text,"size":v.size.map(|n|n.round()),"dx":v.dx.round(),"dy":v.dy.round()}))).collect());
   root["show_cpu_cards"]=self.show_cpu.into();
    root["cpu_preview_counts"]=serde_json::json!(self.cpu_counts);
@@ -390,6 +393,12 @@ impl eframe::App for Designer{
    self.preview.controls(ui);
    ui.separator();
    ui.heading("Properties");
+   ui.heading("Card numbers");
+   let mut number_size=self.card_number_size.unwrap_or(32.);
+   ui.horizontal(|ui|{ui.label("Number text size");if wheel_drag_value(ui,&mut number_size,8.,96.){self.card_number_size=Some(number_size);}});
+   if ui.button("Reset number size").clicked(){self.card_number_size=None;}
+   ui.label("Applies to all card values. Laid-card values stay in the corner.");
+   ui.separator();
    ui.label(format!("{} selected",if self.selected_card.is_some(){1}else{self.selected.len()}));
    if self.selected_card.is_some()||!self.selected.is_empty(){
     egui::ComboBox::from_label("Resize anchor").selected_text(["Center","Left edge","Right edge","Top edge","Bottom edge"][self.resize_anchor]).show_ui(ui,|ui|{for (i,name) in ["Center","Left edge","Right edge","Top edge","Bottom edge"].iter().enumerate(){ui.selectable_value(&mut self.resize_anchor,i,*name);}});
@@ -672,7 +681,7 @@ impl eframe::App for Designer{
    let center=board.center();
    painter.line_segment([Pos2::new(center.x,board.top()),Pos2::new(center.x,board.bottom())],Stroke::new(1.0_f32,Color32::from_rgb(36,90,95)));
    painter.line_segment([Pos2::new(board.left(),center.y),Pos2::new(board.right(),center.y)],Stroke::new(1.0_f32,Color32::from_rgb(36,90,95)));
-   self.preview.draw(ui,board,self.zoom,&self.elements,self.separate,self.play,&self.texts,self.show_cpu,self.cpu_laid,&self.hand_styles,&self.cpu_counts);
+   self.preview.draw(ui,board,self.zoom,&self.elements,self.separate,self.play,&self.texts,self.show_cpu,self.cpu_laid,&self.hand_styles,&self.cpu_counts,self.card_number_size);
    if self.play { return; }
    let grid_painter=painter.with_clip_rect(viewport.intersect(board));
    let grid_color=Color32::from_rgba_unmultiplied(150,175,215,125);
@@ -835,6 +844,17 @@ fn main()->eframe::Result<()>{
 #[cfg(test)]
 mod aspect_tests {
  use super::*;
+ #[test] fn number_text_size_saves_and_reloads_without_changing_geometry(){
+  let mut app=Designer::new();app.desktop=true;app.elements=designer_preview::layout(false);app.show_cpu=true;app.cpu_expanded.clear();app.cpu_collapsed.clear();
+  app.path=std::env::temp_dir().join(format!("phaseup-number-size-{}.json",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+  app.card_number_size=Some(48.);app.save();assert!(app.status.starts_with("Saved"));
+  let saved:serde_json::Value=serde_json::from_str(&fs::read_to_string(&app.path).unwrap()).unwrap();
+  assert_eq!(saved["card_number_size"],48.);let geometry=saved["elements"].clone();
+  app.card_number_size=None;app.load();assert_eq!(app.card_number_size,Some(48.));app.save();
+  let restored:serde_json::Value=serde_json::from_str(&fs::read_to_string(&app.path).unwrap()).unwrap();assert_eq!(restored["elements"],geometry);
+  app.card_number_size=None;app.save();app.load();assert_eq!(app.card_number_size,None);
+  fs::remove_file(&app.path).unwrap();
+ }
  #[test] fn mobile_profiles_keep_geometry_in_bounds_and_do_not_share_files(){
   for aspect in 0..4 {
    let size=canvas(false,aspect);let mut e=defaults();rescale(&mut e,BOARD,size);

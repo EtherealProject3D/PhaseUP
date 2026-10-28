@@ -427,7 +427,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Wild|Kind::Skip) && neon_card_texture(if matches!(card.kind,Kind::Wild){5}else{6},x,yy,w,h) {
         // Special cards share the Neon Forge texture family until dedicated art is available.
         let symbol=card_text(card.kind);
-        let size=if w<45.0 {22_u16}else{35_u16};
+        let size=layout::designer::card_number_size(if w<45.0{22.}else{35.}) as u16;
         let metrics=menu_text_dimensions(&symbol,size);
         let tx=x+(w-metrics.width)/2.0;
         // Font ascent differs between W and S: center the actual glyph bounds.
@@ -437,7 +437,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         if selected && active_theme()!=Theme::Futuristic {draw_rectangle_lines(x-1.0,yy-1.0,w+2.0,h+2.0,2.0,ACCENT);}
     } else if active_theme()==Theme::Futuristic && matches!(card.kind,Kind::Number(_, _)) && neon_card_texture(match card.kind {Kind::Number(_,color)=>color as usize,_=>0},x,yy,w,h) {
         let t=card_text(card.kind);
-        let size=if w<45.0 {22_u16}else{35_u16};
+        let size=layout::designer::card_number_size(if w<45.0{22.}else{35.}) as u16;
         let tw=menu_text_width(&t,size);
         let tx=x+(w-tw)/2.0;
         let ty=yy+h*0.60;
@@ -484,7 +484,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
         draw_rectangle(px(29.0),py(98.0),17.0*sx,2.0*sy,light);
         // Central glyph has a dark offset shadow and a crisp white foreground.
         let t=card_text(card.kind);
-        let size=if w<45.0 {22_u16}else{35_u16};
+        let size=layout::designer::card_number_size(if w<45.0{22.}else{35.}) as u16;
         let tw=menu_text_width(&t,size);
         let tx=x+(w-tw)/2.0;
         let ty=yy+h*0.63;
@@ -496,7 +496,7 @@ pub(super) fn card_ui(card:Card,x:f32,y:f32,w:f32,h:f32,selected:bool)->bool {
     } else {
         draw_rectangle(x+2.,yy+3.,w,h,Color::new(0.,0.,0.,0.3));draw_rectangle(x,yy,w,h,WHITEISH);
         draw_rectangle(x+5.,yy+5.,w-10.,h-10.,c);
-        let t=card_text(card.kind);let size: f32=if w<45.0{23.0}else{32.0};let dims=measure_text(&t,None,size as u16,1.0);
+        let t=card_text(card.kind);let size=layout::designer::card_number_size(if w<45.0{23.0}else{32.0});let dims=measure_text(&t,None,size as u16,1.0);
         label(&t,x+(w-dims.width)/2.,yy+h/2.+dims.height/2.,size,if matches!(card.kind,Kind::Number(_,2)){BG}else{WHITE});
     }
     if selected && layout::designer::mobile(){draw_rectangle_lines(x-2.,yy-2.,w+4.,h+4.,4.,ACCENT);}

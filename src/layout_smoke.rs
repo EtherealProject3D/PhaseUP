@@ -20,6 +20,14 @@ pub(super) async fn run(output: &str) {
             for phase in [0, 3] {
                 for laid in [false, true] {
                     let mut doc = original.clone();
+                    if let Some(size) = std::env::args()
+                        .skip_while(|a| a != "--number-size")
+                        .nth(1)
+                        .and_then(|s| s.parse::<f32>().ok())
+                        .filter(|s| (8.0..=96.0).contains(s))
+                    {
+                        doc["card_number_size"] = serde_json::json!(size);
+                    }
                     doc["show_cpu_cards"] = expanded.into();
                     layout::designer::load(Some(&doc));
                     let (w, h) = layout::designer::canvas().unwrap();

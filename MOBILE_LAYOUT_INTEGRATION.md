@@ -20,6 +20,13 @@ aspect documents as well as the legacy fallback.
 No layout JSON is rewritten. The gameplay Workshop save/reset operations reject
 designer documents, directing edits back to the standalone designer.
 
+The designer's Properties panel includes **Card numbers → Number text size**
+(8–96 logical pixels). This applies to card values across the selected layout,
+including corner values on laid cards. Save with Ctrl+S and reload the game with
+F5. **Reset number size** restores the existing hand/laid defaults. The setting
+is stored as the optional `card_number_size` field; older files keep their current
+appearance. Saved card/panel geometry is unaffected.
+
 ## Validation
 
 Run automated tests and a release build:
@@ -44,6 +51,13 @@ artifacts and are not committed.
 Regression tests cover the actual saved documents, snapshot fallback, hand
 containment at different counts, button mapping, non-1200 canvas heights,
 individual card offsets, and staging/laying/discarding through the real game.
+
+Known pre-existing designer test failure:
+`resizing_one_card_resizes_its_hand_and_preserves_the_chosen_anchor` fails on the
+unchanged baseline as well as this branch. It is unrelated to number rendering.
+The new number-size persistence/default tests and the remaining designer checks
+pass. To run those checks, use `cargo test --features ui-designer --bin
+phaseup-designer -- --skip resizing_one_card_resizes_its_hand_and_preserves_the_chosen_anchor`.
 
 The saved 19.5:9 document contains overlapping geometry: `phase_action` intersects
 the hand, and the sorting controls at y=1140 with height=100 exceed its 1200-high
