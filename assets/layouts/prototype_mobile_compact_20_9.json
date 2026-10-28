@@ -5,76 +5,76 @@
   },
   "cpu_collapsed": {
     "cpu_1": {
-      "height": 178.0,
-      "width": 844.0,
+      "height": 280.0,
+      "width": 1050.0,
       "x": 33.0,
-      "y": 337.0
+      "y": 315.0
     },
     "cpu_1_hand": {
-      "height": 90.0,
-      "width": 811.0,
-      "x": 50.0,
-      "y": 377.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 54.0,
+      "y": 378.0
     },
     "cpu_1_laid_1": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 50.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 54.0,
+      "y": 367.0
     },
     "cpu_1_laid_2": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 461.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 564.0,
+      "y": 367.0
     },
     "cpu_2": {
-      "height": 178.0,
-      "width": 930.0,
-      "x": 868.0,
-      "y": 27.0
+      "height": 280.0,
+      "width": 1050.0,
+      "x": 808.0,
+      "y": 15.0
     },
     "cpu_2_hand": {
-      "height": 90.0,
-      "width": 894.0,
-      "x": 887.0,
-      "y": 27.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 830.0,
+      "y": 15.0
     },
     "cpu_2_laid_1": {
-      "height": 126.0,
-      "width": 441.0,
-      "x": 887.0,
-      "y": 66.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 823.0,
+      "y": 67.0
     },
     "cpu_2_laid_2": {
-      "height": 126.0,
-      "width": 441.0,
-      "x": 1340.0,
-      "y": 66.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 1345.0,
+      "y": 67.0
     },
     "cpu_3": {
-      "height": 178.0,
-      "width": 844.0,
-      "x": 1789.0,
-      "y": 337.0
+      "height": 280.0,
+      "width": 1050.0,
+      "x": 1583.0,
+      "y": 315.0
     },
     "cpu_3_hand": {
-      "height": 90.0,
-      "width": 811.0,
-      "x": 1806.0,
-      "y": 377.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 1604.0,
+      "y": 378.0
     },
     "cpu_3_laid_1": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 1806.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 1604.0,
+      "y": 367.0
     },
     "cpu_3_laid_2": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 2217.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 2115.0,
+      "y": 367.0
     }
   },
   "cpu_expanded": {
@@ -161,243 +161,292 @@
   },
   "elements": {
     "cpu_1": {
-      "height": 178.0,
-      "width": 844.0,
+      "height": 280.0,
+      "width": 1050.0,
       "x": 33.0,
-      "y": 337.0
+      "y": 315.0
     },
     "cpu_1_hand": {
-      "height": 90.0,
-      "width": 811.0,
-      "x": 50.0,
-      "y": 377.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 54.0,
+      "y": 378.0
     },
     "cpu_1_laid_1": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 50.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 54.0,
+      "y": 367.0
     },
     "cpu_1_laid_2": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 461.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 564.0,
+      "y": 367.0
     },
     "cpu_2": {
-      "height": 178.0,
-      "width": 930.0,
-      "x": 868.0,
-      "y": 27.0
+      "height": 280.0,
+      "width": 1050.0,
+      "x": 808.0,
+      "y": 15.0
     },
     "cpu_2_hand": {
-      "height": 90.0,
-      "width": 894.0,
-      "x": 887.0,
-      "y": 27.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 830.0,
+      "y": 15.0
     },
     "cpu_2_laid_1": {
-      "height": 126.0,
-      "width": 441.0,
-      "x": 887.0,
-      "y": 66.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 823.0,
+      "y": 67.0
     },
     "cpu_2_laid_2": {
-      "height": 126.0,
-      "width": 441.0,
-      "x": 1340.0,
-      "y": 66.0
+      "height": 215.0,
+      "width": 500.0,
+      "x": 1345.0,
+      "y": 67.0
     },
     "cpu_3": {
-      "height": 178.0,
-      "width": 844.0,
-      "x": 1789.0,
-      "y": 337.0
+      "height": 280.0,
+      "width": 1050.0,
+      "x": 1583.0,
+      "y": 315.0
     },
     "cpu_3_hand": {
-      "height": 90.0,
-      "width": 811.0,
-      "x": 1806.0,
-      "y": 377.0
+      "height": 142.0,
+      "width": 1009.0,
+      "x": 1604.0,
+      "y": 378.0
     },
     "cpu_3_laid_1": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 1806.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 1604.0,
+      "y": 367.0
     },
     "cpu_3_laid_2": {
-      "height": 126.0,
-      "width": 400.0,
-      "x": 2217.0,
-      "y": 377.0
+      "height": 215.0,
+      "width": 498.0,
+      "x": 2115.0,
+      "y": 367.0
     },
     "discard": {
-      "height": 155.0,
-      "width": 167.0,
-      "x": 1389.0,
-      "y": 420.0
+      "height": 210.0,
+      "width": 165.0,
+      "x": 1377.0,
+      "y": 353.0
     },
     "discard_action": {
-      "height": 40.0,
-      "width": 417.0,
-      "x": 2028.0,
-      "y": 1140.0
+      "height": 80.0,
+      "width": 275.0,
+      "x": 2336.0,
+      "y": 1045.0
     },
     "draw": {
-      "height": 155.0,
-      "width": 167.0,
-      "x": 1112.0,
-      "y": 422.0
+      "height": 210.0,
+      "width": 165.0,
+      "x": 1123.0,
+      "y": 353.0
     },
     "hand": {
-      "height": 205.0,
-      "width": 2600.0,
-      "x": 33.0,
-      "y": 925.0
-    },
-    "phase": {
-      "height": 220.0,
+      "height": 224.0,
       "width": 1889.0,
       "x": 389.0,
-      "y": 610.0
+      "y": 949.0
+    },
+    "menu_button": {
+      "height": 60.0,
+      "width": 130.0,
+      "x": 2496.0,
+      "y": 32.0
+    },
+    "phase": {
+      "height": 245.0,
+      "width": 1889.0,
+      "x": 389.0,
+      "y": 650.0
     },
     "phase_1_group_1": {
-      "height": 176.0,
+      "height": 196.0,
       "width": 1856.0,
       "x": 406.0,
-      "y": 646.0
+      "y": 690.0
     },
     "phase_2_group_1": {
-      "height": 176.0,
+      "height": 196.0,
       "width": 922.0,
       "x": 406.0,
-      "y": 646.0
+      "y": 690.0
     },
     "phase_2_group_2": {
-      "height": 176.0,
+      "height": 196.0,
       "width": 922.0,
       "x": 1339.0,
-      "y": 646.0
+      "y": 690.0
     },
     "phase_action": {
-      "height": 54.0,
-      "width": 556.0,
-      "x": 1056.0,
-      "y": 845.0
+      "height": 310.0,
+      "width": 310.0,
+      "x": 2316.0,
+      "y": 650.0
     },
     "sort_colors": {
-      "height": 40.0,
+      "height": 100.0,
       "width": 250.0,
-      "x": 1208.0,
-      "y": 1140.0
+      "x": 72.0,
+      "y": 1027.0
     },
     "sort_runs": {
-      "height": 40.0,
+      "height": 100.0,
       "width": 250.0,
-      "x": 930.0,
-      "y": 1140.0
+      "x": 72.0,
+      "y": 707.0
     },
     "sort_sets": {
-      "height": 40.0,
+      "height": 100.0,
       "width": 250.0,
-      "x": 1485.0,
-      "y": 1140.0
+      "x": 72.0,
+      "y": 867.0
     }
   },
   "guides": {
-    "columns": 4,
+    "columns": 5,
     "horizontal": false,
-    "rows": 2,
+    "rows": 11,
     "vertical": false
   },
   "hand_card_styles": {
     "cpu_1_laid_1": {
       "dx": 0.0,
       "dy": 0.0,
-      "height": 93.0
+      "gap": 15.0,
+      "height": 150.0
     },
     "cpu_1_laid_2": {
       "dx": 0.0,
       "dy": 0.0,
-      "height": 93.0
+      "gap": 15.0,
+      "height": 150.0
     },
     "cpu_2_laid_1": {
       "dx": 0.0,
       "dy": 0.0,
-      "height": 93.0
+      "gap": 15.0,
+      "height": 150.0
     },
     "cpu_2_laid_2": {
       "dx": 0.0,
       "dy": 0.0,
-      "height": 93.0
+      "gap": 15.0,
+      "height": 150.0
     },
-    "hand": {
+    "cpu_3_laid_1": {
       "dx": 0.0,
       "dy": 0.0,
-      "height": 135.0
+      "gap": 15.0,
+      "height": 150.0
+    },
+    "cpu_3_laid_2": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "gap": 15.0,
+      "height": 150.0
+    },
+    "hand": {
+      "dx": -3.0,
+      "dy": 6.0,
+      "gap": 15.0,
+      "height": 160.0
+    },
+    "hand_card_0": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "gap": null,
+      "height": null
+    },
+    "hand_card_5": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "gap": null,
+      "height": null
     },
     "phase_2_group_1": {
       "dx": 0.0,
-      "dy": 0.0,
-      "height": 143.0
+      "dy": 4.0,
+      "gap": 15.0,
+      "height": 150.0
     },
     "phase_2_group_2": {
       "dx": 0.0,
-      "dy": 0.0,
-      "height": 143.0
+      "dy": 4.0,
+      "gap": 15.0,
+      "height": 150.0
     }
   },
   "labels": {
     "cpu_1": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_1_laid_1": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_1_laid_2": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_2": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_2_laid_1": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_2_laid_2": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_3": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "cpu_3_laid_1": {
+      "dx": 0.0,
+      "dy": 5.0,
+      "size": 30.0,
+      "text": ""
+    },
+    "cpu_3_laid_2": {
+      "dx": 0.0,
+      "dy": 5.0,
+      "size": 30.0,
+      "text": ""
+    },
+    "discard": {
       "dx": 0.0,
       "dy": 0.0,
       "size": null,
       "text": ""
     },
-    "cpu_3_laid_2": {
+    "discard_action": {
       "dx": 0.0,
       "dy": 0.0,
       "size": null,
@@ -406,13 +455,13 @@
     "draw": {
       "dx": 0.0,
       "dy": 0.0,
-      "size": null,
+      "size": 30.0,
       "text": ""
     },
     "hand": {
       "dx": 0.0,
-      "dy": 0.0,
-      "size": null,
+      "dy": 8.0,
+      "size": 30.0,
       "text": ""
     },
     "header": {
@@ -421,31 +470,49 @@
       "size": null,
       "text": ""
     },
-    "phase": {
+    "menu_button": {
       "dx": 0.0,
       "dy": 0.0,
       "size": null,
+      "text": ""
+    },
+    "phase": {
+      "dx": 0.0,
+      "dy": 5.0,
+      "size": 30.0,
       "text": ""
     },
     "phase_2_group_1": {
       "dx": 0.0,
       "dy": 5.0,
       "size": 30.0,
-      "text": "SET OF 3"
+      "text": ""
     },
     "phase_2_group_2": {
       "dx": 0.0,
       "dy": 4.0,
       "size": 30.0,
-      "text": "SET OF 3"
+      "text": ""
     },
     "phase_action": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "size": 30.0,
+      "text": ""
+    },
+    "sort_colors": {
       "dx": 0.0,
       "dy": 0.0,
       "size": null,
       "text": ""
     },
-    "sort_colors": {
+    "sort_runs": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "size": null,
+      "text": ""
+    },
+    "sort_sets": {
       "dx": 0.0,
       "dy": 0.0,
       "size": null,
