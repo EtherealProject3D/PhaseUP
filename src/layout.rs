@@ -222,7 +222,7 @@ fn parse_layout(data:&str)->Option<serde_json::Value>{
 pub(super) fn reload(){
     let mut values=HashMap::new();
     #[cfg(not(target_os="android"))]
-    let data=std::fs::read_to_string("assets/layouts/game_16_10.json").ok();
+    let data=std::fs::read_to_string(crate::selected_layout_file()).ok()\n        .or_else(||std::fs::read_to_string("assets/layouts/game_16_10.json").ok());
     #[cfg(target_os="android")]
     let data=Some(include_str!("../assets/layouts/game_16_10.json").to_owned());
     if let Some(data)=data {
