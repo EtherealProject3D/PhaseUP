@@ -234,6 +234,26 @@ pub(super) fn reload(){
                     if let (Some(x),Some(y),Some(w),Some(h))=(read("x"),read("y"),read("width"),read("height")) {
                         if [x,y,w,h].iter().all(|n|n.is_finite()) && w>0.0 && h>0.0 {
                             values.insert(name.clone(),Rect{x,y,w,h});
+                            // Designer uses semantic element names; gameplay uses
+                            // historical workshop keys. Mirror them at load time.
+                            let mapped=match name.as_str(){
+                                "hand"=>Some("hand_panel"),
+                                "phase"=>Some("player_phase"),
+                                "draw"=>Some("draw_pile"),
+                                "discard"=>Some("discard_pile"),
+                                "menu_button"=>Some("game_menu_button"),
+                                "cpu_1"=>Some("cpu_1_artwork"),
+                                "cpu_2"=>Some("cpu_2_artwork"),
+                                "cpu_3"=>Some("cpu_3_artwork"),
+                                "cpu_1_laid_1"=>Some("cpu_1_group_1"),
+                                "cpu_1_laid_2"=>Some("cpu_1_group_2"),
+                                "cpu_2_laid_1"=>Some("cpu_2_group_1"),
+                                "cpu_2_laid_2"=>Some("cpu_2_group_2"),
+                                "cpu_3_laid_1"=>Some("cpu_3_group_1"),
+                                "cpu_3_laid_2"=>Some("cpu_3_group_2"),
+                                _=>None,
+                            };
+                            if let Some(key)=mapped {values.insert(key.to_owned(),Rect{x,y,w,h});}
                         }
                     }
                 }
