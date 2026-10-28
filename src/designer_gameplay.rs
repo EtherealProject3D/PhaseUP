@@ -13,6 +13,13 @@ pub(crate) fn set_phase(phase: usize) {
 pub(crate) fn active() -> bool {
     DOCUMENT.with(|d| d.borrow().is_some())
 }
+pub(crate) fn mobile() -> bool {
+    DOCUMENT.with(|d| {
+        d.borrow()
+            .as_ref()
+            .is_some_and(|j| j["profile"].as_str() == Some("mobile"))
+    })
+}
 pub(crate) fn canvas() -> Option<(f32, f32)> {
     DOCUMENT.with(|d| {
         let d = d.borrow();
@@ -409,6 +416,43 @@ pub(crate) fn runtime_label(key: &str, text: &str, size: f32, color: crate::Colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn mobile_selection_toggles_independently_and_keeps_cards_stationary() {
+        use crate::*;
+        let j: Value = serde_json::from_str(include_str!(
+            "../assets/layouts/prototype_mobile_compact_20_9.json"
+        ))
+        .unwrap();
+        load(Some(&j));
+        let mut g = Game::new();
+        g.stage = Stage::Play;
+        let ids: Vec<_> = g.players[0].hand.iter().take(3).map(|c| c.id).collect();
+        for id in &ids {
+            g.toggle_hand_selection(*id);
+        }
+        assert_eq!(g.selected, ids);
+        assert_eq!(selected_card_lift(true), 0.);
+        let before = g.discard.len();
+        g.discard_selected();
+        assert_eq!(g.discard.len(), before);
+        g.toggle_hand_selection(ids[1]);
+        assert_eq!(g.selected, vec![ids[0], ids[2]]);
+        g.stage_selected(0);
+        assert_eq!(g.staged[0], vec![ids[0], ids[2]]);
+        assert!(g.selected.is_empty());
+        load(None);
+    }
+    #[test]
+    fn desktop_selection_still_replaces_the_previous_card() {
+        use crate::*;
+        load(None);
+        let mut g = Game::new();
+        g.toggle_hand_selection(1);
+        g.toggle_hand_selection(2);
+        assert_eq!(g.selected, vec![2]);
+        g.toggle_hand_selection(2);
+        assert!(g.selected.is_empty());
+    }
     #[test]
     fn saved_text_settings_reach_group_hand_draw_and_action_labels() {
         let mut j: Value = serde_json::from_str(include_str!(

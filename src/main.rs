@@ -728,7 +728,7 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         hand.iter().enumerate().rev().find(|(i,c)| {
             !g.human_draw_flight.as_ref().is_some_and(|a|a.card_id==c.id) && {
                 let slot=layout::designer::hand_card(hand.len(),*i); let x=slot.map(|r|r.x).unwrap_or(start+*i as f32*spacing);let card_y=slot.map(|r|r.y).unwrap_or(card_y);
-                let selected_lift=if active_theme()!=Theme::Futuristic && g.selected.contains(&c.id){15.0}else{0.0};
+                let selected_lift=selected_card_lift(g.selected.contains(&c.id));
                 hand_mx>=x&&hand_mx<=x+w&&hand_my>=card_y-selected_lift-18.0&&hand_my<=card_y+hand_h
             }
         }).map(|(_,c)|c.id)
@@ -737,9 +737,10 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
     // Retarget from its current visual height when the hover changes mid-flight.
     let now=get_time();
     let ease=|t:f32| t*t*(3.0-2.0*t);
+    if layout::designer::mobile(){g.hover_lifts.clear();}
     g.hover_lifts.retain(|(id,_,_,_)|hand.iter().any(|c|c.id==*id));
     for c in &hand {
-        let target=if hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && (g.selected.contains(&c.id) || g.drag.is_some_and(|(id,_,_)|id==c.id && is_mouse_button_down(MouseButton::Left)))){18.0}else{0.0};
+        let target=if !layout::designer::mobile() && (hovered_hand_card==Some(c.id) || (active_theme()==Theme::Futuristic && (g.selected.contains(&c.id) || g.drag.is_some_and(|(id,_,_)|id==c.id && is_mouse_button_down(MouseButton::Left))))){18.0}else{0.0};
         if let Some(state)=g.hover_lifts.iter_mut().find(|state|state.0==c.id) {
             if (state.2-target).abs()>0.01 {
                 let t=((now-state.3)/0.10).clamp(0.0,1.0) as f32;
@@ -770,16 +771,16 @@ fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wirefr
         } else {
             if card_ui(*c,x,lifted_y,w,hand_h,selected){toggle=Some(c.id);}
             if g.drawn_card==Some(c.id) && active_theme()!=Theme::Futuristic{
-                let y=lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0};
+                let y=lifted_y-selected_card_lift(selected);
                 draw_rectangle_lines(x-3.0,y-3.0,w+6.0,hand_h+6.0,4.0,YELLOW);
             }
         }
-        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-if selected && active_theme()!=Theme::Futuristic{15.0}else{0.0},w,hand_h){
+        if is_mouse_button_pressed(MouseButton::Left)&&inside(x,lifted_y-selected_card_lift(selected),w,hand_h){
             g.drag=Some((c.id,game_mouse().0,game_mouse().1));
         }
     }
-    // Clicking a hand card toggles only that card; phase staging still supports multiple cards.
-    if let Some(id)=toggle {if g.selected.contains(&id){g.selected.clear();}else{g.selected=vec![id];}}
+    // Mobile taps toggle one card without clearing the other selected cards.
+    if let Some(id)=toggle {g.toggle_hand_selection(id);}
     if is_mouse_button_released(MouseButton::Left) {
         let (mx,my)=game_mouse();
         if let Some((id,ox,oy))=g.drag {
