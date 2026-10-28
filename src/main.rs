@@ -235,11 +235,12 @@ fn player_color(i:usize)->Color {
 }
 // Fixed logical canvas: preserve card proportions and letterbox on narrow windows.
 fn draw_game(g:&mut Game,show_debug:bool,show_moves:bool,show_bounds:bool,wireframe:bool){
+    set_game_view(true);
     set_board_input_blocked(g.pending_discard.is_some());
     if !wireframe {layout::begin_scene();}
     set_default_camera();
     clear_background(active_theme().background());
-    let sw=1920.0;let sh=game_canvas_height();
+    let sw=game_canvas_width();let sh=game_canvas_height();
     if wireframe {
         // Isolate logical geometry: no card art, neon textures, or game labels.
         // Use the exact same F4 geometry renderer for a direct comparison.
@@ -1076,6 +1077,7 @@ fn menu_button(title:&str,y:f32)->bool {
     hovered&&is_mouse_button_pressed(MouseButton::Left)
 }
 fn draw_menu(screen:MenuScreen,has_game:bool,fullscreen:&mut bool,show_moves:&mut bool,help_scroll:&mut f32,resolution_open:&mut bool,cpu_difficulty:&mut Difficulty)->Option<MenuScreen> {
+    set_game_view(false);
     let screen=if !cfg!(feature="developer-tools") && matches!(screen,MenuScreen::DeveloperTools|MenuScreen::UiWorkshop) {MenuScreen::Settings}else{screen};
     set_default_camera();
     clear_background(active_theme().background());
@@ -1222,7 +1224,7 @@ fn resolution_picker(x:f32,y:f32)->bool {
         let by=y+39.0+index as f32*54.0;
         let hover=mx>=bx&&mx<=bx+228.0&&my>=by&&my<=by+48.0;
         themed_button(bx,by,228.0,48.0,hover);
-        let label=format!("{} x {} ({})",w,h,mode.aspect(*w,*h).replace('_',":"));
+        let label=format!("{} x {} ({})",w,h,if mode.aspect(*w,*h)=="19_5_9" {"19.5:9"} else if mode.aspect(*w,*h)=="20_9" {"20:9"} else if mode.aspect(*w,*h)=="16_9" {"16:9"} else {"16:10"});
         let tw=menu_text_width(&label,17);
         menu_label(&label,bx+(228.0-tw)/2.0,by+31.0,17.0,WHITEISH);
         if hover&&is_mouse_button_pressed(MouseButton::Left) {
